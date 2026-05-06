@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Sugar Sugar Camp 🐿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#FAF3E9;--cl:#FDF9F2;--cd:#F2E5D2;
+  --cocoa:#2A1810;--cm:#735847;
+  --ps:#F8DBE2;--pd:#C46C7E;
+  --peach:#F0B080;--phs:#FBE3CD;
+  --sage:#9DB089;--ss:#DDE6CE;
+  --coral:#DD8470;--cs:#F5D5C9;
+  --gold:#C9A24E;--gs:#EFE0B6;
+  --ln:rgba(74,51,38,.13);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream);
+  background-image:radial-gradient(circle at 0% 0%,rgba(232,154,171,.18),transparent 45%),
+    radial-gradient(circle at 100% 0%,rgba(240,176,128,.15),transparent 45%),
+    radial-gradient(circle at 50% 100%,rgba(157,176,137,.10),transparent 55%);
+  min-height:100vh;font-size:14px;line-height:1.6;}
+.wrap{padding:28px 22px 80px;max-width:1280px;margin:0 auto;}
+.brand{font-family:'Fraunces',serif;font-size:clamp(36px,7vw,70px);line-height:.92;letter-spacing:-.025em;font-weight:400;}
+.brand em{color:var(--pd);font-style:italic;}
+.brand .star{color:var(--gold);font-size:.55em;vertical-align:top;margin-left:4px;}
+.tagline{font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:var(--cm);margin-top:10px;}
+.hrow{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:18px;margin-bottom:28px;}
+.hright{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+.datebox{background:var(--cl);border:1px solid var(--ln);border-radius:16px;padding:12px 18px;text-align:right;}
+.datebox .dl{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--cm);}
+.datebox .dv{font-family:'Fraunces',serif;font-style:italic;font-size:17px;margin-top:2px;}
+.sbadge{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;
+  border:1px solid var(--ln);background:var(--cl);font-size:12px;cursor:pointer;
+  font-family:inherit;color:var(--cocoa);transition:all .15s;}
+.sbadge:hover{background:white;}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--cm);display:inline-block;flex-shrink:0;}
+.dot.synced{background:var(--sage);}
+.dot.syncing{background:var(--gold);animation:blink 1.2s infinite;}
+.dot.error{background:var(--coral);}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+.banner{background:linear-gradient(135deg,var(--gs),var(--phs));border:1px solid var(--gold);
+  border-radius:16px;padding:14px 20px;display:flex;justify-content:space-between;
+  align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap;}
+.booking-link-banner{
+  background:linear-gradient(135deg,var(--ps),var(--phs));
+  border:1px solid rgba(196,108,126,.3);
+  border-radius:16px;padding:16px 22px;
+  display:flex;justify-content:space-between;align-items:center;
+  gap:14px;margin-bottom:22px;flex-wrap:wrap;}
+.booking-link-banner .bl-left{display:flex;flex-direction:column;gap:3px;}
+.booking-link-banner .bl-title{font-weight:600;font-size:14px;color:var(--cocoa);}
+.booking-link-banner .bl-sub{font-size:12px;color:var(--cm);}
+.booking-link-banner .bl-url{
+  font-size:12px;color:var(--pd);font-style:italic;
+  background:rgba(196,108,126,.1);padding:4px 10px;border-radius:8px;
+  margin-top:4px;display:inline-block;max-width:320px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bl-actions{display:flex;gap:8px;flex-shrink:0;}
+.btn-link{font-family:inherit;font-size:12.5px;font-weight:500;padding:9px 16px;
+  border-radius:999px;border:1.5px solid var(--pd);cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;transition:all .18s;white-space:nowrap;}
+.btn-link.primary{background:var(--pd);color:#fff;border-color:var(--pd);}
+.btn-link.primary:hover{background:var(--cocoa);border-color:var(--cocoa);}
+.btn-link.ghost{background:transparent;color:var(--pd);}
+.btn-link.ghost:hover{background:rgba(196,108,126,.1);}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:0 0 24px;}
+.scard{background:var(--cl);border:1px solid var(--ln);border-radius:20px;padding:20px 22px 18px;
+  position:relative;transition:transform .2s;}
+.scard:hover{transform:translateY(-2px);}
+.sico{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:18px;}
+.sc-sage .sico{background:var(--ss);} .sc-coral .sico{background:var(--cs);}
+.sc-gold .sico{background:var(--gs);} .sc-peach .sico{background:var(--phs);}
+.scard .sl{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cm);font-weight:600;}
+.scard .sv{font-family:'Fraunces',serif;font-size:48px;font-weight:400;line-height:1;margin-top:8px;}
+.scard .ss2{font-size:12px;color:var(--cm);margin-top:6px;}
+.abar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;}
+.tabs{display:flex;gap:4px;background:var(--cd);padding:4px;border-radius:999px;border:1px solid var(--ln);}
+.tab{padding:9px 16px;border-radius:999px;font-size:13px;font-weight:500;cursor:pointer;
+  border:none;background:transparent;color:var(--cm);font-family:inherit;transition:all .2s;}
+.tab.active{background:var(--cocoa);color:var(--cl);}
+.tab:hover:not(.active){color:var(--cocoa);}
+.bgroup{display:flex;gap:8px;}
+.btn{font-family:inherit;font-size:13.5px;font-weight:500;padding:10px 20px;border-radius:999px;
+  border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .2s;white-space:nowrap;}
+.btn-sm{padding:6px 14px;font-size:12px;}
+.btn-p{background:var(--pd);color:#fff;} .btn-p:hover{background:var(--cocoa);}
+.btn-s{background:var(--cd);color:var(--cocoa);} .btn-s:hover{background:var(--cl);}
+.btn-g{background:transparent;color:var(--cm);} .btn-g:hover{background:var(--cd);color:var(--cocoa);}
+.btn-d{background:var(--coral);color:#fff;} .btn-d:hover{background:#b85a47;}
+.btn-o{background:transparent;border:1px solid var(--cocoa);color:var(--cocoa);}
+.btn-o:hover{background:var(--cocoa);color:var(--cl);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.cage-bar{background:var(--cl);border:1px solid var(--ln);border-radius:18px;
+  padding:14px 22px;margin-bottom:18px;display:flex;align-items:center;
+  justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.cage-info{display:flex;align-items:center;gap:14px;}
+.cage-label{font-size:12px;color:var(--cm);line-height:1.5;}
+.cage-label b{color:var(--cocoa);font-size:13px;}
+.cage-counter{display:flex;align-items:center;gap:0;border:1px solid var(--ln);
+  border-radius:10px;overflow:hidden;background:var(--cream);}
+.cage-btn{width:36px;height:36px;border:none;background:transparent;font-size:18px;
+  cursor:pointer;font-family:inherit;color:var(--cocoa);transition:background .12s;
+  display:flex;align-items:center;justify-content:center;}
+.cage-btn:hover{background:var(--cd);}
+.cage-btn:disabled{opacity:.3;cursor:not-allowed;}
+.cage-num{min-width:48px;text-align:center;font-family:"Fraunces",serif;
+  font-size:22px;font-weight:400;color:var(--cocoa);padding:0 4px;}
+.cage-dots{display:flex;gap:3px;flex-wrap:wrap;max-width:320px;}
+.cage-dot{width:16px;height:16px;border-radius:4px;display:inline-block;}
+.cage-dot.main{background:var(--ss);border:1px solid var(--sage);}
+.cage-dot.extra{background:rgba(201,162,78,.3);border:1px solid var(--gold);}
+.sec{background:var(--cl);border:1px solid var(--ln);border-radius:24px;padding:26px 28px;margin-bottom:18px;}
+.stitle{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;gap:16px;flex-wrap:wrap;}
+.stitle h3{font-family:'Fraunces',serif;font-style:italic;font-size:24px;font-weight:400;}
+.stitle .meta{font-size:13px;color:var(--cm);margin-top:4px;}
+.dnav{display:flex;align-items:center;gap:6px;}
+.di{border:1px solid var(--ln);background:var(--cream);font-family:inherit;font-size:13px;color:var(--cocoa);
+  outline:none;padding:8px 12px;border-radius:999px;cursor:pointer;}
+.di:focus{border-color:var(--pd);}
+.nb{width:34px;height:34px;border-radius:50%;border:1px solid var(--ln);background:var(--cl);
+  cursor:pointer;font-size:16px;transition:all .15s;}
+.nb:hover{background:var(--cocoa);color:var(--cl);}
+.legend{display:flex;gap:18px;font-size:12px;color:var(--cm);flex-wrap:wrap;align-items:center;
+  margin-bottom:16px;padding-bottom:14px;border-bottom:1px dashed var(--ln);}
+.li{display:flex;align-items:center;gap:6px;}
+.ld{width:12px;height:12px;border-radius:4px;display:inline-block;}
+.ld.sage{background:var(--ss);border:1px solid var(--sage);}
+.ld.coral{background:var(--cs);border:1px solid var(--coral);}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px;}
+.rc{border-radius:16px;padding:12px;cursor:pointer;border:1.5px solid transparent;
+  display:flex;flex-direction:column;justify-content:space-between;position:relative;
+  text-align:left;font-family:inherit;color:inherit;transition:all .2s;aspect-ratio:1;}
+.rc.av{background:var(--ss);border-color:rgba(157,176,137,.4);}
+.rc.av:hover{background:var(--sage);color:#fff;transform:translateY(-2px);}
+.rc.oc{background:var(--cs);border-color:rgba(221,132,112,.4);}
+.rc.oc:hover{background:var(--coral);color:#fff;transform:translateY(-2px);}
+.rc.suite{aspect-ratio:auto;height:110px;
+  background:linear-gradient(135deg,var(--gs),var(--phs));border-color:var(--gold);}
+.rc.suite.oc{background:linear-gradient(135deg,var(--cs),var(--ps));border-color:var(--coral);}
+.rc.suite.av:hover{background:linear-gradient(135deg,var(--gold),var(--peach));color:#fff;}
+.rc.suite.oc:hover{background:linear-gradient(135deg,var(--coral),var(--pd));color:#fff;}
+.rnum{font-family:'Fraunces',serif;font-size:28px;font-weight:400;line-height:1;letter-spacing:-.02em;}
+.rcr{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.7;margin-top:2px;}
+.rname{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rstat{font-size:11px;font-style:italic;opacity:.7;}
+.calwrap{overflow-x:auto;padding-bottom:4px;}
+.calgrid{display:grid;gap:2px;background:var(--cd);padding:2px;border-radius:14px;min-width:100%;}
+.ccorner{background:var(--cocoa);color:var(--cl);padding:10px 12px;font-size:11px;
+  letter-spacing:.1em;text-transform:uppercase;font-weight:600;}
+.ch{background:var(--cl);padding:7px 4px;text-align:center;}
+.ch.today{background:var(--gs);} .ch.wk{background:var(--cream);}
+.ch .dn{font-family:'Fraunces',serif;font-size:16px;font-weight:400;}
+.ch .dd{font-size:9px;color:var(--cm);text-transform:uppercase;letter-spacing:.05em;}
+.crl{background:var(--cl);padding:0 10px;font-size:12px;font-weight:500;
+  display:flex;align-items:center;gap:5px;height:36px;}
+.crl.suite{background:linear-gradient(90deg,var(--gs),var(--cl));
+  font-style:italic;font-family:'Fraunces',serif;font-size:13px;}
+.cc{background:var(--cl);height:36px;border:none;cursor:pointer;position:relative;
+  transition:background .12s;padding:0;font-family:inherit;}
+.cc:hover{background:var(--cd);}
+.cc.tc{background:rgba(201,162,78,.07);}
+.cc.bk{background:var(--coral);} .cc.bk:hover{background:var(--pd);}
+.cc.bk.s{border-radius:999px 4px 4px 999px;margin-left:3px;}
+.cc.bk.e{border-radius:4px 999px 999px 4px;margin-right:3px;}
+.cc.bk.s.e{border-radius:999px;margin:0 3px;}
+.cctag{position:absolute;left:7px;top:50%;transform:translateY(-50%);
+  font-size:10px;color:#fff;font-weight:500;white-space:nowrap;pointer-events:none;}
+.frow{display:flex;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap;}
+.sbox{flex:1;min-width:220px;display:flex;align-items:center;gap:8px;background:var(--cream);
+  border:1px solid var(--ln);border-radius:999px;padding:9px 16px;color:var(--cm);}
+.sbox:focus-within{border-color:var(--pd);background:#fff;}
+.sbox input{flex:1;border:none;background:transparent;font-family:inherit;font-size:13.5px;outline:none;color:var(--cocoa);}
+.pills{display:flex;gap:4px;flex-wrap:wrap;}
+.pill{font-family:inherit;font-size:12px;padding:7px 14px;border-radius:999px;
+  border:1px solid var(--ln);background:var(--cream);color:var(--cm);cursor:pointer;transition:all .12s;}
+.pill.act{background:var(--cocoa);color:var(--cl);border-color:var(--cocoa);}
+.blist{display:flex;flex-direction:column;gap:10px;}
+.bc{background:var(--cream);border:1px solid var(--ln);border-radius:18px;padding:18px 20px;
+  display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;transition:all .18s;}
+.bc:hover{border-color:var(--pd);background:var(--cl);transform:translateY(-1px);}
+.bc.past{opacity:.65;}
+.bc.active{border-left:3px solid var(--sage);}
+.bc.upcoming{border-left:3px solid var(--gold);}
+.badge{width:62px;height:62px;border-radius:14px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;background:var(--phs);flex-shrink:0;}
+.badge.suite{background:linear-gradient(135deg,var(--gs),var(--phs));}
+.badge .bn{font-family:'Fraunces',serif;font-size:22px;font-weight:400;line-height:1;}
+.badge .bt{font-size:8px;letter-spacing:.05em;opacity:.65;font-weight:600;margin-top:2px;}
+.binfo h4{font-family:'Fraunces',serif;font-size:18px;font-weight:400;}
+.bgl{color:var(--pd);font-style:italic;font-family:'Fraunces',serif;font-size:13px;margin:2px 0 6px;}
+.bmeta{font-size:12px;color:var(--cm);display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.chip{display:inline-flex;align-items:center;gap:4px;}
+.bacts{display:flex;gap:4px;}
+.ib{width:34px;height:34px;border-radius:50%;border:1px solid transparent;background:var(--cd);
+  cursor:pointer;font-size:14px;transition:all .12s;}
+.ib:hover{background:var(--ps);color:var(--pd);}
+.ib.danger:hover{background:var(--cs);color:var(--coral);}
+.ib.confirm{background:var(--ss);color:var(--sage-d,#6B8A57);}
+.ib.confirm:hover{background:var(--sage);color:#fff;}
+.slip-overlay{position:fixed;inset:0;background:rgba(42,24,16,.55);backdrop-filter:blur(10px);
+  z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
+.slip-wrap{max-width:420px;width:100%;animation:su .22s cubic-bezier(.34,1.56,.64,1);}
+.slip-actions{display:flex;gap:10px;margin-top:14px;justify-content:center;}
+.slip-btn{font-family:inherit;font-size:13px;font-weight:500;padding:11px 22px;
+  border-radius:999px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+  transition:all .18s;white-space:nowrap;}
+.slip-btn.dl{background:var(--pd);color:#fff;}
+.slip-btn.dl:hover{background:var(--cocoa);}
+.slip-btn.cl{background:var(--cd);color:var(--cocoa);}
+.slip-btn.cl:hover{background:var(--cl);}
+#slip-card{
+  background:#FDF9F2;
+  border-radius:20px;
+  overflow:hidden;
+  font-family:'Sarabun',sans-serif;
+}
+.slip-top{
+  background:linear-gradient(135deg,#C46C7E 0%,#9B4D5F 100%);
+  padding:24px 28px 20px;
+  color:#fff;
+  text-align:center;
+}
+.slip-top .s-brand{font-family:'Fraunces',serif;font-style:italic;font-size:26px;font-weight:400;letter-spacing:-.02em;}
+.slip-top .s-tag{font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.8;margin-top:2px;}
+.slip-top .s-icon{font-size:44px;margin:14px 0 6px;display:block;}
+.slip-top .s-title{font-size:15px;font-weight:600;letter-spacing:.05em;opacity:.95;}
+.slip-body{padding:22px 28px;}
+.slip-ref{
+  text-align:center;
+  background:rgba(196,108,126,.1);
+  border-radius:10px;
+  padding:10px;
+  margin-bottom:18px;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#9B4D5F;font-weight:600;
+}
+.slip-row{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;
+  border-bottom:1px dashed rgba(74,51,38,.12);gap:12px;}
+.slip-row:last-of-type{border-bottom:none;}
+.slip-lbl{font-size:11.5px;color:#735847;font-weight:500;letter-spacing:.04em;flex-shrink:0;}
+.slip-val{font-size:13px;color:#2A1810;font-weight:600;text-align:right;}
+.slip-val.big{font-family:'Fraunces',serif;font-size:18px;font-style:italic;}
+.slip-footer{
+  background:linear-gradient(135deg,#EFE0B6,#FBE3CD);
+  border-top:1px solid rgba(196,108,126,.2);
+  padding:16px 28px;
+  text-align:center;
+}
+.slip-footer .sf-main{font-size:13px;color:#4A3326;font-weight:600;margin-bottom:3px;}
+.slip-footer .sf-sub{font-size:11px;color:#735847;line-height:1.55;}
+.slip-stamp{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:60px;height:60px;border-radius:50%;
+  border:3px solid #6B8A57;
+  color:#6B8A57;
+  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  line-height:1.2;text-align:center;
+  position:absolute;right:24px;bottom:16px;
+  opacity:.85;
+}
+.bhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
+.stpill{display:inline-flex;align-items:center;font-size:11px;padding:3px 10px;
+  border-radius:999px;font-weight:600;}
+.st-u{background:var(--gs);color:#856B2A;} .st-a{background:var(--ss);color:#4F6938;}
+.st-p{background:var(--cd);color:var(--cm);}
+.overlay{position:fixed;inset:0;background:rgba(42,24,16,.45);backdrop-filter:blur(8px);
+  z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;
+  animation:fi .15s ease;}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+.modal{background:var(--cl);border-radius:24px;padding:28px;max-width:560px;width:100%;
+  max-height:90vh;overflow-y:auto;position:relative;border:1px solid var(--ln);
+  box-shadow:0 28px 56px rgba(42,24,16,.28);animation:su .2s cubic-bezier(.34,1.56,.64,1);}
+.modal.lg{max-width:700px;}
+@keyframes su{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal h2{font-family:'Fraunces',serif;font-style:italic;font-size:28px;font-weight:400;margin-bottom:4px;}
+.modal .msub{color:var(--cm);font-size:13px;margin-bottom:20px;}
+.mclose{position:absolute;top:18px;right:18px;width:34px;height:34px;border-radius:50%;
+  border:none;background:var(--cd);cursor:pointer;font-size:18px;}
+.mclose:hover{background:var(--cs);color:var(--coral);}
+.fg{margin-bottom:14px;}
+.frow2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--cm);margin-bottom:6px;}
+.fi{width:100%;padding:11px 14px;border:1px solid var(--ln);border-radius:12px;
+  background:var(--cream);font-family:inherit;font-size:14px;color:var(--cocoa);outline:none;transition:all .15s;}
+.fi:focus{border-color:var(--pd);background:#fff;box-shadow:0 0 0 3px rgba(196,108,126,.1);}
+textarea.fi{resize:vertical;min-height:72px;}
+.fhelp{font-size:11.5px;color:var(--cm);margin-top:5px;line-height:1.5;}
+.rttog{display:grid;grid-template-columns:1fr 1fr;gap:5px;background:var(--cd);padding:4px;border-radius:14px;}
+.rtbtn{padding:11px 12px;border:none;border-radius:10px;background:transparent;cursor:pointer;
+  font-family:inherit;font-size:13px;font-weight:500;color:var(--cm);
+  display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;}
+.rtbtn.act{background:#fff;color:var(--cocoa);box-shadow:0 2px 8px rgba(74,51,38,.1);}
+.rng{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;}
+.rnb{aspect-ratio:1;border:1px solid var(--ln);border-radius:10px;background:var(--cream);cursor:pointer;
+  font-family:'Fraunces',serif;font-size:14px;color:var(--cocoa);transition:all .1s;}
+.rnb:hover:not(:disabled){border-color:var(--pd);background:#fff;}
+.rnb.sel{background:var(--pd);color:#fff;border-color:var(--pd);}
+.rnb:disabled{background:var(--cs);color:var(--coral);cursor:not-allowed;opacity:.55;text-decoration:line-through;}
+.spick{display:flex;align-items:center;gap:12px;padding:14px 18px;
+  background:linear-gradient(135deg,var(--gs),var(--phs));border:1px solid var(--gold);border-radius:14px;}
+.spick.na{background:var(--cs);border-color:var(--coral);opacity:.7;}
+.nights{font-size:12px;color:var(--cm);background:var(--cd);padding:8px 14px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:5px;margin:-2px 0 12px;}
+.errbx{background:var(--cs);color:#8a3d2a;border:1px solid var(--coral);border-radius:12px;
+  padding:11px 14px;font-size:13px;margin-bottom:12px;}
+.okbx{background:var(--ss);color:#3F5828;border:1px solid var(--sage);border-radius:12px;
+  padding:11px 14px;font-size:13px;margin-bottom:12px;}
+.factions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;
+  padding-top:16px;border-top:1px solid var(--ln);}
+.factions.spl{justify-content:space-between;}
+.dh{display:flex;align-items:center;gap:12px;padding:14px 20px;
+  background:linear-gradient(135deg,var(--cd),var(--phs));border-radius:16px;margin-bottom:8px;}
+.drn{font-style:italic;font-size:26px;font-family:'Fraunces',serif;}
+.dg{background:var(--cream);border:1px solid var(--ln);border-radius:14px;padding:4px 16px;margin-top:16px;}
+.dr{display:flex;justify-content:space-between;align-items:center;
+  padding:12px 0;border-bottom:1px dashed var(--ln);gap:12px;}
+.dr:last-child{border-bottom:none;}
+.dlb{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--cm);font-weight:600;flex-shrink:0;}
+.steps{background:var(--cream);border:1px solid var(--ln);border-radius:14px;
+  padding:18px;font-size:13px;line-height:1.7;margin:14px 0;}
+.steps ol{padding-left:20px;}
+.steps li{margin-bottom:4px;}
+.steps a{color:var(--pd);text-decoration:none;border-bottom:1px solid var(--pd);}
+.codebx{background:var(--cocoa);color:#FBE3CD;border-radius:12px;padding:14px 16px;
+  font-family:monospace;font-size:11px;line-height:1.55;max-height:260px;
+  overflow-y:auto;overflow-x:auto;margin:10px 0 14px;position:relative;white-space:pre;}
+.copybtn{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.14);
+  color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:5px 12px;
+  font-family:inherit;font-size:11px;cursor:pointer;}
+.copybtn:hover{background:rgba(255,255,255,.24);}
+details.sc{border:1px solid var(--ln);border-radius:14px;background:var(--cream);}
+details.sc summary{cursor:pointer;padding:14px 18px;font-weight:600;
+  font-size:13px;list-style:none;display:flex;justify-content:space-between;}
+details.sc summary::after{content:'▾';color:var(--cm);}
+details.sc[open] summary::after{content:'▴';}
+details.sc summary::-webkit-details-marker{display:none;}
+details.sc>div{padding:0 18px 18px;}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--cocoa);color:var(--cl);
+  padding:12px 20px;border-radius:999px;font-size:13px;z-index:200;
+  box-shadow:0 8px 24px rgba(0,0,0,.2);animation:tst .22s ease;}
+.toast.ok{background:#4F6938;} .toast.err{background:var(--coral);}
+@keyframes tst{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+.empty{text-align:center;padding:56px 20px;color:var(--cm);}
+.empty h3{font-family:'Fraunces',serif;font-style:italic;font-size:22px;margin:10px 0 4px;color:var(--cocoa);}
+@media(max-width:700px){
+  .rng{grid-template-columns:repeat(6,1fr);}
+  .frow2{grid-template-columns:1fr;}
+  .bc{grid-template-columns:auto 1fr;}
+  .bacts{grid-column:1/-1;justify-content:flex-end;}
+  .stats{grid-template-columns:repeat(2,1fr);}
+  .scard .sv{font-size:36px;}
+  .sec{padding:20px 16px;}
+  .modal{padding:22px 18px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="modals"></div>
+
+<script>
+'use strict';
+// ============================
+// APPS SCRIPT CODE (for copy)
+// ============================
+const AS_CODE = `/**
+ * Sugar Sugar Camp - Google Apps Script (CORS-Free Version)
+ * วาง code นี้ใน Apps Script ที่ผูกกับ Google Sheets
+ * Deploy -> New deployment -> Web app
+ * Execute as: Me | Who has access: Anyone
+ *
+ * วิธีนี้ใช้ GET + JSONP ทำให้เปิดจากไฟล์ local (file://) ได้ทุกเบราว์เซอร์
+ * ไม่มีปัญหา CORS อีกต่อไป
+ */
+const CALENDAR_NAME = 'Sugar Sugar Camp';
+const SHEET_NAME    = 'Bookings';
+const TZ            = 'Asia/Bangkok';
+
+function doGet(e) {
+  const p   = e && e.parameter ? e.parameter : {};
+  const act = p.action || 'ping';
+  const cb  = p.callback || '';   // JSONP callback — จำเป็นสำหรับการเรียกจาก file:// และ https://
+  let result;
+  try {
+    if (act === 'pull') {
+      result = { ok:true, bookings: readSheet() };
+    } else if (act === 'sync' && p.data) {
+      const bookings = JSON.parse(decodeURIComponent(p.data));
+      result = { ok:true, ...syncAll(bookings) };
+    } else {
+      result = { ok:true, msg:'Sugar Sugar Camp API is live! callback=' + cb };
+    }
+  } catch(err) {
+    result = { ok:false, error:String(err) };
+  }
+  const body   = JSON.stringify(result);
+  const output = cb ? cb + '(' + body + ');' : body;
+  const mime   = cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON;
+  return ContentService.createTextOutput(output).setMimeType(mime);
+}
+
+// doPost ยังคงไว้เผื่อใช้จาก environment อื่นที่ไม่มี CORS issue
+function doPost(e) {
+  try {
+    const d = JSON.parse(e.postData.contents);
+    if (d.action === 'sync') return jsonOut({ ok:true, ...syncAll(d.bookings||[]) });
+    if (d.action === 'pull') return jsonOut({ ok:true, bookings: readSheet() });
+    return jsonOut({ ok:false, error:'Unknown action' });
+  } catch(err) { return jsonOut({ ok:false, error:String(err) }); }
+}
+
+function jsonOut(o) {
+  return ContentService.createTextOutput(JSON.stringify(o))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(SHEET_NAME);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_NAME);
+    const h = [['ID','ชื่อเจ้าของ','ชื่อน้อง','เบอร์',
+      'ประเภท','หมายเลขห้อง','เช็คอิน','เช็คเอาท์',
+      'บันทึก','Calendar Event ID','Updated At']];
+    sh.getRange(1,1,1,11).setValues(h)
+      .setFontWeight('bold').setBackground('#2A1810').setFontColor('#FAF3E9');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function getCal() {
+  const list = CalendarApp.getCalendarsByName(CALENDAR_NAME);
+  if (list.length) return list[0];
+  return CalendarApp.createCalendar(CALENDAR_NAME,{color:CalendarApp.Color.PALE_RED});
+}
+
+function fmtD(v) {
+  if (!v) return '';
+  if (v instanceof Date) return Utilities.formatDate(v,TZ,'yyyy-MM-dd');
+  return String(v);
+}
+
+function readSheet() {
+  const sh = getSheet();
+  if (sh.getLastRow() < 2) return [];
+  return sh.getRange(2,1,sh.getLastRow()-1,11).getValues()
+    .filter(r=>r[0]).map(r=>({
+      id: String(r[0]),
+      guestName: String(r[1]||''),
+      gliderName: String(r[2]||''),
+      phone: String(r[3]||''),
+      roomType: r[4]==='Grand Suite'?'grand_suite':'standard',
+      roomNumber: Number(r[5])||1,
+      checkIn: fmtD(r[6]),
+      checkOut: fmtD(r[7]),
+      notes: String(r[8]||'')
+    }));
+}
+
+function syncAll(bookings) {
+  const sh = getSheet(), cal = getCal();
+  const evMap = {};
+  if (sh.getLastRow()>1)
+    sh.getRange(2,1,sh.getLastRow()-1,11).getValues()
+      .forEach(r=>{ if(r[0]) evMap[String(r[0])]=String(r[9]||''); });
+
+  const ids = new Set(bookings.map(b=>b.id));
+  let del=0,cre=0,upd=0;
+  Object.keys(evMap).forEach(id=>{
+    if(!ids.has(id)&&evMap[id]){
+      try{const e=cal.getEventById(evMap[id]);if(e){e.deleteEvent();del++;}}catch(_){}
+    }
+  });
+  const now = Utilities.formatDate(new Date(),TZ,'yyyy-MM-dd HH:mm:ss');
+  const rows = bookings.map(b=>{
+    const title = (b.gliderName?'🐿 '+b.gliderName:'🐿 '+b.guestName)+' · '+
+      (b.roomType==='grand_suite'?'Grand Suite':'STD-'+String(b.roomNumber).padStart(2,'0'));
+    const desc = ['เจ้าของ: '+b.guestName,
+      b.gliderName?'น้อง: '+b.gliderName:'',
+      b.phone?'เบอร์: '+b.phone:'',
+      b.notes?'บันทึก: '+b.notes:''].filter(Boolean).join('\\n');
+    const s = new Date(b.checkIn+'T00:00:00+07:00');
+    const e = new Date(b.checkOut+'T00:00:00+07:00');
+    let eid = evMap[b.id]||'', ev=null;
+    if(eid) try{ev=cal.getEventById(eid);}catch(_){ev=null;}
+    if(ev){ev.setTitle(title);ev.setDescription(desc);ev.setAllDayDates(s,e);upd++;}
+    else{ev=cal.createAllDayEvent(title,s,e,{description:desc});eid=ev.getId();cre++;}
+    return [b.id,b.guestName||'',b.gliderName||'',b.phone||'',
+      b.roomType==='grand_suite'?'Grand Suite':'Standard',
+      b.roomNumber,b.checkIn,b.checkOut,b.notes||'',eid,now];
+  });
+  if(sh.getLastRow()>1) sh.getRange(2,1,sh.getLastRow()-1,11).clearContent();
+  if(rows.length) sh.getRange(2,1,rows.length,11).setValues(rows);
+  return {created:cre,updated:upd,deleted:del,total:bookings.length};
+}`;
+
+// ============================
+// HELPERS
+// ============================
+const pad = n => String(n).padStart(2,'0');
+const todayKey = () => { const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+const parseD = s => new Date(s+'T00:00:00');
+const fmtD = d => { if(typeof d==='string')return d; return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+const addDays = (s,n) => { const d=parseD(s); d.setDate(d.getDate()+n); return fmtD(d); };
+const TH_M = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TH_MS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const TH_D = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+const thD = (s,sh) => { const d=parseD(s),y=d.getFullYear()+543;
+  return sh ? d.getDate()+' '+TH_MS[d.getMonth()]+' '+String(y).slice(2)
+            : d.getDate()+' '+TH_M[d.getMonth()]+' '+y; };
+const nts = (a,b) => Math.round((parseD(b)-parseD(a))/86400000);
+const genId = () => Math.random().toString(36).slice(2)+Date.now().toString(36);
+const isBooked = (s,ci,co) => s>=ci&&s<co;
+const onDate = (bs,s) => bs.filter(b=>isBooked(s,b.checkIn,b.checkOut));
+const isAvail = (bs,rt,rn,ci,co,ex) => !bs.some(b=>b.id!==ex&&b.roomType===rt&&b.roomNumber===rn&&!(co<=b.checkIn||ci>=b.checkOut));
+const roomOf = (bs,rt,rn,s) => bs.find(b=>b.roomType===rt&&b.roomNumber===rn&&isBooked(s,b.checkIn,b.checkOut));
+const bSt = b => { const t=todayKey(); return t<b.checkIn?'upcoming':t>=b.checkOut?'past':'active'; };
+const rel = ts => { if(!ts)return''; const d=Math.floor((Date.now()-ts)/1e3);
+  if(d<10)return'เมื่อสักครู่'; if(d<60)return d+' วินาทีที่แล้ว';
+  if(d<3600)return Math.floor(d/60)+' นาทีที่แล้ว';
+  if(d<86400)return Math.floor(d/3600)+' ชม.ที่แล้ว';
+  return Math.floor(d/86400)+' วันที่แล้ว'; };
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// ============================
+// STATE
+// ============================
+// ══════════════════════════════════════════════════════
+// ตั้งค่า Apps Script URL ตรงนี้ — ใช้ได้ทุกเครื่องทันที
+// วาง URL ของคุณระหว่าง '' ด้านล่าง แล้วบันทึกไฟล์
+// ══════════════════════════════════════════════════════
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxFN5KihQB9GURSAVNA0HY9l4AABjDfjg1Rd8cKYPgFyzRKKfVsE5N8EnU1fP2yNoNs/exec';
+// ตัวอย่าง: const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/ABC123.../exec';
+// ══════════════════════════════════════════════════════
+
+const LS_B='ssc_b3',LS_U='ssc_u3',LS_T='ssc_t3',LS_EX='ssc_ex3';
+let S = {
+  bookings:[], tab:'today', selDate:todayKey(), calStart:todayKey(),
+  search:'', filter:'all',
+  syncUrl: APPS_SCRIPT_URL || '',
+  syncSt: APPS_SCRIPT_URL ? 'idle' : 'unconfigured',
+  lastSync:0, syncErr:'',
+  extraCages:0
+};
+try{
+  const r=localStorage.getItem(LS_B);
+  if(r){
+    const parsed=JSON.parse(r);
+    // migrate: ข้อมูลเก่าที่ไม่มี gliderCount ให้ set เป็น 1
+    // ถ้ามีค่าอยู่แล้ว (>0) ให้ใช้ค่านั้น ไม่ทับ
+    S.bookings=parsed.map(b=>({
+      ...b,
+      gliderCount: (b.gliderCount !== undefined && b.gliderCount !== null
+                    && b.gliderCount !== '' && parseInt(b.gliderCount) > 0)
+                   ? parseInt(b.gliderCount)
+                   : 1
+    }));
+  }
+}catch(e){}
+try{
+  const u=localStorage.getItem(LS_U);
+  if(u){ S.syncUrl=u; S.syncSt='idle'; }          // ถ้าเคยตั้งค่าผ่าน UI ให้ใช้ค่านั้น
+  else if(APPS_SCRIPT_URL){ S.syncUrl=APPS_SCRIPT_URL; S.syncSt='idle'; } // fallback hardcoded
+}catch(e){}
+try{const ex=localStorage.getItem(LS_EX);if(ex)S.extraCages=parseInt(ex,10)||0;}catch(e){}
+try{const t=localStorage.getItem(LS_T);if(t)S.lastSync=parseInt(t,10);}catch(e){}
+
+function save(){try{localStorage.setItem(LS_B,JSON.stringify(S.bookings));}catch(e){}}
+// นับจำนวนน้องรวมจากการจองที่เข้าพักในวันที่กำหนด
+function countGlidersOnDate(dateStr){
+  return onDate(S.bookings, dateStr)
+    .reduce((sum,b) => sum + (parseInt(b.gliderCount)||1), 0);
+}
+function saveExtra(){try{localStorage.setItem(LS_EX,String(S.extraCages));}catch(e){}}
+function totalStd(){return 23+S.extraCages;}
+function totalRooms(){return totalStd()+1;} // +1 grand suite
+
+// ============================
+// SYNC  — เปิด Tab วิธีเดียวที่ใช้ได้จาก file://
+// ============================
+let syncT=null;
+
+// สร้าง URL สำหรับเรียก Apps Script ผ่าน GET + JSONP
+function buildUrl(action, bookings){
+  let url = S.syncUrl + (S.syncUrl.includes('?')?'&':'?') + 'action='+action+'&_='+Date.now();
+  if(action==='sync' && bookings){
+    url += '&data=' + encodeURIComponent(JSON.stringify(bookings));
+  }
+  return url;
+}
+
+// callAppsScript — รองรับทั้ง https:// และ file://
+// https://  → fetch GET พร้อม JSONP callback (Apps Script ส่ง JSON กลับ)
+// file://   → JSONP via script tag (ไม่ติด CORS)
+function callAppsScript(action, bookings){
+  return new Promise((res, rej) => {
+    if(!S.syncUrl) return rej(new Error('ยังไม่ได้ตั้งค่า URL'));
+    const cbName = 'ssc_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const url = buildUrl(action, bookings) + '&callback=' + cbName;
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      cleanup();
+      rej(new Error('หมดเวลา (20 วิ) — ตรวจสอบ URL และ Apps Script'));
+    }, 20000);
+    function cleanup(){
+      try{ delete window[cbName]; }catch(_){}
+      try{ script.remove(); }catch(_){}
+      clearTimeout(timer);
+    }
+    window[cbName] = function(data){
+      cleanup();
+      if(data && data.ok) res(data);
+      else rej(new Error((data && data.error) || 'Apps Script ตอบกลับว่าล้มเหลว'));
+    };
+    script.onerror = () => {
+      cleanup();
+      rej(new Error('เชื่อมต่อ Apps Script ไม่ได้ — ตรวจสอบ URL หรือ Deploy ใหม่'));
+    };
+    script.src = url;
+    document.head.appendChild(script);
+  });
+}
+
+function autoSync(){
+  if(!S.syncUrl)return;
+  if(syncT)clearTimeout(syncT);
+  S.syncSt='syncing'; updateSyncBadge();
+  syncT=setTimeout(async()=>{
+    try{
+      await callAppsScript('sync', S.bookings);
+      const now=Date.now(); localStorage.setItem(LS_T,String(now));
+      S.syncSt='synced'; S.lastSync=now; S.syncErr=''; updateSyncBadge();
+    }catch(err){
+      S.syncSt='error'; S.syncErr=err.message; updateSyncBadge();
+    }
+  },1500);
+}
+
+function updateSyncBadge(){
+  const dot=document.getElementById('sdot'), txt=document.getElementById('stxt');
+  if(!dot||!txt)return;
+  dot.className='dot '+(S.syncSt==='synced'?'synced':S.syncSt==='syncing'?'syncing':S.syncSt==='error'?'error':'');
+  const lbl={syncing:'กำลังซิงก์…',synced:'ซิงก์แล้ว'+(S.lastSync?' · '+rel(S.lastSync):''),
+    error:'ซิงก์ล้มเหลว',idle:'ซิงก์ล่าสุด'+(S.lastSync?' · '+rel(S.lastSync):''),
+    unconfigured:'ยังไม่ได้เชื่อมต่อ'}[S.syncSt]||'';
+  txt.textContent=lbl;
+}
+
+async function manualSync(){
+  if(!S.syncUrl){openSettings();return;}
+  S.syncSt='syncing'; render();
+  try{
+    const d = await callAppsScript('sync', S.bookings);
+    const now=Date.now(); localStorage.setItem(LS_T,String(now));
+    S.syncSt='synced'; S.lastSync=now; S.syncErr=''; render();
+    toast('✓ Sync สำเร็จ · อัปเดต '+((d.updated||0)+(d.created||0))+' รายการ','ok');
+  }catch(err){
+    S.syncSt='error'; S.syncErr=err.message; render();
+    toast('✗ '+err.message,'err');
+  }
+}
+
+async function pullCloud(silent){
+  if(!S.syncUrl)return;
+  if(!silent && !confirm('ดึงข้อมูลล่าสุดจาก Google Sheets จะแทนที่ข้อมูลในเครื่องนี้ — ยืนยัน?'))return;
+  S.syncSt='syncing'; updateSyncBadge();
+  if(!silent) render();
+  try{
+    const d=await callAppsScript('pull', null);
+    const rawIncoming = d.bookings||[];
+    // migrate gliderCount ทุกตัว (ป้องกันค่า undefined/""/0 จาก Sheet)
+    const incoming = rawIncoming.map(b => ({
+      ...b,
+      gliderCount: (b.gliderCount && parseInt(b.gliderCount) > 0)
+                   ? parseInt(b.gliderCount)
+                   : 1
+    }));
+    // merge: ถ้าข้อมูลใหม่มีมากกว่า หรือ silent pull → ใช้ข้อมูลจาก Sheet
+    if(silent && S.bookings.length > 0 && incoming.length === 0){
+      // Sheet ว่าง แต่เครื่องนี้มีข้อมูล → ไม่ทับ
+    } else {
+      S.bookings=incoming; save();
+    }
+    const now=Date.now(); localStorage.setItem(LS_T,String(now));
+    S.syncSt='synced'; S.lastSync=now;
+    if(!silent){
+      render();
+      toast('✓ ดึงข้อมูล '+incoming.length+' รายการสำเร็จ','ok');
+    } else {
+      updateSyncBadge(); render();
+    }
+  }catch(err){
+    S.syncSt='error'; S.syncErr=err.message;
+    if(!silent){ render(); toast('✗ '+err.message,'err'); }
+    else updateSyncBadge();
+  }
+}
+
+// แสดง modal แนะนำให้เปิด tab — ใช้เมื่อ no-cors ไม่พอ (เช่น pull)
+function showTabSyncModal(action){
+  const url = buildUrl(action, action==='sync'?S.bookings:null);
+  const m=document.getElementById('modals');
+  m.innerHTML=`<div class="overlay" id="ov" onclick="closeModal()">
+  <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
+    <button class="mclose" onclick="closeModal()">✕</button>
+    <h2 style="font-size:22px;">เปิดใน Browser Tab</h2>
+    <p class="msub">เนื่องจากเปิดไฟล์จาก local (file://) Edge จำกัดการเชื่อมต่อ — กด "เปิด" ด้านล่าง Apps Script จะทำงานใน tab ใหม่ แล้วปิด tab นั้นได้เลยค่ะ</p>
+    <div style="background:var(--cd);border-radius:12px;padding:14px 16px;font-size:12.5px;color:var(--cm);line-height:1.65;margin-bottom:18px;">
+      <b style="color:var(--cocoa);">💡 วิธีแก้ถาวร:</b> ย้ายไฟล์ขึ้น hosting เช่น<br/>
+      <b>GitHub Pages</b> (ฟรี) → เปิดผ่าน https:// แล้ว Sync อัตโนมัติได้เลย<br/>
+      หรือดับเบิลคลิก shortcut เพื่อเปิดผ่าน <b>Live Server</b> ใน VS Code
+    </div>
+    <div class="factions">
+      <button class="btn btn-g" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-p" onclick="window.open('${url}','_blank');closeModal();toast('✓ เปิด tab แล้ว — Apps Script กำลังทำงาน','ok');">
+        🔗 เปิดใน Tab ใหม่
+      </button>
+    </div>
+  </div></div>`;
+}
+// ============================
+// TOAST
+// ============================
+let toastEl=null;
+function toast(msg,kind='ok'){
+  if(toastEl)toastEl.remove();
+  toastEl=document.createElement('div');
+  toastEl.className='toast '+kind; toastEl.textContent=msg;
+  document.body.appendChild(toastEl);
+  setTimeout(()=>{if(toastEl){toastEl.remove();toastEl=null;}},3200);
+}
+
+// ============================
+// RENDER
+// ============================
+function render(){
+  const app=document.getElementById('app'); if(!app)return;
+  const t=todayKey(), total=totalRooms();
+  const occ=onDate(S.bookings,t).length;
+  const avail=total-occ;
+  const ci=S.bookings.filter(b=>b.checkIn===t).length;
+  const co=S.bookings.filter(b=>b.checkOut===t).length;
+  const totalGliders=countGlidersOnDate(t);
+  const syncLbl={syncing:'กำลังซิงก์…',synced:'ซิงก์แล้ว'+(S.lastSync?' · '+rel(S.lastSync):''),
+    error:'ซิงก์ล้มเหลว',idle:'ซิงก์ล่าสุด'+(S.lastSync?' · '+rel(S.lastSync):''),
+    unconfigured:'ยังไม่ได้เชื่อมต่อ'}[S.syncSt]||'';
+
+  app.innerHTML=`
+  <div class="hrow">
+    <div>
+      <div class="brand"><em>Sugar Sugar</em><span class="star">✦</span><br/><em>Camp</em></div>
+      <div class="tagline">— ที่พักสำหรับชูการ์ไกลเดอร์ตัวโปรดของคุณ —</div>
+    </div>
+    <div class="hright">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="sbadge" onclick="openSettings()">
+          <span class="dot ${S.syncSt==='synced'?'synced':S.syncSt==='syncing'?'syncing':S.syncSt==='error'?'error':''}" id="sdot"></span>
+          ☁ <span id="stxt">${esc(syncLbl)}</span>
+        </button>
+        ${S.syncUrl?`<button class="sbadge" onclick="pullCloud(false)" title="ดึงข้อมูลล่าสุดจาก Google Sheets" style="padding:8px 12px;">⬇</button>`:''}
+      </div>
+      <div class="datebox">
+        <div class="dl">วันนี้ · Today</div>
+        <div class="dv">${thD(t)}</div>
+      </div>
+    </div>
+  </div>
+
+  ${!S.syncUrl?`<div class="banner">
+    <div>
+      <b>⚠ ยังไม่ได้ตั้งค่า Apps Script URL</b>
+      <div style="color:var(--cm);font-size:12px;margin-top:2px;">
+        ข้อมูลบันทึกเฉพาะในเครื่องนี้ ไม่ Sync Calendar<br/>
+        <b style="color:var(--cocoa);">วิธีแก้ถาวร:</b> เปิดไฟล์ .html ด้วย Notepad++ แล้วใส่ URL ใน APPS_SCRIPT_URL
+      </div>
+    </div>
+    <button class="btn btn-o btn-sm" onclick="openSettings()">⚙ ตั้งค่าตอนนี้</button>
+  </div>`:''}
+
+  <div class="booking-link-banner">
+    <div class="bl-left">
+      <div class="bl-title">🔗 ลิงก์จองสำหรับลูกค้า</div>
+      <div class="bl-sub">แชร์ให้ลูกค้าตรวจสอบห้องว่างและส่งคำขอจองได้เลย</div>
+      <span class="bl-url" id="booking-url-display">booking.html (เปิดจากโฟลเดอร์เดียวกัน)</span>
+    </div>
+    <div class="bl-actions">
+      <button class="btn-link ghost" onclick="previewBookingPage()">👁 ดูตัวอย่าง</button>
+      <button class="btn-link primary" id="copy-link-btn" onclick="copyBookingLink()">📋 คัดลอกลิงก์</button>
+    </div>
+  </div>
+
+  <div class="cage-bar">
+    <div class="cage-info">
+      <div>
+        <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--cm);font-weight:600;margin-bottom:2px;">กรง Standard ทั้งหมด</div>
+        <div style="display:flex;align-items:baseline;gap:6px;">
+          <span style="font-family:'Fraunces',serif;font-size:32px;font-weight:400;color:var(--cocoa);">${totalStd()}</span>
+          <span style="font-size:12px;color:var(--cm);">กรง (หลัก 23 + สำรอง ${S.extraCages})</span>
+        </div>
+      </div>
+      <div class="cage-dots" title="กรงทั้งหมด">
+        ${(()=>{
+          const total=Math.min(totalStd(),40);
+          let dots='';
+          for(let i=0;i<total;i++) dots+=`<span class="cage-dot ${i<23?'main':'extra'}" title="${i<23?'STD-'+pad(i+1):'สำรอง-'+pad(i+1)}"></span>`;
+          if(totalStd()>40) dots+=`<span style="font-size:11px;color:var(--cm);align-self:center;margin-left:2px;">+${totalStd()-40}</span>`;
+          return dots;
+        })()}
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <div style="font-size:11.5px;color:var(--cm);text-align:right;line-height:1.5;">
+        กรงสำรอง<br/><span style="font-size:10.5px;">กด − / ＋ เพื่อปรับ</span>
+      </div>
+      <div class="cage-counter">
+        <button class="cage-btn" onclick="changeExtra(-1)" ${S.extraCages===0?'disabled':''} title="ลดกรงสำรอง">−</button>
+        <div class="cage-num" id="cage-num-main">${S.extraCages}</div>
+        <button class="cage-btn" onclick="changeExtra(1)" title="เพิ่มกรงสำรอง">＋</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="scard sc-sage"><div class="sico">🏠</div><div class="sl">กรงว่าง</div><div class="sv">${avail}</div><div class="ss2">จากทั้งหมด ${total} กรง</div></div>
+    <div class="scard sc-coral"><div class="sico">🌙</div><div class="sl">กรงที่เข้าพัก</div><div class="sv">${occ}</div><div class="ss2">กรง</div></div>
+    <div class="scard sc-peach"><div class="sico">🐿</div><div class="sl">ชูการ์วันนี้</div><div class="sv">${totalGliders}</div><div class="ss2">${totalGliders>0?'ตัว เข้าพักอยู่':'ยังไม่มีน้อง'}</div></div>
+    <div class="scard sc-gold"><div class="sico">🚪</div><div class="sl">เช็คอินวันนี้</div><div class="sv">${ci}</div><div class="ss2">กรง</div></div>
+    <div class="scard sc-sage"><div class="sico">👋</div><div class="sl">เช็คเอาท์วันนี้</div><div class="sv">${co}</div><div class="ss2">กรง</div></div>
+  </div>
+
+  <div class="abar">
+    <div class="tabs">
+      <button class="tab ${S.tab==='today'?'active':''}" onclick="setTab('today')">🏠 สถานะห้อง</button>
+      <button class="tab ${S.tab==='calendar'?'active':''}" onclick="setTab('calendar')">📅 ปฏิทิน</button>
+      <button class="tab ${S.tab==='bookings'?'active':''}" onclick="setTab('bookings')">📋 รายการจอง</button>
+    </div>
+    <div class="bgroup">
+      ${S.syncUrl?`<button class="btn btn-s btn-sm" onclick="manualSync()" ${S.syncSt==='syncing'?'disabled':''}>🔄 Sync</button>`:''}
+      <button class="btn btn-p" onclick="openForm()">＋ เพิ่มการจอง</button>
+    </div>
+  </div>
+
+  ${S.tab==='today'?renderToday():''}
+  ${S.tab==='calendar'?renderCalendar():''}
+  ${S.tab==='bookings'?renderBookings():''}
+  `;
+}
+
+// ============================
+// TODAY VIEW
+// ============================
+function renderToday(){
+  const isT=S.selDate===todayKey();
+  const occ=onDate(S.bookings,S.selDate).length;
+  const glidersToday=countGlidersOnDate(S.selDate);
+  let rooms='';
+  for(let n=1;n<=totalStd();n++) rooms+=roomCell('standard',n,false);
+  return `<div class="sec">
+    <div class="stitle">
+      <div>
+        <h3>${isT?'สถานะห้องวันนี้':'สถานะห้องตามวันที่เลือก'}</h3>
+        <div class="meta">${thD(S.selDate)} · กรงว่าง ${totalRooms()-occ} · กรงเข้าพัก ${occ} · 🐿 ชูการ์ ${glidersToday} ตัว</div>
+      </div>
+      <div class="dnav">
+        <button class="nb" onclick="S.selDate=addDays(S.selDate,-1);render()">‹</button>
+        <input type="date" class="di" value="${S.selDate}" onchange="S.selDate=this.value;render()">
+        <button class="nb" onclick="S.selDate=addDays(S.selDate,1);render()">›</button>
+        ${!isT?`<button class="btn btn-g btn-sm" onclick="S.selDate=todayKey();render()">วันนี้</button>`:''}
+      </div>
+    </div>
+    <div class="legend">
+      <div class="li"><span class="ld sage"></span> ห้องว่าง</div>
+      <div class="li"><span class="ld coral"></span> มีน้องเข้าพัก</div>
+      <div class="li">👑 Grand Suite</div>
+      <div class="li" style="margin-left:auto;font-style:italic;font-size:11.5px;">แตะห้อง · ดูรายละเอียด / จอง</div>
+    </div>
+    <div style="margin-bottom:12px;">${roomCell('grand_suite',1,true)}</div>
+    <div class="rgrid">${rooms}</div>
+  </div>`;
+}
+
+function roomCell(rt,rn,isSuite){
+  const b=roomOf(S.bookings,rt,rn,S.selDate);
+  const oc=!!b;
+  const cls='rc '+(oc?'oc':'av')+(isSuite?' suite':'');
+  const num=isSuite?'GS':pad(rn);
+  const lbl=isSuite?'GRAND SUITE':'STD-'+pad(rn);
+  const cnt=b?(parseInt(b.gliderCount)||1):0;
+  const nameDisp=b?(b.gliderName||b.guestName):'';
+  const bot=oc?`<div class="rname">${esc(nameDisp)}</div><div class="rstat" style="font-size:10px;opacity:.8;">🐿 ${cnt} ตัว</div>`:`<div class="rstat">ว่าง</div>`;
+  const crown=isSuite?`<span style="position:absolute;top:12px;right:12px;font-size:15px;">👑</span>`:'';
+  return `<button class="${cls}" onclick="roomClick('${rt}',${rn})">${crown}
+    <div class="rnum">${num}</div>
+    <div><div class="rcr">${lbl}</div>${bot}</div>
+  </button>`;
+}
+
+function roomClick(rt,rn){
+  const b=roomOf(S.bookings,rt,rn,S.selDate);
+  if(b) showDetail(b,rt,rn);
+  else openForm({roomType:rt,roomNumber:rn,checkIn:S.selDate,checkOut:addDays(S.selDate,1)});
+}
+
+// ============================
+// CALENDAR VIEW
+// ============================
+function renderCalendar(){
+  const DAYS=14;
+  const dates=[]; for(let i=0;i<DAYS;i++) dates.push(addDays(S.calStart,i));
+  const today=todayKey();
+  const allRooms=[{type:'grand_suite',num:1,label:'Grand Suite',isSuite:true}];
+  for(let i=0;i<totalStd();i++) allRooms.push({type:'standard',num:i+1,label:'STD-'+pad(i+1),isSuite:false});
+
+  let head='<div class="ccorner">ห้อง</div>';
+  dates.forEach(d=>{
+    const dt=parseD(d), isT=d===today, isWk=dt.getDay()===0||dt.getDay()===6;
+    head+=`<div class="ch ${isT?'today':''} ${isWk?'wk':''}"><div class="dn">${dt.getDate()}</div><div class="dd">${TH_D[dt.getDay()]}</div></div>`;
+  });
+
+  let body='';
+  allRooms.forEach(room=>{
+    body+=`<div class="crl ${room.isSuite?'suite':''}">${room.isSuite?'👑 ':''}${room.label}</div>`;
+    dates.forEach((d,di)=>{
+      const b=roomOf(S.bookings,room.type,room.num,d);
+      const prev=di>0?roomOf(S.bookings,room.type,room.num,dates[di-1]):null;
+      const next=di<dates.length-1?roomOf(S.bookings,room.type,room.num,dates[di+1]):null;
+      const isS=b&&(!prev||prev.id!==b.id), isE=b&&(!next||next.id!==b.id);
+      let cls='cc'; if(b){cls+=' bk';if(isS)cls+=' s';if(isE)cls+=' e';} if(d===today)cls+=' tc';
+      const tip=b?esc((b.gliderName||b.guestName)+' · 🐿 '+(parseInt(b.gliderCount)||1)+' ตัว · '+thD(b.checkIn,true)+' – '+thD(b.checkOut,true)):'ว่าง';
+      body+=`<button class="${cls}" onclick="calClick('${room.type}',${room.num},'${d}')" title="${tip}">
+        ${b&&isS?`<span class="cctag">${esc((b.gliderName||b.guestName).slice(0,8))}</span>`:''}
+      </button>`;
+    });
+  });
+
+  return `<div class="sec">
+    <div class="stitle">
+      <div>
+        <h3>ปฏิทินห้องพัก</h3>
+        <div class="meta">${thD(dates[0],true)} – ${thD(dates[DAYS-1],true)}</div>
+      </div>
+      <div class="dnav">
+        <button class="nb" onclick="S.calStart=addDays(S.calStart,-7);render()">‹</button>
+        <button class="btn btn-s btn-sm" onclick="S.calStart=todayKey();render()">วันนี้</button>
+        <button class="nb" onclick="S.calStart=addDays(S.calStart,7);render()">›</button>
+      </div>
+    </div>
+    <div class="calwrap">
+      <div class="calgrid" style="grid-template-columns:130px repeat(${DAYS},minmax(42px,1fr));">
+        ${head}${body}
+      </div>
+    </div>
+  </div>`;
+}
+
+function calClick(rt,rn,d){
+  const b=roomOf(S.bookings,rt,rn,d);
+  if(b) showDetail(b,rt,rn);
+  else openForm({roomType:rt,roomNumber:rn,checkIn:d,checkOut:addDays(d,1)});
+}
+
+// ============================
+// BOOKINGS VIEW
+// ============================
+function renderBookings(){
+  let bs=[...S.bookings];
+  if(S.filter!=='all') bs=bs.filter(b=>bSt(b)===S.filter);
+  const q=(S.search||'').toLowerCase().trim();
+  if(q) bs=bs.filter(b=>(b.guestName||'').toLowerCase().includes(q)||(b.gliderName||'').toLowerCase().includes(q)||(b.phone||'').includes(q));
+  bs.sort((a,b)=>a.checkIn.localeCompare(b.checkIn));
+  const stLbl={'upcoming':'✦ กำลังจะมา','active':'✦ เข้าพักอยู่','past':'✦ ผ่านไปแล้ว'};
+  const cards=bs.length===0?`<div class="empty">
+    <div style="font-size:36px;color:var(--gold);">✦</div>
+    <h3>${S.bookings.length===0?'ยังไม่มีการจอง':'ไม่พบรายการที่ตรงกัน'}</h3>
+    <p style="margin-top:4px;">${S.bookings.length===0?'เริ่มต้นโดยการเพิ่มการจองแรก':'ลองเปลี่ยนคำค้นหาดูนะ'}</p>
+    ${S.bookings.length===0?`<button class="btn btn-p" onclick="openForm()" style="margin-top:14px;">＋ เพิ่มการจองแรก</button>`:''}
+  </div>`:bs.map(b=>{
+    const st=bSt(b), nights=nts(b.checkIn,b.checkOut), isS=b.roomType==='grand_suite';
+    return `<div class="bc ${st}">
+      <div class="badge ${isS?'suite':''}">
+        ${isS?`<span style="font-size:20px;">👑</span><div class="bt">SUITE</div>`:`<div class="bn">${pad(b.roomNumber)}</div><div class="bt">STD</div>`}
+      </div>
+      <div class="binfo">
+        <div class="bhead">
+          <h4>${esc(b.guestName)}</h4>
+          <span class="stpill st-${st}">${stLbl[st]||''}</span>
+        </div>
+        ${b.gliderName?`<div class="bgl">น้อง ${esc(b.gliderName)}${b.gliderCount&&b.gliderCount>1?' ('+b.gliderCount+' ตัว)':b.gliderCount===1?' (1 ตัว)':''}</div>`:''}
+        <div class="bmeta">
+          <span class="chip">📅 ${thD(b.checkIn,true)} → ${thD(b.checkOut,true)}</span>
+          <span class="chip">🌙 ${nights} คืน</span>
+          <span class="chip">🐿 ${b.gliderCount||1} ตัว</span>
+          ${b.phone?`<span class="chip">📞 ${esc(b.phone)}</span>`:''}
+          ${b.notes?`<span class="chip">📝 ${esc(b.notes.length>28?b.notes.slice(0,28)+'…':b.notes)}</span>`:''}
+        </div>
+      </div>
+      <div class="bacts">
+        <button class="ib confirm" onclick="showSlip('${b.id}')" title="ออกใบยืนยัน">📄</button>
+        <button class="ib" onclick="openEditForm('${b.id}')" title="แก้ไข">✎</button>
+        <button class="ib danger" onclick="confirmDel('${b.id}')" title="ลบ">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="sec">
+    <div class="stitle">
+      <div><h3>รายการจองทั้งหมด</h3><div class="meta">${bs.length} รายการ จากทั้งหมด ${S.bookings.length}</div></div>
+    </div>
+    <div class="frow">
+      <div class="sbox">🔍
+        <input type="text" placeholder="ค้นหาชื่อเจ้าของ, ชื่อน้อง, เบอร์…"
+          value="${esc(S.search)}" oninput="S.search=this.value;render()">
+      </div>
+      <div class="pills">
+        ${[['all','ทั้งหมด'],['upcoming','กำลังจะมา'],['active','เข้าพักอยู่'],['past','ผ่านไปแล้ว']].map(([v,l])=>
+          `<button class="pill ${S.filter===v?'act':''}" onclick="S.filter='${v}';render()">${l}</button>`).join('')}
+      </div>
+    </div>
+    <div class="blist">${cards}</div>
+  </div>`;
+}
+
+function setTab(t){ S.tab=t; render(); }
+
+// ============================
+// MODAL
+// ============================
+function showModal(html){
+  const m=document.getElementById('modals');
+  m.innerHTML=`<div class="overlay" id="ov" onclick="closeModal()">${html}</div>`;
+}
+function closeModal(){ document.getElementById('modals').innerHTML=''; }
+
+// ============================
+// BOOKING FORM
+// ============================
+let FS={roomType:'standard',roomNumber:null,editId:''};
+
+function openForm(pre={}){
+  FS={roomType:pre.roomType||'standard',roomNumber:pre.roomNumber||null,editId:''};
+  if(FS.roomType==='grand_suite') FS.roomNumber=1;
+  const ci=pre.checkIn||S.selDate, co=pre.checkOut||addDays(ci,1);
+  drawForm({guestName:'',gliderName:'',gliderCount:1,phone:'',notes:'',checkIn:ci,checkOut:co},false);
+}
+function openEditForm(id){
+  const b=S.bookings.find(x=>x.id===id); if(!b)return;
+  FS={roomType:b.roomType,roomNumber:b.roomNumber,editId:id};
+  drawForm(b,true);
+}
+
+function drawForm(v,isEdit){
+  const ci=v.checkIn, co=v.checkOut;
+  const nights=co>ci?nts(ci,co):0;
+  let rng=''; for(let n=1;n<=totalStd();n++){
+    const av=isAvail(S.bookings,'standard',n,ci,co,FS.editId||null);
+    rng+=`<button type="button" class="rnb ${FS.roomNumber===n&&FS.roomType==='standard'?'sel':''}" id="rnb-${n}"
+      ${!av?'disabled':''} onclick="selRoom(${n})">${pad(n)}</button>`;
+  }
+  const gsAvail=isAvail(S.bookings,'grand_suite',1,ci,co,FS.editId||null);
+  showModal(`<div class="modal" onclick="event.stopPropagation()">
+    <button class="mclose" onclick="closeModal()">✕</button>
+    <h2>${isEdit?'แก้ไขการจอง':'เพิ่มการจองใหม่'}</h2>
+    <p class="msub">${isEdit?'แก้ไขรายละเอียดด้านล่าง':'กรอกข้อมูลเพื่อจองที่พักให้กับน้องชูการ์ฯ'}</p>
+    <div id="ferr"></div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">ชื่อเจ้าของ *</label>
+        <input id="fg" class="fi" value="${esc(v.guestName)}" placeholder="เช่น คุณสมหญิง"></div>
+      <div class="fg"><label class="fl">เบอร์โทร</label>
+        <input id="fp" class="fi" value="${esc(v.phone)}" placeholder="08X-XXX-XXXX"></div>
+    </div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">ชื่อน้องชูการ์ฯ</label>
+        <input id="fgl" class="fi" value="${esc(v.gliderName)}" placeholder="เช่น โมจิ, ลาเต้, มะปราง…"></div>
+      <div class="fg"><label class="fl">จำนวนน้อง 🐿 *</label>
+        <div style="display:flex;align-items:center;gap:0;border:1px solid var(--ln);border-radius:12px;overflow:hidden;background:var(--cream);">
+          <button type="button" onclick="changeCount(-1)" style="width:42px;height:44px;border:none;background:transparent;font-size:20px;cursor:pointer;font-family:inherit;color:var(--cocoa);" id="cnt-minus">−</button>
+          <div id="fcnt-display" style="flex:1;text-align:center;font-family:'Fraunces',serif;font-size:24px;font-weight:400;color:var(--cocoa);">${v.gliderCount||1}</div>
+          <input type="hidden" id="fcnt" value="${v.gliderCount||1}">
+          <button type="button" onclick="changeCount(1)" style="width:42px;height:44px;border:none;background:transparent;font-size:20px;cursor:pointer;font-family:inherit;color:var(--cocoa);">＋</button>
+        </div>
+        <div style="font-size:11px;color:var(--cm);margin-top:5px;text-align:center;">ตัว</div>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">ประเภทห้อง</label>
+      <div class="rttog">
+        <button type="button" id="rt-s" class="rtbtn ${FS.roomType==='standard'?'act':''}"
+          onclick="switchRT('standard')">🏠 Standard (${totalStd()} กรง)</button>
+        <button type="button" id="rt-g" class="rtbtn ${FS.roomType==='grand_suite'?'act':''}"
+          onclick="switchRT('grand_suite')">👑 Grand Suite</button>
+      </div>
+    </div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">เช็คอิน *</label>
+        <input type="date" id="fci" class="fi" value="${ci}" onchange="onDates()"></div>
+      <div class="fg"><label class="fl">เช็คเอาท์ *</label>
+        <input type="date" id="fco" class="fi" value="${co}" min="${addDays(ci,1)}" onchange="onDates()"></div>
+    </div>
+    <div id="fnights" class="nights" style="${nights>0?'':'display:none'}">🌙 ${nights} คืน · ${thD(ci,true)} → ${thD(co,true)}</div>
+    <div class="fg" id="rns" style="${FS.roomType==='standard'?'':'display:none'}">
+      <label class="fl">เลือกหมายเลขกรง (สีแดง = ไม่ว่าง)</label>
+      <div class="rng">${rng}</div>
+    </div>
+    <div class="fg" id="gs-sec" style="${FS.roomType==='grand_suite'?'':'display:none'}">
+      <label class="fl">Grand Suite</label>
+      <div class="spick ${gsAvail?'':'na'}">
+        <span style="font-size:22px;">👑</span>
+        <div><div style="font-weight:600;">Grand Suite #1</div>
+          <div style="font-size:12px;color:var(--cm);">${gsAvail?'ห้องว่างพร้อมรองรับ':'มีการจองในช่วงนี้แล้ว'}</div>
+        </div>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">บันทึกเพิ่มเติม</label>
+      <textarea id="fn" class="fi" placeholder="อาหาร, นิสัย, ของใช้…">${esc(v.notes)}</textarea></div>
+    <div class="factions">
+      <button class="btn btn-g" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-p" onclick="submitForm()">${isEdit?'บันทึกการแก้ไข':'ยืนยันการจอง'}</button>
+    </div>
+  </div>`);
+  document.getElementById('fg').focus();
+}
+
+function changeCount(delta){
+  const el=document.getElementById('fcnt');
+  const disp=document.getElementById('fcnt-display');
+  const minus=document.getElementById('cnt-minus');
+  if(!el||!disp)return;
+  let v=parseInt(el.value||'1',10)+delta;
+  if(v<1)v=1; if(v>20)v=20;
+  el.value=v; disp.textContent=v;
+  if(minus) minus.style.opacity=v<=1?'0.3':'1';
+}
+
+function switchRT(rt){
+  FS.roomType=rt;
+  FS.roomNumber=rt==='grand_suite'?1:null;
+  document.getElementById('rt-s').className='rtbtn '+(rt==='standard'?'act':'');
+  document.getElementById('rt-g').className='rtbtn '+(rt==='grand_suite'?'act':'');
+  document.getElementById('rns').style.display=rt==='standard'?'':'none';
+  document.getElementById('gs-sec').style.display=rt==='grand_suite'?'':'none';
+  refreshAvail();
+}
+
+function selRoom(n){
+  FS.roomNumber=n;
+  document.querySelectorAll('.rnb').forEach(b=>b.classList.remove('sel'));
+  const el=document.getElementById('rnb-'+n);
+  if(el&&!el.disabled) el.classList.add('sel');
+}
+
+function onDates(){
+  const ci=document.getElementById('fci')?.value;
+  const co=document.getElementById('fco')?.value;
+  if(!ci||!co)return;
+  const n=co>ci?nts(ci,co):0;
+  const el=document.getElementById('fnights');
+  if(el){el.style.display=n>0?'':'none';el.textContent='🌙 '+n+' คืน · '+thD(ci,true)+' → '+thD(co,true);}
+  refreshAvail();
+}
+
+function refreshAvail(){
+  const ci=document.getElementById('fci')?.value;
+  const co=document.getElementById('fco')?.value;
+  if(!ci||!co)return;
+  for(let n=1;n<=totalStd();n++){
+    const btn=document.getElementById('rnb-'+n); if(!btn)continue;
+    const av=isAvail(S.bookings,'standard',n,ci,co,FS.editId||null);
+    btn.disabled=!av;
+    if(!av&&FS.roomNumber===n){FS.roomNumber=null;btn.classList.remove('sel');}
+  }
+  const gs=document.getElementById('gs-sec');
+  if(gs){
+    const av=isAvail(S.bookings,'grand_suite',1,ci,co,FS.editId||null);
+    const sp=gs.querySelector('.spick');
+    if(sp){ sp.className='spick '+(av?'':'na');
+      const dv=sp.querySelector('div>div:last-child');
+      if(dv)dv.textContent=av?'ห้องว่างพร้อมรองรับ':'มีการจองในช่วงนี้แล้ว'; }
+  }
+}
+
+function submitForm(){
+  const gn=(document.getElementById('fg')?.value||'').trim();
+  const gl=(document.getElementById('fgl')?.value||'').trim();
+  const gc=parseInt(document.getElementById('fcnt')?.value||'1',10)||1;
+  const ph=(document.getElementById('fp')?.value||'').trim();
+  const no=(document.getElementById('fn')?.value||'').trim();
+  const ci=document.getElementById('fci')?.value||'';
+  const co=document.getElementById('fco')?.value||'';
+  const err=t=>{ const e=document.getElementById('ferr'); if(e) e.innerHTML=`<div class="errbx">⚠ ${esc(t)}</div>`; };
+  document.getElementById('ferr').innerHTML='';
+  if(!gn) return err('กรุณาใส่ชื่อเจ้าของ');
+  if(!FS.roomNumber) return err('กรุณาเลือกหมายเลขห้อง');
+  if(co<=ci) return err('วันเช็คเอาท์ต้องอยู่หลังวันเช็คอิน');
+  if(!isAvail(S.bookings,FS.roomType,FS.roomNumber,ci,co,FS.editId||null)) return err('ห้องนี้มีการจองในช่วงนี้แล้ว');
+  const data={guestName:gn,gliderName:gl,gliderCount:gc,phone:ph,notes:no,
+    roomType:FS.roomType,roomNumber:FS.roomNumber,checkIn:ci,checkOut:co};
+  if(FS.editId) S.bookings=S.bookings.map(b=>b.id===FS.editId?{...b,...data}:b);
+  else S.bookings=[...S.bookings,{...data,id:genId(),createdAt:Date.now()}];
+  save(); closeModal(); autoSync(); render();
+}
+
+// ============================
+// DETAIL MODAL
+// ============================
+function showDetail(b,rt,rn){
+  const st=bSt(b), nights=nts(b.checkIn,b.checkOut), isS=rt==='grand_suite';
+  const stLbl={upcoming:'กำลังจะมา',active:'เข้าพักอยู่',past:'ผ่านไปแล้ว'};
+  showModal(`<div class="modal" onclick="event.stopPropagation()">
+    <button class="mclose" onclick="closeModal()">✕</button>
+    <div class="dh">
+      ${isS?'<span style="font-size:28px;">👑</span>':''}
+      <div class="drn">${isS?'Grand Suite':'STD-'+pad(rn)}</div>
+    </div>
+    <h2 style="margin-top:14px;">${esc(b.guestName)}</h2>
+    ${b.gliderName?`<p class="msub" style="font-style:italic;">มากับน้อง ${esc(b.gliderName)} · ${b.gliderCount||1} ตัว</p>`:''}
+    <div class="dg">
+      <div class="dr"><span class="dlb">สถานะ</span><span class="stpill st-${st}">${stLbl[st]||''}</span></div>
+      <div class="dr"><span class="dlb">เช็คอิน</span><span>${thD(b.checkIn)}</span></div>
+      <div class="dr"><span class="dlb">เช็คเอาท์</span><span>${thD(b.checkOut)}</span></div>
+      <div class="dr"><span class="dlb">ระยะเวลา</span><span>${nights} คืน</span></div>
+      <div class="dr"><span class="dlb">จำนวนน้อง</span><span style="font-family:'Fraunces',serif;font-size:18px;">${b.gliderCount||1} ตัว</span></div>
+      ${b.phone?`<div class="dr"><span class="dlb">เบอร์โทร</span><span>${esc(b.phone)}</span></div>`:''}
+      ${b.notes?`<div class="dr"><span class="dlb">บันทึก</span><span style="text-align:right;white-space:pre-wrap;">${esc(b.notes)}</span></div>`:''}
+    </div>
+    <div class="factions" style="flex-wrap:wrap;">
+      <button class="btn btn-g" onclick="closeModal();confirmDel('${b.id}')">🗑 ลบ</button>
+      <button class="btn btn-s" onclick="showSlip('${b.id}')">📄 ใบยืนยัน</button>
+      <button class="btn btn-p" onclick="closeModal();openEditForm('${b.id}')">✎ แก้ไข</button>
+    </div>
+  </div>`);
+}
+
+// ============================
+// DELETE CONFIRM
+// ============================
+function confirmDel(id){
+  const b=S.bookings.find(x=>x.id===id); if(!b)return;
+  showModal(`<div class="modal" style="max-width:400px;" onclick="event.stopPropagation()">
+    <h2 style="font-size:22px;">ยืนยันการลบ</h2>
+    <p style="color:var(--cm);margin:12px 0 20px;">ลบการจองของ <b>${esc(b.guestName)}</b>
+    ${b.gliderName?` (น้อง ${esc(b.gliderName)})`:''}
+    วันที่ ${thD(b.checkIn,true)} – ${thD(b.checkOut,true)}?</p>
+    <div class="factions">
+      <button class="btn btn-g" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-d" onclick="doDel('${id}')">🗑 ยืนยันการลบ</button>
+    </div>
+  </div>`);
+}
+function doDel(id){ S.bookings=S.bookings.filter(b=>b.id!==id); save(); closeModal(); autoSync(); render(); }
+
+// ============================
+// SETTINGS
+// ============================
+function changeExtra(delta){
+  const next = S.extraCages + delta;
+  if(next < 0 || next > 77) return;
+  S.extraCages = next;
+  saveExtra();
+  closeModal();
+  render();
+  toast((delta>0?'＋ เพิ่มกรงสำรอง':'− ลดกรงสำรอง')+' · รวม Standard '+totalStd()+' กรง','ok');
+}
+
+function openSettings(){
+  const lbl={synced:'✓ เชื่อมต่อแล้ว'+(S.lastSync?' · ซิงก์ล่าสุด '+rel(S.lastSync):''),
+    error:'✗ '+esc(S.syncErr||'เชื่อมต่อล้มเหลว')}[S.syncSt]||'';
+  const codeHtml=esc(AS_CODE);
+  showModal(`<div class="modal lg" onclick="event.stopPropagation()">
+    <button class="mclose" onclick="closeModal()">✕</button>
+    <h2>การเชื่อมต่อ Google</h2>
+    <p class="msub">สำรองข้อมูลขึ้น Google Sheets และซิงก์เป็น Event ใน Google Calendar อัตโนมัติ</p>
+    ${S.syncUrl?(S.syncSt==='error'?`<div class="errbx">⚠ ${esc(S.syncErr||'error')}</div>`:`<div class="okbx">${lbl}</div>`):''}
+    ${S.syncSt==='error'?`<div style="background:rgba(196,108,126,.1);border:1px solid rgba(196,108,126,.4);border-radius:12px;padding:12px 16px;font-size:12.5px;color:var(--cocoa);line-height:1.7;margin-bottom:14px;">
+      <b>❓ Sync ล้มเหลว — ตรวจสอบตามลำดับนี้:</b><br/>
+      <b>1. Deploy ใหม่</b> หลังวาง code → กด Deploy → <b>New deployment</b> (ไม่ใช่ Manage)<br/>
+      <b>2. ตั้งค่า</b> Execute as: <b>Me</b> | Who has access: <b>Anyone</b><br/>
+      <b>3. URL</b> ต้องลงท้ายด้วย <code>/exec</code> ไม่ใช่ <code>/dev</code><br/>
+      <b>4. ทดสอบ</b> เปิด URL ใน browser tab ตรง ๆ — ต้องเห็น JSON ตอบกลับ<br/>
+      <span style="color:var(--pd);">ข้อผิดพลาด: ${esc(S.syncErr)}</span>
+    </div>`:''}
+    <div class="fg">
+      <label class="fl">Apps Script Web App URL</label>
+      <input id="su" class="fi" type="url" value="${esc(S.syncUrl)}" placeholder="https://script.google.com/macros/s/.../exec">
+      <div class="fhelp">วาง URL ที่ได้จากการ Deploy Apps Script (ดูคู่มือด้านล่าง)</div>
+    </div>
+    <div class="factions spl">
+      <div style="display:flex;gap:6px;">
+        ${S.syncUrl?`<button class="btn btn-g btn-sm" onclick="closeModal();manualSync()">🔄 ทดสอบ Sync</button>
+        <button class="btn btn-g btn-sm" onclick="closeModal();pullCloud(false)">⬇ ดึงข้อมูลจาก Sheet</button>`:''}
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-g" onclick="closeModal()">ปิด</button>
+        <button class="btn btn-p" onclick="saveSettings()">✓ บันทึก</button>
+      </div>
+    </div>
+    <details class="sc" style="margin-top:20px;" ${!S.syncUrl?'open':''}>
+      <summary>📘 คู่มือการตั้งค่า (ทำครั้งเดียว · ~3 นาที)</summary>
+      <div>
+        <div class="steps"><ol>
+          <li>เปิด <a href="https://sheets.new" target="_blank">sheets.new</a> สร้าง Google Sheets ใหม่</li>
+          <li>คลิก <b>Extensions → Apps Script</b></li>
+          <li>ลบโค้ดเดิมทั้งหมด แล้ววาง code ด้านล่างนี้ (เวอร์ชัน CORS-Free)</li>
+          <li>กด Save 💾 แล้วกด <b>Deploy → New deployment</b></li>
+          <li>คลิก ⚙ → เลือก <b>Web app</b></li>
+          <li>ตั้งค่า: <b>Execute as: Me</b> | <b>Who has access: Anyone</b></li>
+          <li>กด Deploy → อนุญาตสิทธิ์ Sheets + Calendar</li>
+          <li>คัดลอก <b>Web app URL</b> มาวางในช่องด้านบน แล้วกด บันทึก</li>
+          <li style="color:#C46C7E;"><b>⚠ ถ้าเคย Deploy ไปแล้ว ต้อง Deploy ใหม่อีกครั้ง</b> (New deployment) เพื่ออัปเดต code ให้รองรับ JSONP</li>
+        </ol></div>
+        <div style="position:relative;">
+          <div class="codebx">${codeHtml}</div>
+          <button class="copybtn" id="cbtn" onclick="cpCode()">📋 คัดลอกโค้ด</button>
+        </div>
+        <div style="font-size:12px;color:var(--cm);line-height:1.6;margin-top:6px;">
+          ข้อมูลถูกเก็บในบัญชี Google ของคุณเอง · ไม่ส่งออกไปที่ไหน<br/>
+          ชีต <code>Bookings</code> และปฏิทิน <code>Sugar Sugar Camp</code> จะถูกสร้างอัตโนมัติ
+        </div>
+      </div>
+    </details>
+    <div style="margin-top:16px;padding:12px 16px;background:var(--cream);border-radius:12px;font-size:12.5px;color:var(--cm);">
+      <b style="color:var(--cocoa);">สถานะ:</b> มีข้อมูล ${S.bookings.length} รายการในเครื่องนี้
+      ${S.syncUrl&&S.lastSync?' · ซิงก์ล่าสุด '+rel(S.lastSync):''}
+    </div>
+
+    ${S.syncUrl?`<div style="margin-top:10px;padding:12px 16px;background:var(--cream);border-radius:12px;font-size:12px;color:var(--cm);">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <span><b style="color:var(--cocoa);">เวอร์ชัน Apps Script:</b> <span id="api-ver">ยังไม่ได้ตรวจ</span></span>
+        <button class="btn btn-g btn-sm" onclick="checkApiVersion()" style="padding:4px 12px;font-size:11px;">🔍 ตรวจ</button>
+      </div>
+    </div>`:''}
+
+  </div>`);
+}
+
+function cpCode(){
+  navigator.clipboard.writeText(AS_CODE).then(()=>{
+    const b=document.getElementById('cbtn');
+    if(b){b.textContent='✓ คัดลอกแล้ว';setTimeout(()=>{if(b)b.textContent='📋 คัดลอกโค้ด';},2000);}
+  }).catch(()=>alert('กด Ctrl+A ใน code box แล้ว Ctrl+C เพื่อคัดลอก'));
+}
+
+async function checkApiVersion(){
+  const el=document.getElementById('api-ver');
+  if(!el)return;
+  el.textContent='กำลังตรวจ...';
+  el.style.color='var(--cm)';
+  try{
+    const d = await callAppsScript('ping', null);
+    if(d.version === 'v3-glidercount' && d.schema === 13){
+      el.innerHTML = '<span style="color:#3F7B23;">✓ '+d.version+' (Schema '+d.schema+' col)</span>';
+    } else if(d.version){
+      el.innerHTML = '<span style="color:#C9A24E;">⚠ '+d.version+' — ต้อง Deploy ใหม่</span>';
+    } else {
+      el.innerHTML = '<span style="color:#C46C7E;">⚠ เวอร์ชันเก่า — ต้อง Deploy ใหม่ Apps Script</span>';
+    }
+  }catch(err){
+    el.innerHTML = '<span style="color:#C46C7E;">✗ '+err.message+'</span>';
+  }
+}
+
+function saveSettings(){
+  const u=(document.getElementById('su')?.value||'').trim();
+  if(u) localStorage.setItem(LS_U,u); else localStorage.removeItem(LS_U);
+  S.syncUrl=u||APPS_SCRIPT_URL||'';
+  S.syncSt=S.syncUrl?'idle':'unconfigured';
+  closeModal();
+  if(S.syncUrl){ toast('✓ บันทึกการตั้งค่าแล้ว · URL พร้อมใช้งาน'); autoSync(); }
+  render();
+}
+
+// ============================
+// BOOKING PAGE LINK
+// ============================
+function getBookingUrl() {
+  const base = window.location.href.replace(/[^/]*$/, '');
+  return base + 'booking.html';
+}
+function previewBookingPage() {
+  window.open('booking.html', '_blank');
+}
+function copyBookingLink() {
+  const url = getBookingUrl();
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copy-link-btn');
+    if (btn) { btn.textContent = '✓ คัดลอกแล้ว!'; setTimeout(()=>{ if(btn) btn.textContent='📋 คัดลอกลิงก์'; }, 2000); }
+    toast('✓ คัดลอกลิงก์แล้ว — แชร์ให้ลูกค้าได้เลยค่ะ','ok');
+  }).catch(() => {
+    prompt('คัดลอก URL นี้เพื่อแชร์ให้ลูกค้า:', getBookingUrl());
+  });
+}
+
+// ============================
+// CONFIRMATION SLIP
+// ============================
+const TH_M_FULL=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+function thFull(s){const d=parseD(s);return d.getDate()+' '+TH_M_FULL[d.getMonth()]+' '+(d.getFullYear()+543);}
+function genRef(id){return'SSC-'+id.slice(-6).toUpperCase();}
+function genQRDataUrl(text){
+  const s=160,m=8,cs=6,ver=2;
+  const c=document.createElement('canvas');c.width=s;c.height=s;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,s,s);
+  ctx.fillStyle='#2A1810';
+  const seed=text.split('').reduce((a,ch)=>a+ch.charCodeAt(0),0);
+  const rnd=(i)=>((seed*9301+i*49297+233)%233280)/233280;
+  const cells=21;const cell=Math.floor((s-m*2)/cells);
+  for(let r=0;r<cells;r++)for(let cl2=0;cl2<cells;cl2++){
+    const isCorner=(r<7&&cl2<7)||(r<7&&cl2>cells-8)||(r>cells-8&&cl2<7);
+    if(isCorner){
+      if((r===0||r===6||cl2===0||cl2===6)&&!((r>0&&r<6)&&(cl2>0&&cl2<6)))ctx.fillRect(m+cl2*cell,m+r*cell,cell,cell);
+      else if(r>=2&&r<=4&&cl2>=2&&cl2<=4)ctx.fillRect(m+cl2*cell,m+r*cell,cell,cell);
+    } else if(rnd(r*100+cl2)>0.48)ctx.fillRect(m+cl2*cell,m+r*cell,cell,cell);
+  }
+  return c.toDataURL();
+}
+
+function showSlip(id){
+  const b=S.bookings.find(x=>x.id===id); if(!b)return;
+  const isS=b.roomType==='grand_suite';
+  const nights=nts(b.checkIn,b.checkOut);
+  const ref=genRef(b.id);
+  const st=bSt(b);
+  const stLabel={'upcoming':'ยืนยันแล้ว','active':'เข้าพักอยู่','past':'เสร็จสิ้น'}[st];
+  const stColor={'upcoming':'#6B8A57','active':'#6B8A57','past':'#735847'}[st];
+  const roomLabel=isS?'👑 Grand Suite':'Standard #'+pad(b.roomNumber);
+  const now=new Date();
+  const issueDate=now.getDate()+' '+TH_M_FULL[now.getMonth()]+' '+(now.getFullYear()+543);
+  const qr=genQRDataUrl(ref+b.guestName);
+
+  const ol=document.createElement('div');
+  ol.className='slip-overlay';
+  ol.id='slip-overlay';
+  ol.innerHTML=`
+  <div class="slip-wrap">
+    <div id="slip-card">
+      <div class="slip-top">
+        <div class="s-brand">Sugar Sugar Camp</div>
+        <div class="s-tag">ที่พักชูการ์ไกลเดอร์</div>
+        <span class="s-icon">🐿</span>
+        <div class="s-title">ใบยืนยันการจองที่พัก</div>
+      </div>
+      <div class="slip-body">
+        <div class="slip-ref">เลขที่อ้างอิง ${ref}</div>
+        <div class="slip-row">
+          <span class="slip-lbl">ชื่อเจ้าของ</span>
+          <span class="slip-val big">${esc(b.guestName)}</span>
+        </div>
+        ${b.gliderName?`<div class="slip-row">
+          <span class="slip-lbl">ชื่อน้อง</span>
+          <span class="slip-val">${esc(b.gliderName)}</span>
+        </div>`:''}
+        <div class="slip-row">
+          <span class="slip-lbl">จำนวน</span>
+          <span class="slip-val">${b.gliderCount||1} ตัว</span>
+        </div>
+        ${b.phone?`<div class="slip-row">
+          <span class="slip-lbl">เบอร์โทร</span>
+          <span class="slip-val">${esc(b.phone)}</span>
+        </div>`:''}
+        <div class="slip-row">
+          <span class="slip-lbl">ประเภทกรง</span>
+          <span class="slip-val">${roomLabel}</span>
+        </div>
+        <div class="slip-row">
+          <span class="slip-lbl">เช็คอิน</span>
+          <span class="slip-val">${thFull(b.checkIn)}</span>
+        </div>
+        <div class="slip-row">
+          <span class="slip-lbl">เช็คเอาท์</span>
+          <span class="slip-val">${thFull(b.checkOut)}</span>
+        </div>
+        <div class="slip-row">
+          <span class="slip-lbl">ระยะเวลา</span>
+          <span class="slip-val">${nights} คืน</span>
+        </div>
+        ${b.notes?`<div class="slip-row">
+          <span class="slip-lbl">บันทึก</span>
+          <span class="slip-val" style="font-size:11.5px;font-weight:400;">${esc(b.notes)}</span>
+        </div>`:''}
+      </div>
+      <div class="slip-footer" style="position:relative;padding-right:90px;">
+        <div style="text-align:left;">
+          <div class="sf-main">สถานะ: <span style="color:${stColor};">${stLabel}</span></div>
+          <div class="sf-sub">ออกใบยืนยัน: ${issueDate}<br/>ดูแลด้วยความรักและใส่ใจทุกตัว 🌿</div>
+        </div>
+        <div class="slip-stamp">${stLabel}</div>
+      </div>
+    </div>
+    <div class="slip-actions">
+      <button class="slip-btn dl" onclick="downloadSlip('${b.id}','${esc(b.guestName)}')">⬇ บันทึกรูป</button>
+      <button class="slip-btn cl" onclick="document.getElementById('slip-overlay').remove()">✕ ปิด</button>
+    </div>
+    <div style="text-align:center;font-size:11.5px;color:rgba(255,255,255,.6);margin-top:8px;">
+      กด "บันทึกรูป" เพื่อดาวน์โหลด แล้วส่งให้ลูกค้าทาง LINE ได้เลย
+    </div>
+  </div>`;
+  document.body.appendChild(ol);
+  ol.addEventListener('click',e=>{if(e.target===ol)ol.remove();});
+}
+
+function downloadSlip(id,name){
+  const card=document.getElementById('slip-card');
+  if(!card){return;}
+  const btn=document.querySelector('.slip-btn.dl');
+  if(btn){btn.textContent='⏳ กำลังสร้างรูป…';btn.disabled=true;}
+
+  // Use html2canvas if available, else canvas fallback
+  if(window.html2canvas){
+    window.html2canvas(card,{
+      scale:3,useCORS:true,backgroundColor:'#FDF9F2',
+      logging:false,
+      onclone:(doc)=>{
+        const el=doc.getElementById('slip-card');
+        if(el) el.style.fontFamily="'Sarabun',sans-serif";
+      }
+    }).then(canvas=>{
+      const a=document.createElement('a');
+      a.download='SSC-ยืนยันการจอง-'+name.replace(/ /g,'_')+'.png';
+      a.href=canvas.toDataURL('image/png');
+      a.click();
+      if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
+      toast('✓ บันทึกรูปสำเร็จ — ส่งให้ลูกค้าได้เลยค่ะ','ok');
+    }).catch(()=>{
+      if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
+      toast('⚠ ไม่สามารถบันทึกได้ — ลอง screenshot แทนค่ะ','err');
+    });
+  } else {
+    // Load html2canvas then retry
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload=()=>downloadSlip(id,name);
+    s.onerror=()=>{
+      if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
+      toast('⚠ โหลด library ไม่ได้ — ลอง screenshot แทนค่ะ','err');
+    };
+    document.head.appendChild(s);
+  }
+}
+
+// ============================
+// START — auto pull on open
+// ============================
+setInterval(updateSyncBadge, 30000);
+
+// ดึงข้อมูลล่าสุดจาก Sheet อัตโนมัติทุกครั้งที่เปิด (silent)
+async function initSync(){
+  render(); // แสดง UI ก่อนด้วยข้อมูลใน localStorage
+  if(S.syncUrl){
+    await pullCloud(true);  // silent pull — ไม่ถามยืนยัน ไม่แสดง toast
+  }
+}
+
+// รีเฟรชข้อมูลจาก Sheet ทุก 5 นาที (สำหรับกรณีเปิดหลายเครื่อง)
+setInterval(()=>{
+  if(S.syncUrl) pullCloud(true);
+}, 5 * 60 * 1000);
+
+initSync();
+</script>
+</body>
+</html>
