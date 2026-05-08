@@ -357,6 +357,131 @@ details.sc>div{padding:0 18px 18px;}
   .sec{padding:20px 16px;}
   .modal{padding:22px 18px;}
 }
+
+/* ══════════════════════════════════
+   CHECKOUT SYSTEM STYLES
+══════════════════════════════════ */
+.co-modal{background:var(--cl);border-radius:24px;padding:0;max-width:600px;width:100%;
+  max-height:92vh;overflow-y:auto;position:relative;border:1px solid var(--ln);
+  box-shadow:0 28px 56px rgba(42,24,16,.28);animation:su .2s cubic-bezier(.34,1.56,.64,1);}
+.co-header{background:linear-gradient(135deg,var(--pd) 0%,#9B4D5F 100%);padding:22px 28px 18px;
+  color:#fff;position:relative;}
+.co-header .ch-icon{font-size:32px;margin-bottom:6px;}
+.co-header h2{font-family:'Fraunces',serif;font-style:italic;font-size:24px;font-weight:400;margin:0;}
+.co-header .ch-sub{font-size:12px;opacity:.8;margin-top:4px;}
+.co-body{padding:22px 28px;}
+.co-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.co-icard{background:var(--cream);border:1px solid var(--ln);border-radius:12px;padding:10px 14px;}
+.co-icard .cil{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cm);margin-bottom:3px;}
+.co-icard .civ{font-size:13px;font-weight:600;color:var(--cocoa);}
+.co-icard .civ.big{font-family:'Fraunces',serif;font-size:18px;}
+.co-sec-title{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--pd);margin:18px 0 10px;display:flex;align-items:center;gap:8px;}
+.co-sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--ps),transparent);}
+.co-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.co-fg{margin-bottom:12px;}
+.co-label{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--cm);margin-bottom:5px;}
+.co-input{width:100%;padding:10px 13px;border:1.5px solid var(--ln);border-radius:11px;
+  background:var(--cream);font-family:'Sarabun',sans-serif;font-size:13.5px;color:var(--cocoa);
+  outline:none;transition:all .15s;}
+.co-input:focus{border-color:var(--pd);background:#fff;box-shadow:0 0 0 3px rgba(196,108,126,.1);}
+.co-extra-item{display:grid;grid-template-columns:1fr 100px 34px;gap:6px;align-items:center;margin-bottom:7px;}
+.co-add-btn{width:100%;padding:8px;background:var(--ps);border:1.5px dashed rgba(196,108,126,.4);
+  border-radius:10px;font-family:'Sarabun',sans-serif;font-size:12px;color:var(--pd);
+  cursor:pointer;transition:all .2s;margin-top:4px;}
+.co-add-btn:hover{background:var(--phs);border-style:solid;}
+.co-rm-btn{background:none;border:1.5px solid var(--ln);border-radius:8px;padding:0;
+  width:34px;height:38px;cursor:pointer;font-size:14px;color:#ccc;
+  transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.co-rm-btn:hover{border-color:var(--coral);color:var(--coral);}
+.co-preview{background:linear-gradient(135deg,var(--phs),var(--gs));border:1px solid rgba(201,162,78,.3);
+  border-radius:14px;padding:14px 18px;margin:16px 0;}
+.co-prev-row{display:flex;justify-content:space-between;align-items:baseline;
+  padding:5px 0;border-bottom:1px dashed rgba(74,51,38,.1);font-size:13px;color:var(--cm);}
+.co-prev-row:last-child{border-bottom:none;}
+.co-prev-row.disc{color:var(--coral);}
+.co-prev-row.ext{color:#4F6938;}
+.co-total-box{background:linear-gradient(135deg,var(--cocoa),var(--cm));border-radius:14px;
+  padding:16px 20px;display:flex;align-items:center;justify-content:space-between;
+  margin:14px 0;color:#fff;box-shadow:0 4px 16px rgba(42,24,16,.25);}
+.co-total-lbl{font-size:13px;opacity:.85;}
+.co-total-amt{font-family:'Fraunces',serif;font-size:28px;font-style:italic;font-weight:400;}
+.co-actions{display:flex;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--ln);}
+.co-actions .btn{flex:1;}
+/* Receipt overlay */
+.co-receipt-overlay{position:fixed;inset:0;background:rgba(42,24,16,.7);backdrop-filter:blur(12px);
+  z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;
+  animation:fi .15s ease;}
+.co-receipt-wrap{max-width:480px;width:100%;max-height:90vh;overflow-y:auto;}
+.co-receipt-card{background:#FDF9F2;border-radius:20px;overflow:hidden;font-family:'Sarabun',sans-serif;
+  box-shadow:0 20px 60px rgba(0,0,0,.35);}
+.co-rc-top{background:linear-gradient(135deg,var(--pd) 0%,#9B4D5F 100%);padding:24px 28px 20px;
+  color:#fff;text-align:center;position:relative;}
+.co-rc-top::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,var(--pd),var(--coral),#9B4D5F,var(--pd));
+  background-size:200%;animation:shimmer 4s linear infinite;}
+@keyframes shimmer{0%{background-position:0%}100%{background-position:200%}}
+.co-rc-top .rt-brand{font-family:'Fraunces',serif;font-style:italic;font-size:26px;font-weight:400;
+  position:relative;z-index:1;}
+.co-rc-top .rt-sub{font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:.8;
+  margin-top:2px;position:relative;z-index:1;}
+.co-rc-top .rt-icon{font-size:40px;margin:12px 0 6px;display:block;position:relative;z-index:1;}
+.co-rc-top .rt-title{font-size:13px;font-weight:600;letter-spacing:.06em;opacity:.95;
+  position:relative;z-index:1;}
+.co-rc-body{padding:22px 28px;}
+.co-rc-ref{text-align:center;background:rgba(196,108,126,.1);border-radius:10px;
+  padding:9px;margin-bottom:16px;font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--pd);font-weight:600;}
+.co-rc-row{display:flex;justify-content:space-between;align-items:baseline;
+  padding:8px 0;border-bottom:1px dashed rgba(74,51,38,.1);gap:12px;font-size:13px;}
+.co-rc-row:last-of-type{border-bottom:none;}
+.co-rc-lbl{color:var(--cm);font-weight:500;flex-shrink:0;}
+.co-rc-val{color:var(--cocoa);font-weight:600;text-align:right;}
+.co-rc-val.big{font-family:'Fraunces',serif;font-size:18px;font-style:italic;}
+.co-rc-val.disc{color:var(--coral);}
+.co-rc-val.ext{color:#4F6938;}
+.co-rc-total{background:linear-gradient(135deg,var(--cocoa),var(--cm));border-radius:12px;
+  padding:14px 18px;display:flex;justify-content:space-between;align-items:center;
+  margin:14px 0;color:#fff;}
+.co-rc-total-lbl{font-size:12px;opacity:.85;}
+.co-rc-total-amt{font-family:'Fraunces',serif;font-size:24px;font-style:italic;}
+.co-rc-payment{background:#fff;border-radius:12px;padding:14px 16px;
+  border:1.5px solid var(--ln);margin:10px 0;}
+.co-rc-payment-title{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--pd);margin-bottom:10px;text-align:center;}
+.co-rc-payment-body{display:flex;align-items:center;gap:12px;}
+.co-rc-qr{width:72px;height:72px;border-radius:10px;border:2px solid var(--ln);}
+.co-rc-bank{font-size:12px;color:var(--cocoa);line-height:1.7;}
+.co-rc-bank .bank-badge{display:inline-block;background:#1BA345;color:#fff;
+  border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700;margin-right:6px;}
+.co-rc-bank .bank-acct{font-family:'Fraunces',serif;font-size:18px;font-weight:400;
+  color:var(--cocoa);display:block;margin-top:2px;}
+.co-rc-footer{background:linear-gradient(135deg,var(--gs),var(--phs));
+  padding:18px 24px;text-align:center;}
+.co-rc-footer .rf-paws{font-size:20px;letter-spacing:6px;}
+.co-rc-footer .rf-thanks{font-family:'Fraunces',serif;font-size:16px;font-weight:400;
+  color:var(--cocoa);margin:8px 0 4px;}
+.co-rc-footer .rf-sub{font-size:11.5px;color:var(--cm);line-height:1.6;}
+.co-rc-footer .rf-hearts{font-size:16px;letter-spacing:4px;margin-top:8px;}
+.co-rc-stamp{display:inline-flex;align-items:center;justify-content:center;
+  width:56px;height:56px;border-radius:50%;border:2.5px solid #4F6938;color:#4F6938;
+  font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  line-height:1.2;text-align:center;position:absolute;right:22px;bottom:14px;opacity:.85;}
+.co-receipt-actions{display:flex;gap:10px;margin-top:14px;justify-content:center;}
+.co-ra-btn{font-family:'Sarabun',sans-serif;font-size:13px;font-weight:500;padding:11px 22px;
+  border-radius:999px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+  transition:all .18s;}
+.co-ra-btn.primary{background:var(--pd);color:#fff;}
+.co-ra-btn.primary:hover{background:var(--cocoa);}
+.co-ra-btn.ghost{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);}
+.co-ra-btn.ghost:hover{background:rgba(255,255,255,.25);}
+@media(max-width:700px){
+  .co-info-grid{grid-template-columns:1fr 1fr;}
+  .co-row2{grid-template-columns:1fr;}
+  .co-modal{max-height:100vh;border-radius:0;}
+  .co-actions{flex-direction:column;}
+}
 </style>
 </head>
 <body>
@@ -1232,6 +1357,11 @@ function showDetail(b,rt,rn){
       <button class="btn btn-s" onclick="showSlip('${b.id}')">📄 ใบยืนยัน</button>
       <button class="btn btn-p" onclick="closeModal();openEditForm('${b.id}')">✎ แก้ไข</button>
     </div>
+    ${st==='active'||st==='past'?`<div style="margin-top:10px;padding-top:14px;border-top:1px solid var(--ln);">
+      <button class="btn" style="width:100%;background:linear-gradient(135deg,var(--pd),var(--coral));color:#fff;font-size:14px;padding:13px 20px;border-radius:14px;gap:8px;" onclick="closeModal();openCheckout('${b.id}')">
+        💳 Check Out &amp; คิดเงิน
+      </button>
+    </div>`:''}
   </div>`);
 }
 
@@ -1560,6 +1690,262 @@ setInterval(()=>{
   if(S.syncUrl) pullCloud(true);
 }, 5 * 60 * 1000);
 
+
+// ═══════════════════════════════════════════════════
+// CHECKOUT SYSTEM
+// ═══════════════════════════════════════════════════
+
+const PRICE_PER_GLIDER_NIGHT = 90;
+
+function fmtTHB(n){return Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function genReceiptNo(){
+  const d=new Date();
+  return 'SSC-'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+Math.floor(Math.random()*9000+1000);
+}
+
+function formatDateTH(s){
+  if(!s)return'-';
+  const d=parseD(s);
+  const m=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return d.getDate()+' '+m[d.getMonth()]+' '+(d.getFullYear()+543);
+}
+
+// ─── STATE สำหรับ checkout ───────────────────────────
+let COState = {
+  bookingId: '',
+  extras: [],
+  discPct: 0,
+  discBaht: 0,
+  delivery: 0,
+  notes: ''
+};
+
+function calcCheckout(){
+  const b = S.bookings.find(x=>x.id===COState.bookingId);
+  if(!b) return {sub:0,disc:0,discB:0,del:0,extT:0,total:0,nights:0};
+  const nights = nts(b.checkIn, b.checkOut);
+  const gliders = parseInt(b.gliderCount)||1;
+  const sub = gliders * PRICE_PER_GLIDER_NIGHT * nights;
+  const dp = parseFloat(document.getElementById('co-disc-pct')?.value)||0;
+  const db = parseFloat(document.getElementById('co-disc-baht')?.value)||0;
+  const del = parseFloat(document.getElementById('co-delivery')?.value)||0;
+  const extras = getCoExtras();
+  const damt = sub * dp / 100;
+  const extT = extras.reduce((s,e)=>s+e.amt,0);
+  const total = sub - damt - db + del + extT;
+  return {sub,disc:damt,discPct:dp,discB:db,del,extT,total,nights,gliders,extras};
+}
+
+function getCoExtras(){
+  const items=[];
+  document.querySelectorAll('.co-extra-row').forEach(row=>{
+    const name=(row.querySelector('.co-ex-name')?.value||'').trim();
+    const amt=parseFloat(row.querySelector('.co-ex-amt')?.value)||0;
+    items.push({name:name||'ค่าใช้จ่ายอื่นๆ',amt});
+  });
+  return items;
+}
+
+function coUpdatePreview(){
+  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras}=calcCheckout();
+  const b=S.bookings.find(x=>x.id===COState.bookingId);
+  if(!b)return;
+  let html='';
+  html+=`<div class="co-prev-row"><span>ค่าพักรวม ${gliders} ตัว × ${nights} คืน × ฿${PRICE_PER_GLIDER_NIGHT}</span><span>฿${fmtTHB(sub)}</span></div>`;
+  if(discPct>0) html+=`<div class="co-prev-row disc"><span>ส่วนลด ${discPct}%</span><span>-฿${fmtTHB(disc)}</span></div>`;
+  if(discB>0) html+=`<div class="co-prev-row disc"><span>ส่วนลด (฿)</span><span>-฿${fmtTHB(discB)}</span></div>`;
+  if(del>0) html+=`<div class="co-prev-row"><span>ค่าบริการรับ-ส่ง</span><span>+฿${fmtTHB(del)}</span></div>`;
+  extras.forEach(e=>{ if(e.amt>0) html+=`<div class="co-prev-row ext"><span>➕ ${esc(e.name)}</span><span>+฿${fmtTHB(e.amt)}</span></div>`; });
+  html+=`<div class="co-prev-row" style="border-top:1.5px solid rgba(74,51,38,.2);margin-top:6px;padding-top:8px;font-weight:700;font-size:15px;color:var(--cocoa);">
+    <span>💰 รวมทั้งหมด</span><span style="font-family:'Fraunces',serif;font-size:18px;">฿${fmtTHB(total)}</span>
+  </div>`;
+  const el=document.getElementById('co-preview-rows');
+  if(el) el.innerHTML=html;
+}
+
+function addCoExtra(){
+  const list=document.getElementById('co-extras-list');
+  if(!list)return;
+  const div=document.createElement('div');
+  div.className='co-extra-row co-extra-item';
+  div.innerHTML=`<input type="text" class="co-input co-ex-name" placeholder="เช่น ค่าจิ้งหรีด" oninput="coUpdatePreview()">
+    <input type="number" class="co-input co-ex-amt" min="0" value="0" style="padding:10px 8px;" oninput="coUpdatePreview()">
+    <button class="co-rm-btn" onclick="this.parentElement.remove();coUpdatePreview()">✕</button>`;
+  list.appendChild(div);
+}
+
+function openCheckout(id){
+  const b=S.bookings.find(x=>x.id===id);
+  if(!b)return;
+  COState.bookingId=id;
+  const nights=nts(b.checkIn,b.checkOut);
+  const gliders=parseInt(b.gliderCount)||1;
+  const sub=gliders*PRICE_PER_GLIDER_NIGHT*nights;
+  const isS=b.roomType==='grand_suite';
+  const roomLabel=isS?'👑 Grand Suite':'Standard #'+pad(b.roomNumber);
+
+  showModal(`<div class="co-modal" onclick="event.stopPropagation()">
+    <button class="mclose" style="position:absolute;top:14px;right:14px;z-index:10;background:rgba(255,255,255,.25);color:#fff;" onclick="closeModal()">✕</button>
+    <div class="co-header">
+      <div class="ch-icon">💳</div>
+      <h2>Check Out &amp; คิดเงิน</h2>
+      <div class="ch-sub">สรุปค่าใช้จ่ายก่อนส่งน้องกลับบ้าน 🐿</div>
+    </div>
+    <div class="co-body">
+      <div class="co-info-grid">
+        <div class="co-icard"><div class="cil">ชื่อเจ้าของ</div><div class="civ big">${esc(b.guestName)}</div></div>
+        <div class="co-icard"><div class="cil">ห้อง</div><div class="civ">${roomLabel}</div></div>
+        <div class="co-icard"><div class="cil">เช็คอิน</div><div class="civ">${formatDateTH(b.checkIn)}</div></div>
+        <div class="co-icard"><div class="cil">เช็คเอาท์</div><div class="civ">${formatDateTH(b.checkOut)}</div></div>
+        <div class="co-icard"><div class="cil">จำนวนคืน</div><div class="civ big">${nights} คืน</div></div>
+        <div class="co-icard"><div class="cil">น้องชูการ์</div><div class="civ big">${gliders} ตัว</div></div>
+      </div>
+      <div class="co-icard" style="margin-bottom:16px;background:linear-gradient(135deg,var(--gs),var(--phs));border-color:var(--gold);">
+        <div class="cil">💰 ค่าพักเริ่มต้น (${gliders} ตัว × ${nights} คืน × ฿${PRICE_PER_GLIDER_NIGHT})</div>
+        <div class="civ big" style="font-family:'Fraunces',serif;font-size:22px;margin-top:4px;">฿${fmtTHB(sub)}</div>
+      </div>
+
+      <div class="co-sec-title">💝 ส่วนลด & บริการเสริม</div>
+      <div class="co-row2">
+        <div class="co-fg"><label class="co-label">ส่วนลด (%)</label>
+          <input id="co-disc-pct" type="number" class="co-input" min="0" max="100" value="0" oninput="coUpdatePreview()"></div>
+        <div class="co-fg"><label class="co-label">ส่วนลด (฿)</label>
+          <input id="co-disc-baht" type="number" class="co-input" min="0" value="0" oninput="coUpdatePreview()"></div>
+      </div>
+      <div class="co-fg"><label class="co-label">ค่าบริการรับ-ส่ง (฿)</label>
+        <input id="co-delivery" type="number" class="co-input" min="0" value="0" oninput="coUpdatePreview()"></div>
+
+      <div class="co-sec-title">➕ ค่าใช้จ่ายอื่นๆ</div>
+      <div id="co-extras-list"></div>
+      <button class="co-add-btn" onclick="addCoExtra()">+ เพิ่มรายการ</button>
+
+      <div class="co-fg" style="margin-top:14px;"><label class="co-label">หมายเหตุ</label>
+        <input id="co-notes" type="text" class="co-input" placeholder="เช่น ฝากยา, ข้าวโพด..."></div>
+
+      <div class="co-preview">
+        <div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--cm);margin-bottom:10px;">สรุปค่าใช้จ่าย</div>
+        <div id="co-preview-rows"></div>
+      </div>
+
+      <div class="co-actions">
+        <button class="btn btn-g" onclick="closeModal()">ยกเลิก</button>
+        <button class="btn btn-p" style="flex:2;" onclick="showCheckoutReceipt('${id}')">🧾 ออกใบเสร็จ</button>
+      </div>
+    </div>
+  </div>`);
+  setTimeout(()=>coUpdatePreview(),50);
+}
+
+function showCheckoutReceipt(id){
+  const b=S.bookings.find(x=>x.id===id);
+  if(!b)return;
+  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras}=calcCheckout();
+  const notes=(document.getElementById('co-notes')?.value||'').trim();
+  const isS=b.roomType==='grand_suite';
+  const roomLabel=isS?'👑 Grand Suite':'Standard #'+pad(b.roomNumber);
+  const rno=genReceiptNo();
+  const now=new Date();
+  const issueDate=formatDateTH(fmtD(now));
+
+  // build receipt HTML
+  let breakdownRows='';
+  breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏠 ค่าพักรวม</span><span class="co-rc-val">฿${fmtTHB(sub)}</span></div>`;
+  if(discPct>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏷 ส่วนลด ${discPct}%</span><span class="co-rc-val disc">-฿${fmtTHB(disc)}</span></div>`;
+  if(discB>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏷 ส่วนลด (฿)</span><span class="co-rc-val disc">-฿${fmtTHB(discB)}</span></div>`;
+  if(del>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🚗 ค่ารับ-ส่ง</span><span class="co-rc-val">+฿${fmtTHB(del)}</span></div>`;
+  extras.forEach(e=>{ if(e.amt>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">➕ ${esc(e.name)}</span><span class="co-rc-val ext">+฿${fmtTHB(e.amt)}</span></div>`; });
+
+  closeModal();
+  const ol=document.createElement('div');
+  ol.className='co-receipt-overlay';
+  ol.id='co-receipt-overlay';
+  ol.innerHTML=`
+  <div class="co-receipt-wrap">
+    <div class="co-receipt-card" id="co-rc-card">
+      <div class="co-rc-top" style="position:relative;">
+        <div class="co-rc-top rt-brand">Sugar Sugar Camp</div>
+        <div class="rt-sub">ที่พักชูการ์ไกลเดอร์</div>
+        <span class="rt-icon">🐿</span>
+        <div class="rt-title">ใบเสร็จรับเงิน</div>
+        <div class="co-rc-stamp">เสร็จ<br>สิ้น</div>
+      </div>
+      <div class="co-rc-body">
+        <div class="co-rc-ref">เลขที่ ${rno} &nbsp;|&nbsp; ออก: ${issueDate}</div>
+        <div class="co-rc-row"><span class="co-rc-lbl">👤 เจ้าของ</span><span class="co-rc-val big">${esc(b.guestName)}</span></div>
+        ${b.gliderName?`<div class="co-rc-row"><span class="co-rc-lbl">🐿 น้อง</span><span class="co-rc-val">${esc(b.gliderName)} (${gliders} ตัว)</span></div>`:`<div class="co-rc-row"><span class="co-rc-lbl">🐿 จำนวน</span><span class="co-rc-val">${gliders} ตัว</span></div>`}
+        ${b.phone?`<div class="co-rc-row"><span class="co-rc-lbl">📞 โทร</span><span class="co-rc-val">${esc(b.phone)}</span></div>`:''}
+        <div class="co-rc-row"><span class="co-rc-lbl">🏠 ห้อง</span><span class="co-rc-val">${roomLabel}</span></div>
+        <div class="co-rc-row"><span class="co-rc-lbl">📅 เช็คอิน</span><span class="co-rc-val">${formatDateTH(b.checkIn)}</span></div>
+        <div class="co-rc-row"><span class="co-rc-lbl">📅 เช็คเอาท์</span><span class="co-rc-val">${formatDateTH(b.checkOut)}</span></div>
+        <div class="co-rc-row"><span class="co-rc-lbl">🌙 จำนวนคืน</span><span class="co-rc-val">${nights} คืน</span></div>
+        <div style="margin:12px 0 4px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cm);">รายละเอียดค่าใช้จ่าย</div>
+        ${breakdownRows}
+        ${notes?`<div class="co-rc-row" style="margin-top:6px;font-size:12px;"><span class="co-rc-lbl">📝 หมายเหตุ</span><span class="co-rc-val" style="font-weight:400;">${esc(notes)}</span></div>`:''}
+        <div class="co-rc-total">
+          <span class="co-rc-total-lbl">ยอดชำระทั้งหมด</span>
+          <span class="co-rc-total-amt">฿ ${fmtTHB(total)}</span>
+        </div>
+        <div class="co-rc-payment">
+          <div class="co-rc-payment-title">💳 ช่องทางการชำระเงิน</div>
+          <div class="co-rc-payment-body">
+            <div class="co-rc-bank">
+              <span><span class="bank-badge">KBANK</span>ธนาคารกสิกรไทย</span>
+              <span class="bank-acct">026-2-46597-9</span>
+              <span style="font-size:11px;color:var(--cm);">สมทวี จันทร์พร้อม</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="co-rc-footer">
+        <div class="rf-paws">🐾 🌸 🐾</div>
+        <div class="rf-thanks">ขอบคุณที่ไว้ใจ Sugar Sugar Camp</div>
+        <div class="rf-sub">น้อง Sugar Glider ของคุณได้รับการดูแลด้วยความรักตลอดการพัก 🌿💕<br>เราพร้อมต้อนรับคุณและน้องๆ อีกครั้งเสมอ!</div>
+        <div class="rf-hearts">💖 💛 💜 💚 🧡</div>
+      </div>
+    </div>
+    <div class="co-receipt-actions">
+      <button class="co-ra-btn primary" onclick="downloadCheckoutReceipt('${b.id}','${esc(b.guestName)}')">⬇ บันทึกรูป</button>
+      <button class="co-ra-btn ghost" onclick="document.getElementById('co-receipt-overlay').remove()">✕ ปิด</button>
+    </div>
+    <div style="text-align:center;font-size:11.5px;color:rgba(255,255,255,.6);margin-top:8px;">
+      กด "บันทึกรูป" เพื่อดาวน์โหลด แล้วส่งให้ลูกค้าทาง LINE ได้เลย
+    </div>
+  </div>`;
+  document.body.appendChild(ol);
+  ol.addEventListener('click',e=>{if(e.target===ol)ol.remove();});
+}
+
+function downloadCheckoutReceipt(id,name){
+  const card=document.getElementById('co-rc-card');
+  if(!card)return;
+  const btn=document.querySelector('.co-ra-btn.primary');
+  if(btn){btn.textContent='⏳ กำลังสร้างรูป…';btn.disabled=true;}
+  if(window.html2canvas){
+    window.html2canvas(card,{
+      scale:3,useCORS:true,backgroundColor:'#FDF9F2',logging:false
+    }).then(canvas=>{
+      const a=document.createElement('a');
+      a.download='SSC-ใบเสร็จ-'+name.replace(/ /g,'_')+'.png';
+      a.href=canvas.toDataURL('image/png');
+      a.click();
+      if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
+      toast('✓ บันทึกรูปสำเร็จ — ส่งให้ลูกค้าได้เลยค่ะ','ok');
+    }).catch(()=>{
+      if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
+      toast('⚠ ไม่สามารถบันทึกได้ — ลอง screenshot แทนค่ะ','err');
+    });
+  } else {
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload=()=>downloadCheckoutReceipt(id,name);
+    s.onerror=()=>{
+      if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
+      toast('⚠ โหลด library ไม่ได้ — ลอง screenshot แทนค่ะ','err');
+    };
+    document.head.appendChild(s);
+  }
+}
 initSync();
 </script>
 </body>
