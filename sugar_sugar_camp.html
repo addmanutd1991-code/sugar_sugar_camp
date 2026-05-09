@@ -494,31 +494,39 @@ details.sc>div{padding:0 18px 18px;}
 // APPS SCRIPT CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google Apps Script (CORS-Free Version)
- * วาง code นี้ใน Apps Script ที่ผูกกับ Google Sheets
+ * Sugar Sugar Camp - Google Apps Script
  * Deploy -> New deployment -> Web app
  * Execute as: Me | Who has access: Anyone
  *
- * วิธีนี้ใช้ GET + JSONP ทำให้เปิดจากไฟล์ local (file://) ได้ทุกเบราว์เซอร์
- * ไม่มีปัญหา CORS อีกต่อไป
+ * sync ใช้ POST (ไม่มี URL limit) — รองรับข้อมูลจำนวนมาก
+ * pull/ping ใช้ GET + JSONP — รองรับ file:// ด้วย
  */
 const CALENDAR_NAME = 'Sugar Sugar Camp';
 const SHEET_NAME    = 'Bookings';
 const TZ            = 'Asia/Bangkok';
 
+// ─── CORS helper ───────────────────────────────────────
+function corsOut(o) {
+  return ContentService
+    .createTextOutput(JSON.stringify(o))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ─── doGet  : pull + ping + JSONP (ใช้จาก file:// ได้) ─
 function doGet(e) {
-  const p   = e && e.parameter ? e.parameter : {};
+  const p  = e && e.parameter ? e.parameter : {};
   const act = p.action || 'ping';
-  const cb  = p.callback || '';   // JSONP callback — จำเป็นสำหรับการเรียกจาก file:// และ https://
+  const cb  = p.callback || '';
   let result;
   try {
     if (act === 'pull') {
       result = { ok:true, bookings: readSheet() };
     } else if (act === 'sync' && p.data) {
+      // fallback เผื่อเรียก GET sync (data สั้นๆ)
       const bookings = JSON.parse(decodeURIComponent(p.data));
       result = { ok:true, ...syncAll(bookings) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API is live! callback=' + cb };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v4-post' };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -529,19 +537,16 @@ function doGet(e) {
   return ContentService.createTextOutput(output).setMimeType(mime);
 }
 
-// doPost ยังคงไว้เผื่อใช้จาก environment อื่นที่ไม่มี CORS issue
+// ─── doPost : sync หลัก (ไม่มี URL limit ปัญหา) ────────
 function doPost(e) {
   try {
     const d = JSON.parse(e.postData.contents);
-    if (d.action === 'sync') return jsonOut({ ok:true, ...syncAll(d.bookings||[]) });
-    if (d.action === 'pull') return jsonOut({ ok:true, bookings: readSheet() });
-    return jsonOut({ ok:false, error:'Unknown action' });
-  } catch(err) { return jsonOut({ ok:false, error:String(err) }); }
-}
-
-function jsonOut(o) {
-  return ContentService.createTextOutput(JSON.stringify(o))
-    .setMimeType(ContentService.MimeType.JSON);
+    if (d.action === 'sync') return corsOut({ ok:true, ...syncAll(d.bookings||[]) });
+    if (d.action === 'pull') return corsOut({ ok:true, bookings: readSheet() });
+    return corsOut({ ok:false, error:'Unknown action' });
+  } catch(err) {
+    return corsOut({ ok:false, error:String(err) });
+  }
 }
 
 function getSheet() {
@@ -660,7 +665,7 @@ const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 // ตั้งค่า Apps Script URL ตรงนี้ — ใช้ได้ทุกเครื่องทันที
 // วาง URL ของคุณระหว่าง '' ด้านล่าง แล้วบันทึกไฟล์
 // ══════════════════════════════════════════════════════
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyG3i3jL4Zp0DSYlwdArTVYcVaEHkygghKKXDvZ2VKD-o8ruy-jt0H2kAFzt9TqEbws/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNfhh1uwK5GyxtPy4s9i2cWE0NNMS0YxIaT2OtRceN_si1IpXvQWjG7D5tp_ilEB6G/exec';
 // ตัวอย่าง: const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/ABC123.../exec';
 // ══════════════════════════════════════════════════════
 
@@ -707,27 +712,46 @@ function totalStd(){return 23+S.extraCages;}
 function totalRooms(){return totalStd()+1;} // +1 grand suite
 
 // ============================
-// SYNC  — เปิด Tab วิธีเดียวที่ใช้ได้จาก file://
+// SYNC
 // ============================
 let syncT=null;
 
-// สร้าง URL สำหรับเรียก Apps Script ผ่าน GET + JSONP
-function buildUrl(action, bookings){
+// buildUrl — ใช้สำหรับ GET เท่านั้น (pull / ping / JSONP)
+function buildUrl(action, extraParams){
   let url = S.syncUrl + (S.syncUrl.includes('?')?'&':'?') + 'action='+action+'&_='+Date.now();
-  if(action==='sync' && bookings){
-    url += '&data=' + encodeURIComponent(JSON.stringify(bookings));
-  }
+  if(extraParams) url += extraParams;
   return url;
 }
 
-// callAppsScript — รองรับทั้ง https:// และ file://
-// https://  → fetch GET พร้อม JSONP callback (Apps Script ส่ง JSON กลับ)
-// file://   → JSONP via script tag (ไม่ติด CORS)
+// callAppsScript
+//   sync  → POST fetch  (ไม่มี URL limit, รองรับข้อมูลเยอะ)
+//   pull/ping → GET + JSONP (รองรับ file:// ด้วย)
 function callAppsScript(action, bookings){
+  // POST สำหรับ sync เมื่ออยู่บน https://
+  if(action==='sync' && location.protocol !== 'file:'){
+    return fetch(S.syncUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },  // text/plain หลีกเลี่ยง preflight
+      body: JSON.stringify({ action:'sync', bookings: bookings||[] })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if(data && data.ok) return data;
+      throw new Error((data && data.error) || 'Apps Script ตอบกลับว่าล้มเหลว');
+    })
+    .catch(err => { throw new Error(err.message || 'POST sync ล้มเหลว'); });
+  }
+
+  // GET + JSONP สำหรับ pull / ping หรือ sync จาก file://
   return new Promise((res, rej) => {
     if(!S.syncUrl) return rej(new Error('ยังไม่ได้ตั้งค่า URL'));
     const cbName = 'ssc_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-    const url = buildUrl(action, bookings) + '&callback=' + cbName;
+    // สำหรับ sync จาก file:// ยังคงใช้ GET (ข้อมูลน้อยกว่า limit เพราะใช้งานออฟไลน์)
+    let url = buildUrl(action);
+    if(action==='sync' && bookings){
+      url += '&data=' + encodeURIComponent(JSON.stringify(bookings));
+    }
+    url += '&callback=' + cbName;
     const script = document.createElement('script');
     const timer = setTimeout(() => {
       cleanup();
@@ -827,9 +851,9 @@ async function pullCloud(silent){
   }
 }
 
-// แสดง modal แนะนำให้เปิด tab — ใช้เมื่อ no-cors ไม่พอ (เช่น pull)
+// แสดง modal แนะนำให้เปิด tab — ใช้เมื่ออยู่บน file:// และ sync
 function showTabSyncModal(action){
-  const url = buildUrl(action, action==='sync'?S.bookings:null);
+  const url = buildUrl(action) + (action==='sync' ? '&data='+encodeURIComponent(JSON.stringify(S.bookings)) : '');
   const m=document.getElementById('modals');
   m.innerHTML=`<div class="overlay" id="ov" onclick="closeModal()">
   <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
@@ -1407,10 +1431,10 @@ function openSettings(){
     ${S.syncUrl?(S.syncSt==='error'?`<div class="errbx">⚠ ${esc(S.syncErr||'error')}</div>`:`<div class="okbx">${lbl}</div>`):''}
     ${S.syncSt==='error'?`<div style="background:rgba(196,108,126,.1);border:1px solid rgba(196,108,126,.4);border-radius:12px;padding:12px 16px;font-size:12.5px;color:var(--cocoa);line-height:1.7;margin-bottom:14px;">
       <b>❓ Sync ล้มเหลว — ตรวจสอบตามลำดับนี้:</b><br/>
-      <b>1. Deploy ใหม่</b> หลังวาง code → กด Deploy → <b>New deployment</b> (ไม่ใช่ Manage)<br/>
+      <b>1. 🔴 Deploy ใหม่ Apps Script</b> → คัดลอก code ใหม่ด้านล่าง → วางแทนของเดิม → Deploy → <b>New deployment</b><br/>
       <b>2. ตั้งค่า</b> Execute as: <b>Me</b> | Who has access: <b>Anyone</b><br/>
       <b>3. URL</b> ต้องลงท้ายด้วย <code>/exec</code> ไม่ใช่ <code>/dev</code><br/>
-      <b>4. ทดสอบ</b> เปิด URL ใน browser tab ตรง ๆ — ต้องเห็น JSON ตอบกลับ<br/>
+      <b>4. ตรวจเวอร์ชัน</b> กดปุ่ม 🔍 ด้านล่าง — ต้องแสดง "v4-post"<br/>
       <span style="color:var(--pd);">ข้อผิดพลาด: ${esc(S.syncErr)}</span>
     </div>`:''}
     <div class="fg">
@@ -1481,12 +1505,14 @@ async function checkApiVersion(){
   el.style.color='var(--cm)';
   try{
     const d = await callAppsScript('ping', null);
-    if(d.version === 'v3-glidercount' && d.schema === 13){
-      el.innerHTML = '<span style="color:#3F7B23;">✓ '+d.version+' (Schema '+d.schema+' col)</span>';
+    if(d.version === 'v4-post'){
+      el.innerHTML = '<span style="color:#3F7B23;">✓ v4-post (POST sync พร้อมใช้)</span>';
     } else if(d.version){
-      el.innerHTML = '<span style="color:#C9A24E;">⚠ '+d.version+' — ต้อง Deploy ใหม่</span>';
+      el.innerHTML = '<span style="color:#C9A24E;">⚠ '+d.version+' — ต้อง Deploy ใหม่ เพื่อแก้ sync fail</span>';
+    } else if(d.msg && d.msg.includes('ready')){
+      el.innerHTML = '<span style="color:#3F7B23;">✓ v4-post (POST sync พร้อมใช้)</span>';
     } else {
-      el.innerHTML = '<span style="color:#C46C7E;">⚠ เวอร์ชันเก่า — ต้อง Deploy ใหม่ Apps Script</span>';
+      el.innerHTML = '<span style="color:#C46C7E;">⚠ เวอร์ชันเก่า — ต้อง Deploy ใหม่ เพื่อแก้ sync fail</span>';
     }
   }catch(err){
     el.innerHTML = '<span style="color:#C46C7E;">✗ '+err.message+'</span>';
