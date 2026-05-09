@@ -494,16 +494,18 @@ details.sc>div{padding:0 18px 18px;}
 // APPS SCRIPT CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google Apps Script
+ * Sugar Sugar Camp - Google Apps Script (v5-gc-post)
  * Deploy -> New deployment -> Web app
  * Execute as: Me | Who has access: Anyone
  *
+ * Schema: 12 columns (เพิ่ม "จำนวนน้อง" col 10)
  * sync ใช้ POST (ไม่มี URL limit) — รองรับข้อมูลจำนวนมาก
  * pull/ping ใช้ GET + JSONP — รองรับ file:// ด้วย
  */
 const CALENDAR_NAME = 'Sugar Sugar Camp';
 const SHEET_NAME    = 'Bookings';
 const TZ            = 'Asia/Bangkok';
+const N_COLS        = 12;
 
 // ─── CORS helper ───────────────────────────────────────
 function corsOut(o) {
@@ -512,9 +514,9 @@ function corsOut(o) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ─── doGet  : pull + ping + JSONP (ใช้จาก file:// ได้) ─
+// ─── doGet : pull + ping + JSONP (รองรับ file://) ──────
 function doGet(e) {
-  const p  = e && e.parameter ? e.parameter : {};
+  const p   = e && e.parameter ? e.parameter : {};
   const act = p.action || 'ping';
   const cb  = p.callback || '';
   let result;
@@ -522,11 +524,11 @@ function doGet(e) {
     if (act === 'pull') {
       result = { ok:true, bookings: readSheet() };
     } else if (act === 'sync' && p.data) {
-      // fallback เผื่อเรียก GET sync (data สั้นๆ)
+      // fallback สำหรับ GET sync (data สั้น / file://)
       const bookings = JSON.parse(decodeURIComponent(p.data));
       result = { ok:true, ...syncAll(bookings) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v4-post' };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v5-gc-post', schema:12 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -537,7 +539,7 @@ function doGet(e) {
   return ContentService.createTextOutput(output).setMimeType(mime);
 }
 
-// ─── doPost : sync หลัก (ไม่มี URL limit ปัญหา) ────────
+// ─── doPost : sync หลัก (POST ไม่มี URL limit) ─────────
 function doPost(e) {
   try {
     const d = JSON.parse(e.postData.contents);
@@ -556,10 +558,27 @@ function getSheet() {
     sh = ss.insertSheet(SHEET_NAME);
     const h = [['ID','ชื่อเจ้าของ','ชื่อน้อง','เบอร์',
       'ประเภท','หมายเลขห้อง','เช็คอิน','เช็คเอาท์',
-      'บันทึก','Calendar Event ID','Updated At']];
-    sh.getRange(1,1,1,11).setValues(h)
+      'บันทึก','จำนวนน้อง','Calendar Event ID','Updated At']];
+    sh.getRange(1,1,1,N_COLS).setValues(h)
       .setFontWeight('bold').setBackground('#2A1810').setFontColor('#FAF3E9');
     sh.setFrozenRows(1);
+  } else {
+    // อัพเกรด schema ถ้า sheet เก่ามี 11 cols
+    const lastCol = sh.getLastColumn();
+    if (lastCol === 11) {
+      // แทรก col "จำนวนน้อง" ก่อน Calendar Event ID (col 10)
+      sh.insertColumnBefore(10);
+      sh.getRange(1,10).setValue('จำนวนน้อง')
+        .setFontWeight('bold').setBackground('#2A1810').setFontColor('#FAF3E9');
+      // ตั้งค่าเริ่มต้นเป็น 1 สำหรับ row ที่มีข้อมูล
+      const lastRow = sh.getLastRow();
+      if (lastRow > 1) {
+        const range = sh.getRange(2,10,lastRow-1,1);
+        const cur = range.getValues();
+        const filled = cur.map(r => [r[0] || 1]);
+        range.setValues(filled);
+      }
+    }
   }
   return sh;
 }
@@ -579,7 +598,7 @@ function fmtD(v) {
 function readSheet() {
   const sh = getSheet();
   if (sh.getLastRow() < 2) return [];
-  return sh.getRange(2,1,sh.getLastRow()-1,11).getValues()
+  return sh.getRange(2,1,sh.getLastRow()-1,N_COLS).getValues()
     .filter(r=>r[0]).map(r=>({
       id: String(r[0]),
       guestName: String(r[1]||''),
@@ -589,7 +608,8 @@ function readSheet() {
       roomNumber: Number(r[5])||1,
       checkIn: fmtD(r[6]),
       checkOut: fmtD(r[7]),
-      notes: String(r[8]||'')
+      notes: String(r[8]||''),
+      gliderCount: Number(r[9])||1
     }));
 }
 
@@ -597,8 +617,8 @@ function syncAll(bookings) {
   const sh = getSheet(), cal = getCal();
   const evMap = {};
   if (sh.getLastRow()>1)
-    sh.getRange(2,1,sh.getLastRow()-1,11).getValues()
-      .forEach(r=>{ if(r[0]) evMap[String(r[0])]=String(r[9]||''); });
+    sh.getRange(2,1,sh.getLastRow()-1,N_COLS).getValues()
+      .forEach(r=>{ if(r[0]) evMap[String(r[0])]=String(r[10]||''); });
 
   const ids = new Set(bookings.map(b=>b.id));
   let del=0,cre=0,upd=0;
@@ -609,10 +629,12 @@ function syncAll(bookings) {
   });
   const now = Utilities.formatDate(new Date(),TZ,'yyyy-MM-dd HH:mm:ss');
   const rows = bookings.map(b=>{
-    const title = (b.gliderName?'🐿 '+b.gliderName:'🐿 '+b.guestName)+' · '+
+    const gc = Number(b.gliderCount)||1;
+    const title = (b.gliderName?'🐿 '+b.gliderName:'🐿 '+b.guestName)+' ('+gc+' ตัว) · '+
       (b.roomType==='grand_suite'?'Grand Suite':'STD-'+String(b.roomNumber).padStart(2,'0'));
     const desc = ['เจ้าของ: '+b.guestName,
       b.gliderName?'น้อง: '+b.gliderName:'',
+      'จำนวน: '+gc+' ตัว',
       b.phone?'เบอร์: '+b.phone:'',
       b.notes?'บันทึก: '+b.notes:''].filter(Boolean).join('\\n');
     const s = new Date(b.checkIn+'T00:00:00+07:00');
@@ -623,10 +645,10 @@ function syncAll(bookings) {
     else{ev=cal.createAllDayEvent(title,s,e,{description:desc});eid=ev.getId();cre++;}
     return [b.id,b.guestName||'',b.gliderName||'',b.phone||'',
       b.roomType==='grand_suite'?'Grand Suite':'Standard',
-      b.roomNumber,b.checkIn,b.checkOut,b.notes||'',eid,now];
+      b.roomNumber,b.checkIn,b.checkOut,b.notes||'',gc,eid,now];
   });
-  if(sh.getLastRow()>1) sh.getRange(2,1,sh.getLastRow()-1,11).clearContent();
-  if(rows.length) sh.getRange(2,1,rows.length,11).setValues(rows);
+  if(sh.getLastRow()>1) sh.getRange(2,1,sh.getLastRow()-1,N_COLS).clearContent();
+  if(rows.length) sh.getRange(2,1,rows.length,N_COLS).setValues(rows);
   return {created:cre,updated:upd,deleted:del,total:bookings.length};
 }`;
 
@@ -665,7 +687,7 @@ const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 // ตั้งค่า Apps Script URL ตรงนี้ — ใช้ได้ทุกเครื่องทันที
 // วาง URL ของคุณระหว่าง '' ด้านล่าง แล้วบันทึกไฟล์
 // ══════════════════════════════════════════════════════
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxFN5KihQB9GURSAVNA0HY9l4AABjDfjg1Rd8cKYPgFyzRKKfVsE5N8EnU1fP2yNoNs/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwPWCFGJetQw0afVPD3LaiR-HcFOw25kt_RoVI9Nv0o2uYXPnoZTxef5wYZr_DY1IZi/exec';
 // ตัวอย่าง: const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/ABC123.../exec';
 // ══════════════════════════════════════════════════════
 
@@ -823,14 +845,14 @@ async function pullCloud(silent){
   try{
     const d=await callAppsScript('pull', null);
     const rawIncoming = d.bookings||[];
-    // migrate gliderCount ทุกตัว (ป้องกันค่า undefined/""/0 จาก Sheet)
+    // ใช้ gliderCount จาก Sheet (Apps Script v5+); fallback = 1 เฉพาะกรณี undefined
     const incoming = rawIncoming.map(b => ({
       ...b,
-      gliderCount: (b.gliderCount && parseInt(b.gliderCount) > 0)
+      gliderCount: (b.gliderCount !== undefined && b.gliderCount !== null && parseInt(b.gliderCount) > 0)
                    ? parseInt(b.gliderCount)
                    : 1
     }));
-    // merge: ถ้าข้อมูลใหม่มีมากกว่า หรือ silent pull → ใช้ข้อมูลจาก Sheet
+    // merge: ถ้า silent pull และ Sheet ว่างแต่เครื่องนี้มีข้อมูล → ไม่ทับ
     if(silent && S.bookings.length > 0 && incoming.length === 0){
       // Sheet ว่าง แต่เครื่องนี้มีข้อมูล → ไม่ทับ
     } else {
@@ -1431,10 +1453,10 @@ function openSettings(){
     ${S.syncUrl?(S.syncSt==='error'?`<div class="errbx">⚠ ${esc(S.syncErr||'error')}</div>`:`<div class="okbx">${lbl}</div>`):''}
     ${S.syncSt==='error'?`<div style="background:rgba(196,108,126,.1);border:1px solid rgba(196,108,126,.4);border-radius:12px;padding:12px 16px;font-size:12.5px;color:var(--cocoa);line-height:1.7;margin-bottom:14px;">
       <b>❓ Sync ล้มเหลว — ตรวจสอบตามลำดับนี้:</b><br/>
-      <b>1. 🔴 Deploy ใหม่ Apps Script</b> → คัดลอก code ใหม่ด้านล่าง → วางแทนของเดิม → Deploy → <b>New deployment</b><br/>
+      <b>1. 🔴 Deploy ใหม่ Apps Script (v5-gc-post)</b> → คัดลอก code ใหม่ด้านล่าง → วางแทนของเดิม → Deploy → <b>New deployment</b><br/>
       <b>2. ตั้งค่า</b> Execute as: <b>Me</b> | Who has access: <b>Anyone</b><br/>
       <b>3. URL</b> ต้องลงท้ายด้วย <code>/exec</code> ไม่ใช่ <code>/dev</code><br/>
-      <b>4. ตรวจเวอร์ชัน</b> กดปุ่ม 🔍 ด้านล่าง — ต้องแสดง "v4-post"<br/>
+      <b>4. ตรวจเวอร์ชัน</b> กดปุ่ม 🔍 ด้านล่าง — ต้องแสดง "v5-gc-post"<br/>
       <span style="color:var(--pd);">ข้อผิดพลาด: ${esc(S.syncErr)}</span>
     </div>`:''}
     <div class="fg">
@@ -1505,14 +1527,12 @@ async function checkApiVersion(){
   el.style.color='var(--cm)';
   try{
     const d = await callAppsScript('ping', null);
-    if(d.version === 'v4-post'){
-      el.innerHTML = '<span style="color:#3F7B23;">✓ v4-post (POST sync พร้อมใช้)</span>';
+    if(d.version === 'v5-gc-post' && d.schema === 12){
+      el.innerHTML = '<span style="color:#3F7B23;">✓ v5-gc-post (Schema 12 col + POST sync)</span>';
     } else if(d.version){
-      el.innerHTML = '<span style="color:#C9A24E;">⚠ '+d.version+' — ต้อง Deploy ใหม่ เพื่อแก้ sync fail</span>';
-    } else if(d.msg && d.msg.includes('ready')){
-      el.innerHTML = '<span style="color:#3F7B23;">✓ v4-post (POST sync พร้อมใช้)</span>';
+      el.innerHTML = '<span style="color:#C9A24E;">⚠ '+d.version+' — ต้อง Deploy ใหม่ เพื่อแก้ปัญหาจำนวนตัว + sync</span>';
     } else {
-      el.innerHTML = '<span style="color:#C46C7E;">⚠ เวอร์ชันเก่า — ต้อง Deploy ใหม่ เพื่อแก้ sync fail</span>';
+      el.innerHTML = '<span style="color:#C46C7E;">⚠ เวอร์ชันเก่า — ต้อง Deploy ใหม่ Apps Script</span>';
     }
   }catch(err){
     el.innerHTML = '<span style="color:#C46C7E;">✗ '+err.message+'</span>';
