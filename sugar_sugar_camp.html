@@ -528,7 +528,7 @@ function doGet(e) {
       const bookings = JSON.parse(decodeURIComponent(p.data));
       result = { ok:true, ...syncAll(bookings) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v5-gc-post', schema:12 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v3-glidercount', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -687,7 +687,7 @@ const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 // ตั้งค่า Apps Script URL ตรงนี้ — ใช้ได้ทุกเครื่องทันที
 // วาง URL ของคุณระหว่าง '' ด้านล่าง แล้วบันทึกไฟล์
 // ══════════════════════════════════════════════════════
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxmdVpDvRHeSEV2-duj3K1l7_pxt7oz1HVznlPeLmtnZXdndFYpMrvaut2pdLUFBkD1/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwCG7QEgNCZTmCkCVqZM11YpOkH4x2CW-EtL0aLCWcvdiuKXtmHiF-Gl12SBUFn7mqq/exec';
 // ตัวอย่าง: const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/ABC123.../exec';
 // ══════════════════════════════════════════════════════
 
@@ -1453,10 +1453,10 @@ function openSettings(){
     ${S.syncUrl?(S.syncSt==='error'?`<div class="errbx">⚠ ${esc(S.syncErr||'error')}</div>`:`<div class="okbx">${lbl}</div>`):''}
     ${S.syncSt==='error'?`<div style="background:rgba(196,108,126,.1);border:1px solid rgba(196,108,126,.4);border-radius:12px;padding:12px 16px;font-size:12.5px;color:var(--cocoa);line-height:1.7;margin-bottom:14px;">
       <b>❓ Sync ล้มเหลว — ตรวจสอบตามลำดับนี้:</b><br/>
-      <b>1. 🔴 Deploy ใหม่ Apps Script (v5-gc-post)</b> → คัดลอก code ใหม่ด้านล่าง → วางแทนของเดิม → Deploy → <b>New deployment</b><br/>
+      <b>1. ตรวจสอบ URL</b> ต้องลงท้ายด้วย <code>/exec</code> ไม่ใช่ <code>/dev</code><br/>
       <b>2. ตั้งค่า</b> Execute as: <b>Me</b> | Who has access: <b>Anyone</b><br/>
       <b>3. URL</b> ต้องลงท้ายด้วย <code>/exec</code> ไม่ใช่ <code>/dev</code><br/>
-      <b>4. ตรวจเวอร์ชัน</b> กดปุ่ม 🔍 ด้านล่าง — ต้องแสดง "v5-gc-post"<br/>
+      <b>4. ตรวจเวอร์ชัน</b> กดปุ่ม 🔍 ด้านล่าง — ต้องแสดง "พร้อมใช้งาน" สีเขียว<br/>
       <span style="color:var(--pd);">ข้อผิดพลาด: ${esc(S.syncErr)}</span>
     </div>`:''}
     <div class="fg">
@@ -1527,12 +1527,14 @@ async function checkApiVersion(){
   el.style.color='var(--cm)';
   try{
     const d = await callAppsScript('ping', null);
-    if(d.version === 'v5-gc-post' && d.schema === 12){
-      el.innerHTML = '<span style="color:#3F7B23;">✓ v5-gc-post (Schema 12 col + POST sync)</span>';
-    } else if(d.version){
-      el.innerHTML = '<span style="color:#C9A24E;">⚠ '+d.version+' — ต้อง Deploy ใหม่ เพื่อแก้ปัญหาจำนวนตัว + sync</span>';
+    const v = d.version || '';
+    const s = d.schema  || 0;
+    if(v){
+      el.innerHTML = '<span style="color:#3F7B23;">✓ '+v+(s?' (Schema '+s+' col)':'')+' — พร้อมใช้งาน</span>';
+    } else if(d.msg && d.msg.includes('ready')){
+      el.innerHTML = '<span style="color:#3F7B23;">✓ เชื่อมต่อสำเร็จ — พร้อมใช้งาน</span>';
     } else {
-      el.innerHTML = '<span style="color:#C46C7E;">⚠ เวอร์ชันเก่า — ต้อง Deploy ใหม่ Apps Script</span>';
+      el.innerHTML = '<span style="color:#C9A24E;">⚠ เชื่อมต่อได้ แต่ตรวจเวอร์ชันไม่ได้</span>';
     }
   }catch(err){
     el.innerHTML = '<span style="color:#C46C7E;">✗ '+err.message+'</span>';
