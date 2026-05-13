@@ -656,7 +656,7 @@ async function gFetch(url, options = {}) {
   return r.json();
 }
 async function fetchSheet() {
-  const range = encodeURIComponent(CFG.sheetName + '!A:M');
+  const range = encodeURIComponent(CFG.sheetName + '!A:N');
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values/${range}?key=${CFG.apiKey}`;
   const data = await gFetch(url);
   return data.values || [];
@@ -740,12 +740,16 @@ function extractGliderNames(text) {
 function buildCustomers(rows) {
   if (!rows.length) return [];
   const data = rows.slice(1);
-  const idx = { timestamp:0, checkIn:1, owner:2, phone:3, phone2:4, count:5, gliders:6, note:7, transport:8, terms:9, checkOut:10, line:11 };
+  // Sheet columns: A=row#, B=timestamp, C=checkIn, D=owner, E=phone, F=phone2, G=count, H=gliders, I=note, J=transport, K=terms, L=checkOut, M=line
+  const idx = { rownum:0, timestamp:1, checkIn:2, owner:3, phone:4, phone2:5, count:6, gliders:7, note:8, transport:9, terms:10, checkOut:11, line:12 };
   const groups = {};
   data.forEach(row => {
-    if (!row || row.length < 3) return;
+    if (!row || row.length < 4) return;
     const owner = (row[idx.owner] || '').trim();
     if (!owner) return;
+    // Skip rows that don't look like customer entries (no timestamp or timestamp doesn't contain time)
+    const ts = (row[idx.timestamp] || '').trim();
+    if (!ts || !ts.includes('/')) return;
     const phone = normalizePhone(row[idx.phone]);
     const key = phone || ('name:' + owner.toLowerCase());
     if (!groups[key]) {
