@@ -482,6 +482,27 @@ details.sc>div{padding:0 18px 18px;}
   .co-modal{max-height:100vh;border-radius:0;}
   .co-actions{flex-direction:column;}
 }
+
+/* ══════════════════════════════════
+   RETURNING CUSTOMER AUTOCOMPLETE
+══════════════════════════════════ */
+.cust-suggest{position:absolute;top:100%;left:0;right:0;z-index:30;
+  background:#fff;border:1px solid var(--ln);border-radius:12px;margin-top:4px;
+  box-shadow:0 14px 30px rgba(42,24,16,.20);overflow:hidden;
+  max-height:264px;overflow-y:auto;}
+.cust-suggest-head{font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--cm);font-weight:600;padding:9px 14px 6px;background:var(--cream);
+  border-bottom:1px solid var(--ln);}
+.cust-item{display:block;width:100%;text-align:left;border:none;background:transparent;
+  padding:10px 14px;cursor:pointer;font-family:inherit;border-bottom:1px solid var(--ln);
+  transition:background .12s;}
+.cust-item:last-child{border-bottom:none;}
+.cust-item:hover{background:var(--phs);}
+.cust-name{font-size:13.5px;font-weight:600;color:var(--cocoa);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.cust-sub{font-size:11.5px;color:var(--cm);margin-top:2px;}
+.cust-badge{font-size:10px;font-weight:600;background:var(--gs);color:#856B2A;
+  padding:2px 8px;border-radius:999px;}
 </style>
 </head>
 <body>
@@ -494,7 +515,7 @@ details.sc>div{padding:0 18px 18px;}
 // APPS SCRIPT CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google Apps Script (v5-gc-post)
+ * Sugar Sugar Camp - Google Apps Script (v6-lock)
  * Deploy -> New deployment -> Web app
  * Execute as: Me | Who has access: Anyone
  *
@@ -528,7 +549,7 @@ function doGet(e) {
       const bookings = JSON.parse(decodeURIComponent(p.data));
       result = { ok:true, ...syncAll(bookings) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v3-glidercount', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v6-lock', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -614,6 +635,10 @@ function readSheet() {
 }
 
 function syncAll(bookings) {
+  // กันหลายเครื่อง/หลายคนเขียนชนกัน — ทำให้ข้อมูลทับกันหาย
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
   const sh = getSheet(), cal = getCal();
   const evMap = {};
   if (sh.getLastRow()>1)
@@ -649,7 +674,11 @@ function syncAll(bookings) {
   });
   if(sh.getLastRow()>1) sh.getRange(2,1,sh.getLastRow()-1,N_COLS).clearContent();
   if(rows.length) sh.getRange(2,1,rows.length,N_COLS).setValues(rows);
+  SpreadsheetApp.flush();
   return {created:cre,updated:upd,deleted:del,total:bookings.length};
+  } finally {
+    lock.releaseLock();
+  }
 }`;
 
 // ============================
@@ -687,7 +716,7 @@ const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 // ตั้งค่า Apps Script URL ตรงนี้ — ใช้ได้ทุกเครื่องทันที
 // วาง URL ของคุณระหว่าง '' ด้านล่าง แล้วบันทึกไฟล์
 // ══════════════════════════════════════════════════════
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwCG7QEgNCZTmCkCVqZM11YpOkH4x2CW-EtL0aLCWcvdiuKXtmHiF-Gl12SBUFn7mqq/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9XOHiDBxV4lKDiKF6BQ_zm4pB-ro5QiDhINGFeICcNI2kxDilewSOihywvSsEb9og/exec';
 // ตัวอย่าง: const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/ABC123.../exec';
 // ══════════════════════════════════════════════════════
 
@@ -698,7 +727,8 @@ let S = {
   syncUrl: APPS_SCRIPT_URL || '',
   syncSt: APPS_SCRIPT_URL ? 'idle' : 'unconfigured',
   lastSync:0, syncErr:'',
-  extraCages:0
+  extraCages:0,
+  dirty:false        // มีการแก้ไขที่ยัง sync ขึ้น Sheet ไม่สำเร็จหรือยัง
 };
 try{
   const r=localStorage.getItem(LS_B);
@@ -798,19 +828,37 @@ function callAppsScript(action, bookings){
   });
 }
 
-function autoSync(){
-  if(!S.syncUrl)return;
-  if(syncT)clearTimeout(syncT);
-  S.syncSt='syncing'; updateSyncBadge();
-  syncT=setTimeout(async()=>{
+// pushNow — ยิง sync ขึ้น Sheet พร้อม retry แบบ backoff
+//   คืน true เมื่อสำเร็จ (เคลียร์ dirty), false เมื่อพยายามครบแล้วยังพลาด
+async function pushNow(retries){
+  if(!S.syncUrl) return false;
+  const max = (typeof retries==='number') ? retries : 3;
+  for(let attempt=1; attempt<=max; attempt++){
     try{
       await callAppsScript('sync', S.bookings);
       const now=Date.now(); localStorage.setItem(LS_T,String(now));
-      S.syncSt='synced'; S.lastSync=now; S.syncErr=''; updateSyncBadge();
+      S.syncSt='synced'; S.lastSync=now; S.syncErr=''; S.dirty=false;
+      updateSyncBadge();
+      return true;
     }catch(err){
-      S.syncSt='error'; S.syncErr=err.message; updateSyncBadge();
+      S.syncErr=err.message;
+      if(attempt<max){
+        // backoff: 0.8s, 1.6s, 2.4s …
+        await new Promise(r=>setTimeout(r, attempt*800));
+      }else{
+        S.syncSt='error'; updateSyncBadge();
+      }
     }
-  },1500);
+  }
+  return false;
+}
+
+function autoSync(){
+  if(!S.syncUrl)return;
+  S.dirty=true;                       // มีของค้างที่ต้อง push ก่อน pull เสมอ
+  if(syncT)clearTimeout(syncT);
+  S.syncSt='syncing'; updateSyncBadge();
+  syncT=setTimeout(()=>{ pushNow(3); },1500);
 }
 
 function updateSyncBadge(){
@@ -829,7 +877,7 @@ async function manualSync(){
   try{
     const d = await callAppsScript('sync', S.bookings);
     const now=Date.now(); localStorage.setItem(LS_T,String(now));
-    S.syncSt='synced'; S.lastSync=now; S.syncErr=''; render();
+    S.syncSt='synced'; S.lastSync=now; S.syncErr=''; S.dirty=false; render();
     toast('✓ Sync สำเร็จ · อัปเดต '+((d.updated||0)+(d.created||0))+' รายการ','ok');
   }catch(err){
     S.syncSt='error'; S.syncErr=err.message; render();
@@ -840,6 +888,20 @@ async function manualSync(){
 async function pullCloud(silent){
   if(!S.syncUrl)return;
   if(!silent && !confirm('ดึงข้อมูลล่าสุดจาก Google Sheets จะแทนที่ข้อมูลในเครื่องนี้ — ยืนยัน?'))return;
+
+  // ★ ป้องกันข้อมูลหาย: ถ้ามีของค้างที่ยัง sync ไม่สำเร็จ ต้อง push ขึ้น Sheet ก่อน
+  //   ถ้า push ไม่สำเร็จ → หยุดเลย ห้าม pull มาทับการจองที่ยังไม่ได้ขึ้น cloud
+  if(S.dirty){
+    S.syncSt='syncing'; updateSyncBadge();
+    const ok = await pushNow(3);
+    if(!ok){
+      // push ล้มเหลว — เก็บข้อมูลในเครื่องไว้ ไม่ดึงทับ
+      if(!silent){ render(); toast('⚠ ยังมีข้อมูลค้างที่ยังไม่ได้ Sync — ข้ามการดึงเพื่อกันข้อมูลหาย','err'); }
+      else { updateSyncBadge(); render(); }
+      return;
+    }
+  }
+
   S.syncSt='syncing'; updateSyncBadge();
   if(!silent) render();
   try{
@@ -852,11 +914,11 @@ async function pullCloud(silent){
                    ? parseInt(b.gliderCount)
                    : 1
     }));
-    // merge: ถ้า silent pull และ Sheet ว่างแต่เครื่องนี้มีข้อมูล → ไม่ทับ
+    // กันเหนียวซ้ำ: ถ้า silent pull และ Sheet ว่างแต่เครื่องนี้มีข้อมูล → ไม่ทับ
     if(silent && S.bookings.length > 0 && incoming.length === 0){
       // Sheet ว่าง แต่เครื่องนี้มีข้อมูล → ไม่ทับ
     } else {
-      S.bookings=incoming; save();
+      S.bookings=incoming; S.dirty=false; save();
     }
     const now=Date.now(); localStorage.setItem(LS_T,String(now));
     S.syncSt='synced'; S.lastSync=now;
@@ -1213,6 +1275,74 @@ function closeModal(){ document.getElementById('modals').innerHTML=''; }
 // ============================
 let FS={roomType:'standard',roomNumber:null,editId:''};
 
+// ── ลูกค้าเดิม (returning customer) ─────────────────────
+let CUST_MATCHES=[];
+
+// รวมรายชื่อลูกค้าไม่ซ้ำจากการจองทั้งหมด — ใช้ค่าจากการจอง "ล่าสุด" ของแต่ละคน
+// key: เบอร์โทร (ถ้ามี) ไม่งั้นใช้ชื่อ — กันชื่อซ้ำคนละคน/คนเดียวเปลี่ยนเบอร์
+function getCustomerProfiles(){
+  const map={};
+  const sorted=[...S.bookings].sort((a,b)=>{
+    const ka=a.createdAt||Date.parse(a.checkIn+'T00:00:00')||0;
+    const kb=b.createdAt||Date.parse(b.checkIn+'T00:00:00')||0;
+    return ka-kb; // เก่า→ใหม่ ให้ค่าล่าสุดทับค่าก่อนหน้า
+  });
+  sorted.forEach(b=>{
+    const name=(b.guestName||'').trim();
+    if(!name)return;
+    const ph=(b.phone||'').trim();
+    const key=ph?('p:'+ph):('n:'+name.toLowerCase());
+    if(!map[key]) map[key]={name,phone:ph,gliderName:'',gliderCount:1,notes:'',count:0,lastDate:b.checkIn};
+    const m=map[key];
+    m.count++;
+    m.name=name;
+    if(ph) m.phone=ph;
+    if(b.gliderName) m.gliderName=b.gliderName;
+    if(b.gliderCount) m.gliderCount=parseInt(b.gliderCount)||m.gliderCount;
+    if(b.notes) m.notes=b.notes;
+    if(b.checkIn>(m.lastDate||'')) m.lastDate=b.checkIn;
+  });
+  return Object.values(map).sort((a,b)=>(b.lastDate||'').localeCompare(a.lastDate||''));
+}
+
+// แสดงรายการ suggestion ใต้ช่องชื่อเจ้าของ
+function custSuggest(q){
+  const box=document.getElementById('cust-suggest');
+  if(!box)return;
+  q=(q||'').toLowerCase().trim();
+  if(q.length<1){ box.style.display='none'; box.innerHTML=''; return; }
+  const all=getCustomerProfiles();
+  const matches=all.filter(c=>
+    c.name.toLowerCase().includes(q) || (c.phone||'').toLowerCase().includes(q)
+  ).slice(0,6);
+  CUST_MATCHES=matches;
+  if(matches.length===0){ box.style.display='none'; box.innerHTML=''; return; }
+  box.innerHTML='<div class="cust-suggest-head">🔁 ลูกค้าเดิม — แตะเพื่อเติมข้อมูล</div>'+
+    matches.map((c,i)=>`
+    <button type="button" class="cust-item" onmousedown="event.preventDefault();applyCust(${i})">
+      <div class="cust-name">${esc(c.name)}${c.count>1?`<span class="cust-badge">เคยพัก ${c.count} ครั้ง</span>`:''}</div>
+      <div class="cust-sub">${c.gliderName?'🐿 '+esc(c.gliderName)+' · ':''}${c.gliderCount} ตัว${c.phone?' · 📞 '+esc(c.phone):''}${c.lastDate?' · ล่าสุด '+thD(c.lastDate,true):''}</div>
+    </button>`).join('');
+  box.style.display='';
+}
+
+// เติมข้อมูลลูกค้าเดิมลงในฟอร์ม
+function applyCust(i){
+  const c=CUST_MATCHES[i]; if(!c)return;
+  const g=document.getElementById('fg');   if(g)  g.value=c.name;
+  const p=document.getElementById('fp');   if(p)  p.value=c.phone||'';
+  const gl=document.getElementById('fgl'); if(gl) gl.value=c.gliderName||'';
+  const n=document.getElementById('fn');   if(n)  n.value=c.notes||'';
+  const cnt=document.getElementById('fcnt'), disp=document.getElementById('fcnt-display');
+  const gc=parseInt(c.gliderCount)||1;
+  if(cnt) cnt.value=gc;
+  if(disp) disp.textContent=gc;
+  const minus=document.getElementById('cnt-minus'); if(minus) minus.style.opacity=gc<=1?'0.3':'1';
+  const box=document.getElementById('cust-suggest'); if(box){box.style.display='none';box.innerHTML='';}
+  toast('✓ เติมข้อมูลลูกค้าเดิม: '+c.name,'ok');
+}
+
+
 function openForm(pre={}){
   FS={roomType:pre.roomType||'standard',roomNumber:pre.roomNumber||null,editId:''};
   if(FS.roomType==='grand_suite') FS.roomNumber=1;
@@ -1240,8 +1370,11 @@ function drawForm(v,isEdit){
     <p class="msub">${isEdit?'แก้ไขรายละเอียดด้านล่าง':'กรอกข้อมูลเพื่อจองที่พักให้กับน้องชูการ์ฯ'}</p>
     <div id="ferr"></div>
     <div class="frow2">
-      <div class="fg"><label class="fl">ชื่อเจ้าของ *</label>
-        <input id="fg" class="fi" value="${esc(v.guestName)}" placeholder="เช่น คุณสมหญิง"></div>
+      <div class="fg" style="position:relative;"><label class="fl">ชื่อเจ้าของ *</label>
+        <input id="fg" class="fi" value="${esc(v.guestName)}" placeholder="เช่น คุณสมหญิง" autocomplete="off"
+          oninput="custSuggest(this.value)" onfocus="custSuggest(this.value)"
+          onblur="setTimeout(()=>{const b=document.getElementById('cust-suggest');if(b){b.style.display='none';}},160)">
+        <div id="cust-suggest" class="cust-suggest" style="display:none;"></div></div>
       <div class="fg"><label class="fl">เบอร์โทร</label>
         <input id="fp" class="fi" value="${esc(v.phone)}" placeholder="08X-XXX-XXXX"></div>
     </div>
@@ -1724,6 +1857,25 @@ function downloadSlip(id,name){
 // START — auto pull on open
 // ============================
 setInterval(updateSyncBadge, 30000);
+
+// ★ flush ตอนปิด/สลับแท็บ: ถ้ายังมีของค้าง (dirty) ส่งด้วย sendBeacon
+//   sendBeacon ส่งได้แม้หน้ากำลังปิด — กันเคสปิดแท็บภายใน 1.5 วิหลังกดจอง
+function flushOnExit(){
+  if(S.dirty && S.syncUrl && navigator.sendBeacon){
+    try{
+      const blob=new Blob(
+        [JSON.stringify({action:'sync', bookings:S.bookings})],
+        {type:'text/plain'}
+      );
+      const sent=navigator.sendBeacon(S.syncUrl, blob);
+      if(sent){ S.dirty=false; localStorage.setItem(LS_T,String(Date.now())); }
+    }catch(_){}
+  }
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden') flushOnExit();
+});
+window.addEventListener('pagehide', flushOnExit);
 
 // ดึงข้อมูลล่าสุดจาก Sheet อัตโนมัติทุกครั้งที่เปิด (silent)
 async function initSync(){
