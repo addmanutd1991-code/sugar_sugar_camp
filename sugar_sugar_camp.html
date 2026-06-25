@@ -549,7 +549,7 @@ function doGet(e) {
       const bookings = JSON.parse(decodeURIComponent(p.data));
       result = { ok:true, ...syncAll(bookings) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v6-lock', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v7-line', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -679,6 +679,91 @@ function syncAll(bookings) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// ════════════════════════════════════════════════════════════
+// LINE — แจ้งเตือนสรุปประจำวัน (ส่งอัตโนมัติทุกเช้า 06:00)
+// ────────────────────────────────────────────────────────────
+// อ่านข้อมูลจากชีต Bookings แล้วสรุปว่าวันนี้ Sugar เข้ากี่บ้าน
+// ออกกี่บ้าน แล้วส่งเข้า LINE ให้อัตโนมัติ
+//
+// ตั้งค่าครั้งเดียว:
+//  1) สร้าง Messaging API channel ที่ https://developers.line.biz
+//     แล้วคัดลอก "Channel access token (long-lived)"
+//  2) ในหน้า Apps Script: ⚙ Project Settings > Script Properties
+//     เพิ่ม 2 ค่า:
+//        LINE_CHANNEL_ACCESS_TOKEN = <channel access token>
+//        LINE_TARGET_ID            = <userId/groupId ผู้รับ>
+//        (ถ้าเว้น LINE_TARGET_ID ว่างไว้ = ส่งแบบ broadcast หาผู้ติดตามทุกคน)
+//  3) ตั้ง Time zone ของโปรเจกต์เป็น (GMT+07:00) Bangkok
+//  4) รันฟังก์ชัน setupDailyLineTrigger() 1 ครั้ง เพื่อสร้างทริกเกอร์ 06:00
+//
+//  ทดสอบส่งทันทีได้โดยกดรันฟังก์ชัน sendDailyLineSummary()
+// ════════════════════════════════════════════════════════════
+
+function dailySummary() {
+  const today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  const bs = readSheet();
+  const isIn = b => today >= b.checkIn && today < b.checkOut;
+  return {
+    today: today,
+    ci:  bs.filter(b => b.checkIn  === today),
+    co:  bs.filter(b => b.checkOut === today),
+    occ: bs.filter(isIn),
+    gliders: bs.filter(isIn).reduce((s,b) => s + (Number(b.gliderCount)||1), 0)
+  };
+}
+
+function buildLineMessage() {
+  const d = dailySummary();
+  const MS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const dt = new Date(d.today + 'T00:00:00+07:00');
+  const dateTh = dt.getDate() + ' ' + MS[dt.getMonth()] + ' ' + String(dt.getFullYear()+543).slice(2);
+  const nameOf = b => (b.gliderName || b.guestName || 'ไม่ระบุ') +
+    ' (' + (Number(b.gliderCount)||1) + ' ตัว · ' +
+    (b.roomType==='grand_suite' ? 'Grand Suite' : 'STD-' + String(b.roomNumber).padStart(2,'0')) + ')';
+  let m = '🐿 Sugar Sugar Camp\\n';
+  m += 'สรุปประจำวัน · ' + dateTh + '\\n';
+  m += '────────────\\n';
+  m += '🚪 เช็คอินวันนี้: ' + d.ci.length + ' บ้าน\\n';
+  m += '👋 เช็คเอาท์วันนี้: ' + d.co.length + ' บ้าน\\n';
+  m += '🌙 กรงที่เข้าพัก: ' + d.occ.length + ' บ้าน\\n';
+  m += '🐿 ชูการ์ที่พักอยู่: ' + d.gliders + ' ตัว';
+  if (d.ci.length) m += '\\n\\n🚪 เข้าวันนี้:\\n• ' + d.ci.map(nameOf).join('\\n• ');
+  if (d.co.length) m += '\\n\\n👋 ออกวันนี้:\\n• ' + d.co.map(nameOf).join('\\n• ');
+  return m;
+}
+
+function sendDailyLineSummary() {
+  const props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+  if (!token) throw new Error('ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN ใน Script Properties');
+  const target = (props.getProperty('LINE_TARGET_ID') || '').trim();
+  const text = buildLineMessage();
+  const isPush = !!target;
+  const url = 'https://api.line.me/v2/bot/message/' + (isPush ? 'push' : 'broadcast');
+  const payload = isPush
+    ? { to: target, messages: [{ type:'text', text: text }] }
+    : { messages: [{ type:'text', text: text }] };
+  const res = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + token },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  const code = res.getResponseCode();
+  if (code !== 200) throw new Error('LINE API ' + code + ': ' + res.getContentText());
+  return { ok:true, sent: isPush ? 'push' : 'broadcast' };
+}
+
+function setupDailyLineTrigger() {
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'sendDailyLineSummary')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('sendDailyLineSummary')
+    .timeBased().everyDays(1).atHour(6).create();
+  return 'ตั้งทริกเกอร์ส่ง LINE สรุปประจำวันทุกเช้า 06:00 เรียบร้อยแล้ว';
 }`;
 
 // ============================
@@ -1628,6 +1713,31 @@ function openSettings(){
         <div style="font-size:12px;color:var(--cm);line-height:1.6;margin-top:6px;">
           ข้อมูลถูกเก็บในบัญชี Google ของคุณเอง · ไม่ส่งออกไปที่ไหน<br/>
           ชีต <code>Bookings</code> และปฏิทิน <code>Sugar Sugar Camp</code> จะถูกสร้างอัตโนมัติ
+        </div>
+      </div>
+    </details>
+    <details class="sc" style="margin-top:12px;">
+      <summary>📲 แจ้งเตือนสรุปเข้า LINE ทุกเช้า 06:00</summary>
+      <div>
+        <div style="font-size:12.5px;color:var(--cm);line-height:1.7;margin-bottom:8px;">
+          ระบบจะอ่านข้อมูลจากชีต <code>Bookings</code> แล้วสรุปว่าวันนี้ Sugar
+          <b>เข้ากี่บ้าน ออกกี่บ้าน</b> ส่งเข้า LINE ให้อัตโนมัติทุกเช้า 06:00
+          (ทำงานบนเซิร์ฟเวอร์ Google — ไม่ต้องเปิดหน้านี้ค้างไว้)
+        </div>
+        <div class="steps"><ol>
+          <li>สร้าง <b>Messaging API channel</b> ที่ <a href="https://developers.line.biz" target="_blank">developers.line.biz</a> แล้วคัดลอก <b>Channel access token (long-lived)</b></li>
+          <li>ในหน้า Apps Script กด ⚙ <b>Project Settings → Script Properties</b> เพิ่ม 2 ค่า:
+            <div style="margin-top:4px;font-size:12px;">
+              <code>LINE_CHANNEL_ACCESS_TOKEN</code> = token ที่คัดลอกมา<br/>
+              <code>LINE_TARGET_ID</code> = userId/groupId ผู้รับ <span style="color:var(--cm);">(เว้นว่าง = broadcast หาผู้ติดตามทุกคน)</span>
+            </div>
+          </li>
+          <li>ตั้ง <b>Time zone</b> ของโปรเจกต์เป็น <b>(GMT+07:00) Bangkok</b></li>
+          <li>เลือกฟังก์ชัน <code>setupDailyLineTrigger</code> แล้วกด <b>▶ Run</b> 1 ครั้ง เพื่อสร้างทริกเกอร์ 06:00</li>
+          <li style="color:#3F7B23;">ทดสอบส่งทันที: เลือกฟังก์ชัน <code>sendDailyLineSummary</code> แล้วกด ▶ Run</li>
+        </ol></div>
+        <div style="font-size:12px;color:var(--cm);line-height:1.6;margin-top:6px;">
+          ⚠ ถ้าแก้โค้ดใหม่ อย่าลืม <b>Save</b> แล้ว <b>Deploy → New deployment</b> เพื่ออัปเดต
         </div>
       </div>
     </details>
