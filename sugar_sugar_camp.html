@@ -597,10 +597,16 @@ function doGet(e) {
   return ContentService.createTextOutput(output).setMimeType(mime);
 }
 
-// ─── doPost : sync หลัก (POST ไม่มี URL limit) ─────────
+// ─── doPost : sync หลัก + LINE Webhook (จับ User ID อัตโนมัติ) ─────────
 function doPost(e) {
   try {
     const d = JSON.parse(e.postData.contents);
+
+    // ★ LINE Webhook — มี events[] (ไม่มี action) → จับ userId อัตโนมัติ
+    if (d.events && Array.isArray(d.events) && !d.action) {
+      return handleLineWebhook(d);
+    }
+
     if (d.action === 'sync') return corsOut({ ok:true, ...syncAll(d.bookings||[]) });
     if (d.action === 'pull') return corsOut({ ok:true, bookings: readSheet() });
     if (d.action === 'send_line') return corsOut({ ok:true, ...sendMorningLineSummary() });
@@ -611,6 +617,41 @@ function doPost(e) {
   } catch(err) {
     return corsOut({ ok:false, error:String(err) });
   }
+}
+
+// ─── LINE Webhook handler ───────────────────────────────────
+// พอมีคนทักหา Bot (รายบุคคล) → บันทึก userId ลง LINE_TARGET_ID
+// แล้วตอบกลับยืนยันใน LINE ทันที
+function handleLineWebhook(body) {
+  const props = PropertiesService.getScriptProperties();
+  (body.events || []).forEach(function(ev) {
+    const src = ev.source || {};
+    // รับเฉพาะแชทส่วนตัว (รายบุคคล) เท่านั้น — ข้าม group/room
+    if (src.type === 'user' && src.userId) {
+      props.setProperty('LINE_TARGET_ID', src.userId);
+      // ตอบกลับยืนยัน (ถ้ามี replyToken — ใช้ได้เฉพาะ event ที่ตอบได้)
+      if (ev.replyToken) {
+        const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+        if (token) {
+          try {
+            UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'post', contentType: 'application/json',
+              headers: { Authorization: 'Bearer ' + token },
+              payload: JSON.stringify({
+                replyToken: ev.replyToken,
+                messages: [{ type:'text', text:
+                  '✅ บันทึกผู้รับแจ้งเตือนเรียบร้อย!\n🐿 Sugar Sugar Camp จะส่งสรุปให้คุณ\n🌅 ทุกเช้า 06:00\n🌆 ทุกเย็น 18:00\n\n(User ID: ' + src.userId + ')' }]
+              }),
+              muteHttpExceptions: true
+            });
+          } catch(_) {}
+        }
+      }
+    }
+  });
+  // LINE ต้องการ HTTP 200 เสมอ
+  return ContentService.createTextOutput(JSON.stringify({ ok:true }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function getSheet() {
@@ -1884,52 +1925,26 @@ function openSettings(){
           <li style="color:#3F7B23;">ทดสอบ: เลือก <code>sendMorningLineSummary</code> หรือ <code>sendEveningLineSummary</code> กด ▶ Run</li>
         </ol></div>
 
-        <details class="sc" style="margin-top:10px;border-color:rgba(196,108,126,.3);">
-          <summary style="font-size:12.5px;color:var(--pd);">🔍 วิธีหา LINE User ID / Group ID (LINE_TARGET_ID)</summary>
+        <details class="sc" style="margin-top:10px;border-color:rgba(6,199,85,.4);" open>
+          <summary style="font-size:12.5px;color:#06C755;">🎯 ตั้งค่าผู้รับรายบุคคล — จับ User ID อัตโนมัติ</summary>
           <div style="font-size:12px;line-height:1.8;color:var(--cocoa);">
-            <div style="background:#fff8e6;border-radius:8px;padding:10px 14px;margin-bottom:10px;border:1px solid #C9A24E;">
-              <b>วิธีที่ 1 — ส่งให้ตัวเอง (ง่ายที่สุด)</b>
+            <div style="background:#f0faf3;border-radius:8px;padding:12px 14px;margin-bottom:10px;border:1px solid #06C755;">
+              <b style="color:#06C755;">✨ วิธีใหม่ — ไม่ต้องใช้ webhook.site / ไม่ต้องคัดลอก ID เอง</b>
+              <div style="margin:6px 0;color:var(--cm);">โค้ดเวอร์ชันนี้ทำตัวเป็น LINE Webhook ในตัว เมื่อคุณทักหา Bot มันจะ <b>บันทึก User ID ลง LINE_TARGET_ID ให้อัตโนมัติ</b> แล้วตอบกลับยืนยันใน LINE</div>
               <ol style="margin:6px 0 0 16px;">
-                <li>เปิด <a href="https://developers.line.biz" target="_blank">developers.line.biz</a> → เลือก Bot ของคุณ</li>
-                <li>แถบ <b>Messaging API</b> → เลื่อนหา <b>Bot basic ID</b> (เช่น <code>@xxx1234</code>)</li>
-                <li>เปิด LINE บนมือถือ → ค้นหา Bot ID → <b>Add Friend</b></li>
-                <li>ส่งข้อความอะไรก็ได้ไปหา Bot</li>
-                <li>ใน Apps Script รันโค้ดนี้เพื่อดู userId:<br/>
-                  <code style="background:var(--cocoa);color:#FBE3CD;padding:4px 8px;border-radius:6px;display:block;margin-top:4px;font-size:11px;">
-function getMyUserId() {
-  const token = PropertiesService.getScriptProperties()
-                .getProperty('LINE_CHANNEL_ACCESS_TOKEN');
-  const res = UrlFetchApp.fetch(
-    'https://api.line.me/v2/bot/message/profile',
-    { headers: { Authorization: 'Bearer ' + token } }
-  );
-  Logger.log(res.getContentText());
-}
-// ดู Log → จะเห็น "userId": "Uxxxxxxxx..."
-                  </code>
-                  หรือใช้วิธีง่ายกว่า → ดู Webhook log ด้านล่าง
-                </li>
-                <li>วาง userId (ขึ้นต้นด้วย <code>U</code>) ใส่ใน <code>LINE_TARGET_ID</code></li>
+                <li>วาง code เวอร์ชันนี้แล้ว <b>Deploy → New deployment</b> · คัดลอก <b>Web app URL</b> (ลงท้าย <code>/exec</code>)</li>
+                <li>ไป <a href="https://developers.line.biz" target="_blank">developers.line.biz</a> → Bot → แท็บ <b>Messaging API</b></li>
+                <li>หัวข้อ <b>Webhook settings</b> → วาง <b>Web app URL</b> ลงช่อง Webhook URL → กด <b>Update</b></li>
+                <li>เปิดสวิตช์ <b>Use webhook</b> ให้เป็น <b>Enabled</b></li>
+                <li>ปิด <b>Auto-reply messages</b> / <b>Greeting messages</b> (ที่หัวข้อ LINE Official Account features) เพื่อไม่ให้ข้อความตอบกลับชนกัน</li>
+                <li>ดู <b>Bot basic ID</b> (เช่น <code>@xxx1234</code>) → เปิด LINE มือถือ → ค้นหา ID → <b>เพิ่มเพื่อน</b></li>
+                <li><b>ทักข้อความอะไรก็ได้</b>ไปหา Bot → Bot จะตอบ "✅ บันทึกผู้รับเรียบร้อย" = เสร็จแล้ว!</li>
               </ol>
+              <div style="margin-top:6px;color:#1a6b35;">→ ตั้งแต่นี้ระบบจะส่งสรุปหาคุณคนเดียว (push) ทุกเช้า 06:00 และเย็น 18:00</div>
             </div>
-            <div style="background:#f0faf3;border-radius:8px;padding:10px 14px;margin-bottom:10px;border:1px solid #06C755;">
-              <b>วิธีที่ 2 — ดูจาก Webhook (แนะนำ)</b>
-              <ol style="margin:6px 0 0 16px;">
-                <li>ใน Messaging API Channel → <b>Webhook settings</b> → ใส่ URL: <code>https://webhook.site</code> (ฟรี)</li>
-                <li>กด <b>Verify</b> แล้วส่งข้อความไปหา Bot</li>
-                <li>เปิด webhook.site → ดู JSON payload → หาค่า <code>source.userId</code> หรือ <code>source.groupId</code></li>
-              </ol>
-            </div>
-            <div style="background:rgba(196,108,126,.08);border-radius:8px;padding:10px 14px;border:1px solid rgba(196,108,126,.3);">
-              <b>ส่งเข้า Group / ห้อง LINE</b><br/>
-              <ol style="margin:6px 0 0 16px;">
-                <li>เพิ่ม Bot เข้า Group LINE</li>
-                <li>ส่งข้อความใน Group → ดู Webhook log</li>
-                <li><code>source.groupId</code> (ขึ้นต้นด้วย <code>C</code>) → ใส่ใน <code>LINE_TARGET_ID</code></li>
-              </ol>
-            </div>
-            <div style="margin-top:8px;font-size:11.5px;color:var(--cm);">
-              💡 <b>เว้นว่าง LINE_TARGET_ID</b> = ส่งแบบ Broadcast ไปถึงทุกคนที่ Add Bot เป็น Friend
+            <div style="background:rgba(74,51,38,.05);border-radius:8px;padding:10px 14px;font-size:11.5px;color:var(--cm);">
+              <b style="color:var(--cocoa);">เปลี่ยนผู้รับ?</b> แค่ให้คนใหม่ทักหา Bot — ID ล่าสุดจะถูกบันทึกทับให้เอง<br/>
+              <b style="color:var(--cocoa);">อยากส่งหลายคน?</b> เว้นว่าง <code>LINE_TARGET_ID</code> = Broadcast ถึงทุกคนที่เพิ่ม Bot เป็นเพื่อน
             </div>
           </div>
         </details>
