@@ -503,6 +503,34 @@ details.sc>div{padding:0 18px 18px;}
 .cust-sub{font-size:11.5px;color:var(--cm);margin-top:2px;}
 .cust-badge{font-size:10px;font-weight:600;background:var(--gs);color:#856B2A;
   padding:2px 8px;border-radius:999px;}
+
+/* ══════════════════════════════════
+   LINE SUMMARY BANNER
+══════════════════════════════════ */
+.line-banner{
+  background:linear-gradient(135deg,#06C755 0%,#04A847 100%);
+  border-radius:16px;padding:16px 20px;
+  display:flex;justify-content:space-between;align-items:center;
+  gap:14px;margin-bottom:22px;flex-wrap:wrap;
+  box-shadow:0 4px 16px rgba(6,199,85,.25);}
+.line-banner .lb-left{display:flex;flex-direction:column;gap:2px;}
+.line-banner .lb-title{font-weight:700;font-size:14px;color:#fff;display:flex;align-items:center;gap:7px;}
+.line-banner .lb-stats{
+  display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;}
+.line-banner .lb-stat{
+  background:rgba(255,255,255,.18);border-radius:10px;
+  padding:6px 12px;font-size:12.5px;color:#fff;font-weight:600;
+  display:flex;align-items:center;gap:5px;}
+.line-banner .lb-stat span{opacity:.85;font-weight:400;}
+.line-banner .lb-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+.btn-line{font-family:inherit;font-size:13px;font-weight:600;padding:10px 18px;
+  border-radius:999px;border:2px solid #fff;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;transition:all .18s;white-space:nowrap;}
+.btn-line.solid{background:#fff;color:#06C755;}
+.btn-line.solid:hover{background:rgba(255,255,255,.88);}
+.btn-line.ghost{background:rgba(255,255,255,.15);color:#fff;}
+.btn-line.ghost:hover{background:rgba(255,255,255,.28);}
+.btn-line:disabled{opacity:.5;cursor:not-allowed;}
 </style>
 </head>
 <body>
@@ -548,6 +576,15 @@ function doGet(e) {
       // fallback สำหรับ GET sync (data สั้น / file://)
       const bookings = JSON.parse(decodeURIComponent(p.data));
       result = { ok:true, ...syncAll(bookings) };
+    } else if (act === 'send_line') {
+      result = { ok:true, ...sendMorningLineSummary() };
+    } else if (act === 'send_line_evening') {
+      result = { ok:true, ...sendEveningLineSummary() };
+    } else if (act === 'line_summary') {
+      result = { ok:true, summary: dailySummary(), message: buildMorningMessage() };
+    } else if (act === 'line_summary_evening') {
+      const tom = addDay_(dateStr_(new Date()), 1);
+      result = { ok:true, summary: summaryForDate(tom), message: buildEveningMessage() };
     } else {
       result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v7-line', schema:13 };
     }
@@ -566,6 +603,10 @@ function doPost(e) {
     const d = JSON.parse(e.postData.contents);
     if (d.action === 'sync') return corsOut({ ok:true, ...syncAll(d.bookings||[]) });
     if (d.action === 'pull') return corsOut({ ok:true, bookings: readSheet() });
+    if (d.action === 'send_line') return corsOut({ ok:true, ...sendMorningLineSummary() });
+    if (d.action === 'send_line_evening') return corsOut({ ok:true, ...sendEveningLineSummary() });
+    if (d.action === 'line_summary') return corsOut({ ok:true, summary: dailySummary(), message: buildMorningMessage() });
+    if (d.action === 'line_summary_evening') { const tom=addDay_(dateStr_(new Date()),1); return corsOut({ ok:true, summary: summaryForDate(tom), message: buildEveningMessage() }); }
     return corsOut({ ok:false, error:'Unknown action' });
   } catch(err) {
     return corsOut({ ok:false, error:String(err) });
@@ -682,88 +723,148 @@ function syncAll(bookings) {
 }
 
 // ════════════════════════════════════════════════════════════
-// LINE — แจ้งเตือนสรุปประจำวัน (ส่งอัตโนมัติทุกเช้า 06:00)
+// LINE — แจ้งเตือน 2 รอบต่อวัน
 // ────────────────────────────────────────────────────────────
-// อ่านข้อมูลจากชีต Bookings แล้วสรุปว่าวันนี้ Sugar เข้ากี่บ้าน
-// ออกกี่บ้าน แล้วส่งเข้า LINE ให้อัตโนมัติ
+//  🌅 06:00 — สรุปวันนี้ : เช็คอิน/เช็คเอาท์วันนี้
+//  🌆 18:00 — แจ้งล่วงหน้า : พรุ่งนี้มีเข้า/ออกกี่บ้าน
+//  (ทำงานบน Google Server — ไม่ต้องเปิดหน้า Dashboard ค้างไว้)
 //
 // ตั้งค่าครั้งเดียว:
 //  1) สร้าง Messaging API channel ที่ https://developers.line.biz
 //     แล้วคัดลอก "Channel access token (long-lived)"
-//  2) ในหน้า Apps Script: ⚙ Project Settings > Script Properties
-//     เพิ่ม 2 ค่า:
+//  2) ⚙ Project Settings > Script Properties เพิ่ม 2 ค่า:
 //        LINE_CHANNEL_ACCESS_TOKEN = <channel access token>
 //        LINE_TARGET_ID            = <userId/groupId ผู้รับ>
-//        (ถ้าเว้น LINE_TARGET_ID ว่างไว้ = ส่งแบบ broadcast หาผู้ติดตามทุกคน)
-//  3) ตั้ง Time zone ของโปรเจกต์เป็น (GMT+07:00) Bangkok
-//  4) รันฟังก์ชัน setupDailyLineTrigger() 1 ครั้ง เพื่อสร้างทริกเกอร์ 06:00
+//        (เว้นว่าง LINE_TARGET_ID = broadcast ถึงผู้ติดตามทุกคน)
+//  3) ตั้ง Time zone เป็น (GMT+07:00) Bangkok
+//  4) รัน setupDailyLineTrigger() 1 ครั้ง → สร้าง 2 trigger อัตโนมัติ
 //
-//  ทดสอบส่งทันทีได้โดยกดรันฟังก์ชัน sendDailyLineSummary()
+//  ทดสอบ: รัน sendMorningLineSummary() หรือ sendEveningLineSummary()
 // ════════════════════════════════════════════════════════════
 
-function dailySummary() {
-  const today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+// ── ยูทิลิตี้วันที่ ─────────────────────────────────────────
+function dateStr_(d) {
+  return Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
+}
+function addDay_(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00+07:00');
+  d.setDate(d.getDate() + n);
+  return dateStr_(d);
+}
+function thDateShort_(dateStr) {
+  const MS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const d = new Date(dateStr + 'T00:00:00+07:00');
+  return d.getDate() + ' ' + MS[d.getMonth()] + ' ' + String(d.getFullYear()+543).slice(2);
+}
+function nameOf_(b) {
+  return (b.gliderName || b.guestName || 'ไม่ระบุ') +
+    ' (' + (Number(b.gliderCount)||1) + ' ตัว · ' +
+    (b.roomType==='grand_suite' ? 'Grand Suite' : 'STD-' + String(b.roomNumber).padStart(2,'0')) + ')';
+}
+
+// ── สรุปข้อมูลตามวันที่ ─────────────────────────────────────
+function summaryForDate(targetDate) {
   const bs = readSheet();
-  const isIn = b => today >= b.checkIn && today < b.checkOut;
+  const isIn = b => targetDate >= b.checkIn && targetDate < b.checkOut;
   return {
-    today: today,
-    ci:  bs.filter(b => b.checkIn  === today),
-    co:  bs.filter(b => b.checkOut === today),
-    occ: bs.filter(isIn),
+    date:    targetDate,
+    ci:      bs.filter(b => b.checkIn  === targetDate),
+    co:      bs.filter(b => b.checkOut === targetDate),
+    occ:     bs.filter(isIn),
     gliders: bs.filter(isIn).reduce((s,b) => s + (Number(b.gliderCount)||1), 0)
   };
 }
 
-function buildLineMessage() {
-  const d = dailySummary();
-  const MS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-  const dt = new Date(d.today + 'T00:00:00+07:00');
-  const dateTh = dt.getDate() + ' ' + MS[dt.getMonth()] + ' ' + String(dt.getFullYear()+543).slice(2);
-  const nameOf = b => (b.gliderName || b.guestName || 'ไม่ระบุ') +
-    ' (' + (Number(b.gliderCount)||1) + ' ตัว · ' +
-    (b.roomType==='grand_suite' ? 'Grand Suite' : 'STD-' + String(b.roomNumber).padStart(2,'0')) + ')';
+// เข้ากังเดิม — คืน summary ของวันนี้
+function dailySummary() {
+  const today = dateStr_(new Date());
+  const d = summaryForDate(today);
+  return { today, ...d };
+}
+
+// ── 🌅 เช้า 06:00 — สรุปวันนี้ ─────────────────────────────
+function buildMorningMessage() {
+  const today = dateStr_(new Date());
+  const d = summaryForDate(today);
   let m = '🐿 Sugar Sugar Camp\\n';
-  m += 'สรุปประจำวัน · ' + dateTh + '\\n';
-  m += '────────────\\n';
-  m += '🚪 เช็คอินวันนี้: ' + d.ci.length + ' บ้าน\\n';
-  m += '👋 เช็คเอาท์วันนี้: ' + d.co.length + ' บ้าน\\n';
-  m += '🌙 กรงที่เข้าพัก: ' + d.occ.length + ' บ้าน\\n';
-  m += '🐿 ชูการ์ที่พักอยู่: ' + d.gliders + ' ตัว';
-  if (d.ci.length) m += '\\n\\n🚪 เข้าวันนี้:\\n• ' + d.ci.map(nameOf).join('\\n• ');
-  if (d.co.length) m += '\\n\\n👋 ออกวันนี้:\\n• ' + d.co.map(nameOf).join('\\n• ');
+  m += '🌅 สรุปเช้า · ' + thDateShort_(today) + '\\n';
+  m += '────────────────\\n';
+  m += '🚪 เช็คอินวันนี้: ' + d.ci.length  + ' บ้าน\\n';
+  m += '👋 เช็คเอาท์วันนี้: ' + d.co.length  + ' บ้าน\\n';
+  m += '🌙 กรงที่เข้าพักอยู่: ' + d.occ.length + ' บ้าน\\n';
+  m += '🐿 ชูการ์ทั้งหมด: '   + d.gliders   + ' ตัว';
+  if (d.ci.length)  m += '\\n\\n🚪 เข้าวันนี้:\\n• ' + d.ci.map(nameOf_).join('\\n• ');
+  if (d.co.length)  m += '\\n\\n👋 ออกวันนี้:\\n• ' + d.co.map(nameOf_).join('\\n• ');
   return m;
 }
 
-function sendDailyLineSummary() {
-  const props = PropertiesService.getScriptProperties();
-  const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
-  if (!token) throw new Error('ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN ใน Script Properties');
+// ── 🌆 เย็น 18:00 — แจ้งล่วงหน้าพรุ่งนี้ ──────────────────
+function buildEveningMessage() {
+  const today    = dateStr_(new Date());
+  const tomorrow = addDay_(today, 1);
+  const d = summaryForDate(tomorrow);
+  // ยังพักอยู่วันนี้ (และอย่างน้อยผ่านพรุ่งนี้)
+  const staying = summaryForDate(today).occ.filter(b => b.checkOut > tomorrow);
+  let m = '🐿 Sugar Sugar Camp\\n';
+  m += '🌆 แจ้งล่วงหน้า · พรุ่งนี้ ' + thDateShort_(tomorrow) + '\\n';
+  m += '────────────────\\n';
+  m += '🚪 เช็คอินพรุ่งนี้: '   + d.ci.length      + ' บ้าน\\n';
+  m += '👋 เช็คเอาท์พรุ่งนี้: ' + d.co.length      + ' บ้าน\\n';
+  m += '🌙 พักต่อเนื่อง: '       + staying.length   + ' บ้าน\\n';
+  m += '🐿 ชูการ์คืนนี้: '       + summaryForDate(today).gliders + ' ตัว';
+  if (d.ci.length)  m += '\\n\\n🚪 เข้าพรุ่งนี้:\\n• ' + d.ci.map(nameOf_).join('\\n• ');
+  if (d.co.length)  m += '\\n\\n👋 ออกพรุ่งนี้:\\n• ' + d.co.map(nameOf_).join('\\n• ');
+  return m;
+}
+
+// เข้ากันเดิม — ชื่อเก่าสำหรับ action=send_line
+function buildLineMessage() { return buildMorningMessage(); }
+
+// ── ส่ง LINE ────────────────────────────────────────────────
+function sendLine_(text) {
+  const props  = PropertiesService.getScriptProperties();
+  const token  = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+  if (!token)  throw new Error('ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN ใน Script Properties');
   const target = (props.getProperty('LINE_TARGET_ID') || '').trim();
-  const text = buildLineMessage();
   const isPush = !!target;
-  const url = 'https://api.line.me/v2/bot/message/' + (isPush ? 'push' : 'broadcast');
+  const url     = 'https://api.line.me/v2/bot/message/' + (isPush ? 'push' : 'broadcast');
   const payload = isPush
-    ? { to: target, messages: [{ type:'text', text: text }] }
-    : { messages: [{ type:'text', text: text }] };
+    ? { to: target, messages: [{ type:'text', text }] }
+    : { messages: [{ type:'text', text }] };
   const res = UrlFetchApp.fetch(url, {
-    method: 'post',
-    contentType: 'application/json',
+    method: 'post', contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + token },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
+    payload: JSON.stringify(payload), muteHttpExceptions: true
   });
   const code = res.getResponseCode();
   if (code !== 200) throw new Error('LINE API ' + code + ': ' + res.getContentText());
-  return { ok:true, sent: isPush ? 'push' : 'broadcast' };
+  return { ok:true, sent: isPush ? 'push→' + target : 'broadcast' };
 }
 
+// 🌅 เช้า 06:00
+function sendMorningLineSummary() {
+  return sendLine_(buildMorningMessage());
+}
+
+// 🌆 เย็น 18:00
+function sendEveningLineSummary() {
+  return sendLine_(buildEveningMessage());
+}
+
+// เข้ากันเดิม — ชื่อเก่า
+function sendDailyLineSummary() { return sendMorningLineSummary(); }
+
+// ── ตั้ง Trigger 2 รอบ ─────────────────────────────────────
 function setupDailyLineTrigger() {
+  // ลบ trigger เดิมของทั้งสองฟังก์ชัน
+  const targets = ['sendMorningLineSummary','sendEveningLineSummary','sendDailyLineSummary'];
   ScriptApp.getProjectTriggers()
-    .filter(t => t.getHandlerFunction() === 'sendDailyLineSummary')
+    .filter(t => targets.includes(t.getHandlerFunction()))
     .forEach(t => ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger('sendDailyLineSummary')
-    .timeBased().everyDays(1).atHour(6).create();
-  return 'ตั้งทริกเกอร์ส่ง LINE สรุปประจำวันทุกเช้า 06:00 เรียบร้อยแล้ว';
+  // สร้างใหม่ 2 trigger
+  ScriptApp.newTrigger('sendMorningLineSummary').timeBased().everyDays(1).atHour(6).create();
+  ScriptApp.newTrigger('sendEveningLineSummary').timeBased().everyDays(1).atHour(18).create();
+  return 'ตั้งทริกเกอร์แล้ว 2 รอบ: 🌅 06:00 สรุปวันนี้ · 🌆 18:00 แจ้งล่วงหน้าพรุ่งนี้';
 }`;
 
 // ============================
@@ -1112,6 +1213,44 @@ function render(){
       <button class="btn-link primary" id="copy-link-btn" onclick="copyBookingLink()">📋 คัดลอกลิงก์</button>
     </div>
   </div>
+
+  ${(()=>{
+    const today=todayKey();
+    const tomorrow=addDays(today,1);
+    const ls=buildLocalLineSummary(today);
+    const lsEve=buildLocalLineSummary(tomorrow);
+    return `<div class="line-banner">
+      <div class="lb-left">
+        <div class="lb-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.02 2 11c0 2.89 1.4 5.48 3.6 7.23L5 22l3.97-1.99C10.01 20.64 11 21 12 21c5.52 0 10-4.02 10-9S17.52 2 12 2z"/></svg>
+          แจ้งเตือน LINE · 2 รอบต่อวัน
+        </div>
+        <div class="lb-stats" style="margin-top:6px;">
+          <div class="lb-stat" title="วันนี้">🌅 <span style="font-size:10px;opacity:.8;">วันนี้</span></div>
+          <div class="lb-stat">🚪 <span>${ls.ci.length} เข้า</span></div>
+          <div class="lb-stat">👋 <span>${ls.co.length} ออก</span></div>
+          <div class="lb-stat">🐿 <span>${ls.gliders} ตัว</span></div>
+        </div>
+        <div class="lb-stats">
+          <div class="lb-stat" title="พรุ่งนี้">🌆 <span style="font-size:10px;opacity:.8;">พรุ่งนี้</span></div>
+          <div class="lb-stat">🚪 <span>${lsEve.ci.length} เข้า</span></div>
+          <div class="lb-stat">👋 <span>${lsEve.co.length} ออก</span></div>
+        </div>
+      </div>
+      <div class="lb-actions">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <div style="display:flex;gap:6px;">
+            <button class="btn-line ghost" style="font-size:11.5px;padding:7px 12px;" onclick="showLinePreview('morning')">👁 เช้า</button>
+            <button class="btn-line solid" id="line-send-btn" style="font-size:12px;padding:7px 14px;" onclick="sendLineNow()">🌅 ส่งเช้า 06:00</button>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-line ghost" style="font-size:11.5px;padding:7px 12px;" onclick="showLinePreview('evening')">👁 เย็น</button>
+            <button class="btn-line solid" id="line-eve-btn" style="font-size:12px;padding:7px 14px;" onclick="sendLineEvening()">🌆 ส่งเย็น 18:00</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  })()}
 
   <div class="cage-bar">
     <div class="cage-info">
@@ -1717,28 +1856,101 @@ function openSettings(){
       </div>
     </details>
     <details class="sc" style="margin-top:12px;">
-      <summary>📲 แจ้งเตือนสรุปเข้า LINE ทุกเช้า 06:00</summary>
+      <summary>📲 แจ้งเตือน LINE · 2 รอบต่อวัน (06:00 + 18:00)</summary>
       <div>
-        <div style="font-size:12.5px;color:var(--cm);line-height:1.7;margin-bottom:8px;">
-          ระบบจะอ่านข้อมูลจากชีต <code>Bookings</code> แล้วสรุปว่าวันนี้ Sugar
-          <b>เข้ากี่บ้าน ออกกี่บ้าน</b> ส่งเข้า LINE ให้อัตโนมัติทุกเช้า 06:00
-          (ทำงานบนเซิร์ฟเวอร์ Google — ไม่ต้องเปิดหน้านี้ค้างไว้)
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+          <div style="background:#f0faf3;border:1px solid #06C755;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6;">
+            <b style="color:#06C755;">🌅 06:00 — สรุปเช้า</b><br/>
+            เช็คอิน / เช็คเอาท์วันนี้<br/>กรงที่เข้าพักอยู่ · จำนวน Sugar
+          </div>
+          <div style="background:#fff8e6;border:1px solid #C9A24E;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6;">
+            <b style="color:#856B2A;">🌆 18:00 — แจ้งล่วงหน้า</b><br/>
+            เช็คอิน / เช็คเอาท์<b>พรุ่งนี้</b><br/>พักต่อเนื่อง · Sugar คืนนี้
+          </div>
         </div>
+
         <div class="steps"><ol>
-          <li>สร้าง <b>Messaging API channel</b> ที่ <a href="https://developers.line.biz" target="_blank">developers.line.biz</a> แล้วคัดลอก <b>Channel access token (long-lived)</b></li>
+          <li>สร้าง <b>Messaging API channel</b> ที่ <a href="https://developers.line.biz" target="_blank">developers.line.biz</a>
+            → <b>Messaging API</b> → คัดลอก <b>Channel access token (long-lived)</b></li>
           <li>ในหน้า Apps Script กด ⚙ <b>Project Settings → Script Properties</b> เพิ่ม 2 ค่า:
-            <div style="margin-top:4px;font-size:12px;">
-              <code>LINE_CHANNEL_ACCESS_TOKEN</code> = token ที่คัดลอกมา<br/>
-              <code>LINE_TARGET_ID</code> = userId/groupId ผู้รับ <span style="color:var(--cm);">(เว้นว่าง = broadcast หาผู้ติดตามทุกคน)</span>
+            <div style="margin-top:6px;background:var(--cream);border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.9;">
+              <code style="color:#C46C7E;">LINE_CHANNEL_ACCESS_TOKEN</code> = token ที่คัดลอกมา<br/>
+              <code style="color:#C46C7E;">LINE_TARGET_ID</code> = userId หรือ groupId <span style="color:var(--cm);">(ดูวิธีหาด้านล่าง)</span>
             </div>
           </li>
           <li>ตั้ง <b>Time zone</b> ของโปรเจกต์เป็น <b>(GMT+07:00) Bangkok</b></li>
-          <li>เลือกฟังก์ชัน <code>setupDailyLineTrigger</code> แล้วกด <b>▶ Run</b> 1 ครั้ง เพื่อสร้างทริกเกอร์ 06:00</li>
-          <li style="color:#3F7B23;">ทดสอบส่งทันที: เลือกฟังก์ชัน <code>sendDailyLineSummary</code> แล้วกด ▶ Run</li>
+          <li>เลือกฟังก์ชัน <code>setupDailyLineTrigger</code> กด <b>▶ Run</b> 1 ครั้ง
+            → สร้าง Trigger <b>2 รอบ</b> อัตโนมัติ (06:00 + 18:00)</li>
+          <li style="color:#3F7B23;">ทดสอบ: เลือก <code>sendMorningLineSummary</code> หรือ <code>sendEveningLineSummary</code> กด ▶ Run</li>
         </ol></div>
-        <div style="font-size:12px;color:var(--cm);line-height:1.6;margin-top:6px;">
-          ⚠ ถ้าแก้โค้ดใหม่ อย่าลืม <b>Save</b> แล้ว <b>Deploy → New deployment</b> เพื่ออัปเดต
+
+        <details class="sc" style="margin-top:10px;border-color:rgba(196,108,126,.3);">
+          <summary style="font-size:12.5px;color:var(--pd);">🔍 วิธีหา LINE User ID / Group ID (LINE_TARGET_ID)</summary>
+          <div style="font-size:12px;line-height:1.8;color:var(--cocoa);">
+            <div style="background:#fff8e6;border-radius:8px;padding:10px 14px;margin-bottom:10px;border:1px solid #C9A24E;">
+              <b>วิธีที่ 1 — ส่งให้ตัวเอง (ง่ายที่สุด)</b>
+              <ol style="margin:6px 0 0 16px;">
+                <li>เปิด <a href="https://developers.line.biz" target="_blank">developers.line.biz</a> → เลือก Bot ของคุณ</li>
+                <li>แถบ <b>Messaging API</b> → เลื่อนหา <b>Bot basic ID</b> (เช่น <code>@xxx1234</code>)</li>
+                <li>เปิด LINE บนมือถือ → ค้นหา Bot ID → <b>Add Friend</b></li>
+                <li>ส่งข้อความอะไรก็ได้ไปหา Bot</li>
+                <li>ใน Apps Script รันโค้ดนี้เพื่อดู userId:<br/>
+                  <code style="background:var(--cocoa);color:#FBE3CD;padding:4px 8px;border-radius:6px;display:block;margin-top:4px;font-size:11px;">
+function getMyUserId() {
+  const token = PropertiesService.getScriptProperties()
+                .getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+  const res = UrlFetchApp.fetch(
+    'https://api.line.me/v2/bot/message/profile',
+    { headers: { Authorization: 'Bearer ' + token } }
+  );
+  Logger.log(res.getContentText());
+}
+// ดู Log → จะเห็น "userId": "Uxxxxxxxx..."
+                  </code>
+                  หรือใช้วิธีง่ายกว่า → ดู Webhook log ด้านล่าง
+                </li>
+                <li>วาง userId (ขึ้นต้นด้วย <code>U</code>) ใส่ใน <code>LINE_TARGET_ID</code></li>
+              </ol>
+            </div>
+            <div style="background:#f0faf3;border-radius:8px;padding:10px 14px;margin-bottom:10px;border:1px solid #06C755;">
+              <b>วิธีที่ 2 — ดูจาก Webhook (แนะนำ)</b>
+              <ol style="margin:6px 0 0 16px;">
+                <li>ใน Messaging API Channel → <b>Webhook settings</b> → ใส่ URL: <code>https://webhook.site</code> (ฟรี)</li>
+                <li>กด <b>Verify</b> แล้วส่งข้อความไปหา Bot</li>
+                <li>เปิด webhook.site → ดู JSON payload → หาค่า <code>source.userId</code> หรือ <code>source.groupId</code></li>
+              </ol>
+            </div>
+            <div style="background:rgba(196,108,126,.08);border-radius:8px;padding:10px 14px;border:1px solid rgba(196,108,126,.3);">
+              <b>ส่งเข้า Group / ห้อง LINE</b><br/>
+              <ol style="margin:6px 0 0 16px;">
+                <li>เพิ่ม Bot เข้า Group LINE</li>
+                <li>ส่งข้อความใน Group → ดู Webhook log</li>
+                <li><code>source.groupId</code> (ขึ้นต้นด้วย <code>C</code>) → ใส่ใน <code>LINE_TARGET_ID</code></li>
+              </ol>
+            </div>
+            <div style="margin-top:8px;font-size:11.5px;color:var(--cm);">
+              💡 <b>เว้นว่าง LINE_TARGET_ID</b> = ส่งแบบ Broadcast ไปถึงทุกคนที่ Add Bot เป็น Friend
+            </div>
+          </div>
+        </details>
+
+        <div style="font-size:12px;color:var(--cm);line-height:1.6;margin-top:10px;">
+          ⚠ ถ้า Deploy Apps Script ใหม่ → รัน <code>setupDailyLineTrigger()</code> อีกครั้งเพื่ออัปเดต Trigger
         </div>
+        ${S.syncUrl?`<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+          <button class="btn btn-g btn-sm" onclick="closeModal();showLinePreview('morning')" style="background:#f0faf3;color:#1a6b35;border:1px solid #06C755;">
+            👁 ดูข้อความเช้า
+          </button>
+          <button class="btn btn-sm" onclick="closeModal();sendLineNow()" style="background:#06C755;color:#fff;border:none;">
+            🌅 ทดสอบส่งเช้า
+          </button>
+          <button class="btn btn-g btn-sm" onclick="closeModal();showLinePreview('evening')" style="background:#fff8e6;color:#856B2A;border:1px solid #C9A24E;">
+            👁 ดูข้อความเย็น
+          </button>
+          <button class="btn btn-sm" onclick="closeModal();sendLineEvening()" style="background:#C9A24E;color:#fff;border:none;">
+            🌆 ทดสอบส่งเย็น
+          </button>
+        </div>`:'<div style="color:var(--cm);font-size:12px;margin-top:10px;">⚠ ตั้งค่า Apps Script URL ด้านบนก่อน จึงจะใช้ส่ง LINE ได้</div>'}
       </div>
     </details>
     <div style="margin-top:16px;padding:12px 16px;background:var(--cream);border-radius:12px;font-size:12.5px;color:var(--cm);">
@@ -1792,6 +2004,126 @@ function saveSettings(){
   closeModal();
   if(S.syncUrl){ toast('✓ บันทึกการตั้งค่าแล้ว · URL พร้อมใช้งาน'); autoSync(); }
   render();
+}
+
+// ============================
+// LINE SUMMARY
+// ============================
+// ── ยูทิลิตี้ฝั่ง JS ─────────────────────────────────
+function localNameOf(b){
+  return (b.gliderName||b.guestName||'ไม่ระบุ')+
+    ' ('+(Number(b.gliderCount)||1)+' ตัว · '+
+    (b.roomType==='grand_suite'?'Grand Suite':'STD-'+pad(b.roomNumber))+')';
+}
+function localThDate(dateStr){
+  const dt=parseD(dateStr);
+  return dt.getDate()+' '+TH_MS[dt.getMonth()]+' '+String(dt.getFullYear()+543).slice(2);
+}
+
+function buildLocalLineSummary(dateStr){
+  const t=dateStr||todayKey();
+  const ci=S.bookings.filter(b=>b.checkIn===t);
+  const co=S.bookings.filter(b=>b.checkOut===t);
+  const occ=onDate(S.bookings,t);
+  const gliders=occ.reduce((s,b)=>s+(parseInt(b.gliderCount)||1),0);
+  return {ci,co,occ,gliders,date:t};
+}
+
+function buildLocalMorningText(){
+  const t=todayKey();
+  const d=buildLocalLineSummary(t);
+  let m='🐿 Sugar Sugar Camp\n';
+  m+='🌅 สรุปเช้า · '+localThDate(t)+'\n';
+  m+='────────────────\n';
+  m+='🚪 เช็คอินวันนี้: '+d.ci.length+' บ้าน\n';
+  m+='👋 เช็คเอาท์วันนี้: '+d.co.length+' บ้าน\n';
+  m+='🌙 กรงที่เข้าพักอยู่: '+d.occ.length+' บ้าน\n';
+  m+='🐿 ชูการ์ทั้งหมด: '+d.gliders+' ตัว';
+  if(d.ci.length) m+='\n\n🚪 เข้าวันนี้:\n• '+d.ci.map(localNameOf).join('\n• ');
+  if(d.co.length) m+='\n\n👋 ออกวันนี้:\n• '+d.co.map(localNameOf).join('\n• ');
+  return m;
+}
+
+function buildLocalEveningText(){
+  const tomorrow=addDays(todayKey(),1);
+  const d=buildLocalLineSummary(tomorrow);
+  const todayOcc=buildLocalLineSummary(todayKey());
+  const staying=todayOcc.occ.filter(b=>b.checkOut>tomorrow);
+  let m='🐿 Sugar Sugar Camp\n';
+  m+='🌆 แจ้งล่วงหน้า · พรุ่งนี้ '+localThDate(tomorrow)+'\n';
+  m+='────────────────\n';
+  m+='🚪 เช็คอินพรุ่งนี้: '+d.ci.length+' บ้าน\n';
+  m+='👋 เช็คเอาท์พรุ่งนี้: '+d.co.length+' บ้าน\n';
+  m+='🌙 พักต่อเนื่อง: '+staying.length+' บ้าน\n';
+  m+='🐿 ชูการ์คืนนี้: '+todayOcc.gliders+' ตัว';
+  if(d.ci.length) m+='\n\n🚪 เข้าพรุ่งนี้:\n• '+d.ci.map(localNameOf).join('\n• ');
+  if(d.co.length) m+='\n\n👋 ออกพรุ่งนี้:\n• '+d.co.map(localNameOf).join('\n• ');
+  return m;
+}
+
+// เข้ากันเดิม
+function buildLocalLineText(){ return buildLocalMorningText(); }
+
+async function callLineAction(action, btnEl, btnLabel){
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='⏳ กำลังส่ง…';}
+  if(!S.syncUrl){
+    toast('⚠ ยังไม่ได้เชื่อมต่อ Apps Script — ไปตั้งค่าก่อน','err');
+    openSettings();
+    if(btnEl){btnEl.disabled=false;btnEl.innerHTML=btnLabel;}
+    return;
+  }
+  try{
+    if(location.protocol!=='file:'){
+      const r=await fetch(S.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action})});
+      const d=await r.json();
+      if(!d.ok) throw new Error(d.error||'ส่งไม่สำเร็จ');
+    } else {
+      await new Promise((res,rej)=>{
+        const cbName='ssc_cb_line_'+Date.now();
+        const url=S.syncUrl+(S.syncUrl.includes('?')?'&':'?')+'action='+action+'&callback='+cbName+'&_='+Date.now();
+        const script=document.createElement('script');
+        const timer=setTimeout(()=>{cleanup();rej(new Error('หมดเวลา 20 วิ'));},20000);
+        function cleanup(){try{delete window[cbName];}catch(_){}try{script.remove();}catch(_){}clearTimeout(timer);}
+        window[cbName]=function(d){cleanup();if(d&&d.ok)res(d);else rej(new Error(d&&d.error||'ส่งไม่สำเร็จ'));};
+        script.onerror=()=>{cleanup();rej(new Error('เชื่อมต่อ Apps Script ไม่ได้'));};
+        script.src=url;document.head.appendChild(script);
+      });
+    }
+    toast('✓ ส่งเข้า LINE สำเร็จ','ok');
+    if(btnEl){btnEl.disabled=false;btnEl.innerHTML=btnLabel;}
+  }catch(err){
+    toast('✗ ส่ง LINE ไม่สำเร็จ: '+err.message,'err');
+    if(btnEl){btnEl.disabled=false;btnEl.innerHTML=btnLabel;}
+  }
+}
+
+function sendLineNow(){
+  callLineAction('send_line', document.getElementById('line-send-btn'), '<span>💬</span> ส่ง LINE เช้า');
+}
+function sendLineEvening(){
+  callLineAction('send_line_evening', document.getElementById('line-eve-btn'), '<span>🌆</span> ส่ง LINE เย็น');
+}
+
+function showLinePreview(type){
+  const isEvening=(type==='evening');
+  const text=isEvening?buildLocalEveningText():buildLocalMorningText();
+  const t=isEvening?addDays(todayKey(),1):todayKey();
+  const label=isEvening?('🌆 แจ้งล่วงหน้าพรุ่งนี้ '+localThDate(t)):('🌅 สรุปเช้าวันนี้ '+localThDate(t));
+  const action=isEvening?'send_line_evening':'send_line';
+  showModal(`<div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
+    <button class="mclose" onclick="closeModal()">✕</button>
+    <h2 style="color:#06C755;font-size:22px;">💬 ตัวอย่างข้อความ LINE</h2>
+    <p class="msub">${label}</p>
+    <div style="background:#f0faf3;border:1.5px solid #06C755;border-radius:14px;padding:18px;font-size:13px;line-height:1.9;color:#1a3d24;white-space:pre-wrap;font-family:inherit;margin-bottom:14px;">${esc(text)}</div>
+    <div style="font-size:11.5px;color:var(--cm);margin-bottom:16px;line-height:1.6;background:var(--cream);border-radius:10px;padding:10px 14px;">
+      ⚠ ข้อความนี้สร้างจากข้อมูลในเครื่องนี้<br/>
+      เมื่อส่งจริง Apps Script จะอ่านข้อมูลล่าสุดจาก Google Sheets
+    </div>
+    <div class="factions">
+      <button class="btn btn-g" onclick="closeModal()">ปิด</button>
+      ${S.syncUrl?`<button class="btn btn-p" style="background:#06C755;border-color:#06C755;" onclick="closeModal();callLineAction('${action}',null,'')">💬 ส่งทันที</button>`:''}
+    </div>
+  </div>`);
 }
 
 // ============================
