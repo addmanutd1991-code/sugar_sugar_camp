@@ -503,6 +503,34 @@ details.sc>div{padding:0 18px 18px;}
 .cust-sub{font-size:11.5px;color:var(--cm);margin-top:2px;}
 .cust-badge{font-size:10px;font-weight:600;background:var(--gs);color:#856B2A;
   padding:2px 8px;border-radius:999px;}
+
+/* ══════════════════════════════════
+   LINE SUMMARY BANNER
+══════════════════════════════════ */
+.line-banner{
+  background:linear-gradient(135deg,#06C755 0%,#04A847 100%);
+  border-radius:16px;padding:16px 20px;
+  display:flex;justify-content:space-between;align-items:center;
+  gap:14px;margin-bottom:22px;flex-wrap:wrap;
+  box-shadow:0 4px 16px rgba(6,199,85,.25);}
+.line-banner .lb-left{display:flex;flex-direction:column;gap:2px;}
+.line-banner .lb-title{font-weight:700;font-size:14px;color:#fff;display:flex;align-items:center;gap:7px;}
+.line-banner .lb-stats{
+  display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;}
+.line-banner .lb-stat{
+  background:rgba(255,255,255,.18);border-radius:10px;
+  padding:6px 12px;font-size:12.5px;color:#fff;font-weight:600;
+  display:flex;align-items:center;gap:5px;}
+.line-banner .lb-stat span{opacity:.85;font-weight:400;}
+.line-banner .lb-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+.btn-line{font-family:inherit;font-size:13px;font-weight:600;padding:10px 18px;
+  border-radius:999px;border:2px solid #fff;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;transition:all .18s;white-space:nowrap;}
+.btn-line.solid{background:#fff;color:#06C755;}
+.btn-line.solid:hover{background:rgba(255,255,255,.88);}
+.btn-line.ghost{background:rgba(255,255,255,.15);color:#fff;}
+.btn-line.ghost:hover{background:rgba(255,255,255,.28);}
+.btn-line:disabled{opacity:.5;cursor:not-allowed;}
 </style>
 </head>
 <body>
@@ -548,6 +576,10 @@ function doGet(e) {
       // fallback สำหรับ GET sync (data สั้น / file://)
       const bookings = JSON.parse(decodeURIComponent(p.data));
       result = { ok:true, ...syncAll(bookings) };
+    } else if (act === 'send_line') {
+      result = { ok:true, ...sendDailyLineSummary() };
+    } else if (act === 'line_summary') {
+      result = { ok:true, summary: dailySummary(), message: buildLineMessage() };
     } else {
       result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v7-line', schema:13 };
     }
@@ -566,6 +598,8 @@ function doPost(e) {
     const d = JSON.parse(e.postData.contents);
     if (d.action === 'sync') return corsOut({ ok:true, ...syncAll(d.bookings||[]) });
     if (d.action === 'pull') return corsOut({ ok:true, bookings: readSheet() });
+    if (d.action === 'send_line') return corsOut({ ok:true, ...sendDailyLineSummary() });
+    if (d.action === 'line_summary') return corsOut({ ok:true, summary: dailySummary(), message: buildLineMessage() });
     return corsOut({ ok:false, error:'Unknown action' });
   } catch(err) {
     return corsOut({ ok:false, error:String(err) });
@@ -1112,6 +1146,28 @@ function render(){
       <button class="btn-link primary" id="copy-link-btn" onclick="copyBookingLink()">📋 คัดลอกลิงก์</button>
     </div>
   </div>
+
+  ${(()=>{
+    const ls=buildLocalLineSummary();
+    return `<div class="line-banner">
+      <div class="lb-left">
+        <div class="lb-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.02 2 11c0 2.89 1.4 5.48 3.6 7.23L5 22l3.97-1.99C10.01 20.64 11 21 12 21c5.52 0 10-4.02 10-9S17.52 2 12 2z"/></svg>
+          LINE สรุปประจำวัน
+        </div>
+        <div class="lb-stats">
+          <div class="lb-stat">🚪 เช็คอิน <span>${ls.ci.length} บ้าน</span></div>
+          <div class="lb-stat">👋 เช็คเอาท์ <span>${ls.co.length} บ้าน</span></div>
+          <div class="lb-stat">🌙 เข้าพักอยู่ <span>${ls.occ.length} บ้าน</span></div>
+          <div class="lb-stat">🐿 Sugar <span>${ls.gliders} ตัว</span></div>
+        </div>
+      </div>
+      <div class="lb-actions">
+        <button class="btn-line ghost" onclick="showLinePreview()">👁 ดูข้อความ</button>
+        <button class="btn-line solid" id="line-send-btn" onclick="sendLineNow()"><span>💬</span> ส่ง LINE ตอนนี้</button>
+      </div>
+    </div>`;
+  })()}
 
   <div class="cage-bar">
     <div class="cage-info">
@@ -1739,6 +1795,14 @@ function openSettings(){
         <div style="font-size:12px;color:var(--cm);line-height:1.6;margin-top:6px;">
           ⚠ ถ้าแก้โค้ดใหม่ อย่าลืม <b>Save</b> แล้ว <b>Deploy → New deployment</b> เพื่ออัปเดต
         </div>
+        ${S.syncUrl?`<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+          <button class="btn btn-g btn-sm" onclick="closeModal();showLinePreview()" style="background:#f0faf3;color:#1a6b35;border:1px solid #06C755;">
+            👁 ดูข้อความสรุปวันนี้
+          </button>
+          <button class="btn btn-sm" onclick="closeModal();sendLineNow()" style="background:#06C755;color:#fff;border:none;">
+            💬 ส่ง LINE ทันที (ทดสอบ)
+          </button>
+        </div>`:'<div style="color:var(--cm);font-size:12px;margin-top:10px;">⚠ ตั้งค่า Apps Script URL ด้านบนก่อน จึงจะใช้ส่ง LINE ได้</div>'}
       </div>
     </details>
     <div style="margin-top:16px;padding:12px 16px;background:var(--cream);border-radius:12px;font-size:12.5px;color:var(--cm);">
@@ -1792,6 +1856,97 @@ function saveSettings(){
   closeModal();
   if(S.syncUrl){ toast('✓ บันทึกการตั้งค่าแล้ว · URL พร้อมใช้งาน'); autoSync(); }
   render();
+}
+
+// ============================
+// LINE SUMMARY
+// ============================
+function buildLocalLineSummary(){
+  const t=todayKey();
+  const ci=S.bookings.filter(b=>b.checkIn===t);
+  const co=S.bookings.filter(b=>b.checkOut===t);
+  const occ=onDate(S.bookings,t);
+  const gliders=occ.reduce((s,b)=>s+(parseInt(b.gliderCount)||1),0);
+  return {ci,co,occ,gliders,today:t};
+}
+
+function buildLocalLineText(){
+  const d=buildLocalLineSummary();
+  const dt=parseD(d.today);
+  const dateTh=dt.getDate()+' '+TH_MS[dt.getMonth()]+' '+String(dt.getFullYear()+543).slice(2);
+  const nameOf=b=>(b.gliderName||b.guestName||'ไม่ระบุ')+
+    ' ('+( Number(b.gliderCount)||1)+' ตัว · '+
+    (b.roomType==='grand_suite'?'Grand Suite':'STD-'+pad(b.roomNumber))+')';
+  let m='🐿 Sugar Sugar Camp\n';
+  m+='สรุปประจำวัน · '+dateTh+'\n';
+  m+='────────────\n';
+  m+='🚪 เช็คอินวันนี้: '+d.ci.length+' บ้าน\n';
+  m+='👋 เช็คเอาท์วันนี้: '+d.co.length+' บ้าน\n';
+  m+='🌙 กรงที่เข้าพัก: '+d.occ.length+' บ้าน\n';
+  m+='🐿 ชูการ์ที่พักอยู่: '+d.gliders+' ตัว';
+  if(d.ci.length) m+='\n\n🚪 เข้าวันนี้:\n• '+d.ci.map(nameOf).join('\n• ');
+  if(d.co.length) m+='\n\n👋 ออกวันนี้:\n• '+d.co.map(nameOf).join('\n• ');
+  return m;
+}
+
+async function sendLineNow(){
+  const btn=document.getElementById('line-send-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ กำลังส่ง…';}
+  if(!S.syncUrl){
+    toast('⚠ ยังไม่ได้เชื่อมต่อ Apps Script — ไปตั้งค่าก่อน','err');
+    openSettings();
+    if(btn){btn.disabled=false;btn.innerHTML='<span>💬</span> ส่ง LINE ตอนนี้';}
+    return;
+  }
+  try{
+    if(location.protocol!=='file:'){
+      const r=await fetch(S.syncUrl,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'send_line'})
+      });
+      const d=await r.json();
+      if(!d.ok) throw new Error(d.error||'ส่งไม่สำเร็จ');
+    } else {
+      await new Promise((res,rej)=>{
+        const cbName='ssc_cb_line_'+Date.now();
+        const url=S.syncUrl+(S.syncUrl.includes('?')?'&':'?')+'action=send_line&callback='+cbName+'&_='+Date.now();
+        const script=document.createElement('script');
+        const timer=setTimeout(()=>{cleanup();rej(new Error('หมดเวลา 20 วิ'));},20000);
+        function cleanup(){try{delete window[cbName];}catch(_){}try{script.remove();}catch(_){}clearTimeout(timer);}
+        window[cbName]=function(d){cleanup();if(d&&d.ok)res(d);else rej(new Error(d&&d.error||'ส่งไม่สำเร็จ'));};
+        script.onerror=()=>{cleanup();rej(new Error('เชื่อมต่อ Apps Script ไม่ได้'));};
+        script.src=url;
+        document.head.appendChild(script);
+      });
+    }
+    toast('✓ ส่งสรุปเข้า LINE แล้ว','ok');
+    if(btn){btn.disabled=false;btn.innerHTML='<span>💬</span> ส่ง LINE ตอนนี้';}
+  }catch(err){
+    toast('✗ ส่ง LINE ไม่สำเร็จ: '+err.message,'err');
+    if(btn){btn.disabled=false;btn.innerHTML='<span>💬</span> ส่ง LINE ตอนนี้';}
+  }
+}
+
+function showLinePreview(){
+  const text=buildLocalLineText();
+  const d=buildLocalLineSummary();
+  const dt=parseD(d.today);
+  const dateTh=dt.getDate()+' '+TH_MS[dt.getMonth()]+' '+String(dt.getFullYear()+543).slice(2);
+  showModal(`<div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
+    <button class="mclose" onclick="closeModal()">✕</button>
+    <h2 style="color:#06C755;">💬 สรุปส่ง LINE</h2>
+    <p class="msub">ข้อความที่จะถูกส่งเข้า LINE · ${dateTh}</p>
+    <div style="background:#f0faf3;border:1.5px solid #06C755;border-radius:14px;padding:18px;font-size:13.5px;line-height:1.9;color:#1a3d24;white-space:pre-wrap;font-family:inherit;margin-bottom:18px;">${esc(text)}</div>
+    <div style="font-size:12px;color:var(--cm);margin-bottom:16px;line-height:1.6;">
+      ⚠ ข้อความนี้สร้างจากข้อมูลในเครื่องนี้<br/>
+      ถ้าต้องการให้อ่านจากชีต Google → กด "ส่งผ่าน Apps Script" ด้านล่าง
+    </div>
+    <div class="factions">
+      <button class="btn btn-g" onclick="closeModal()">ปิด</button>
+      ${S.syncUrl?`<button class="btn btn-p" style="background:#06C755;border-color:#06C755;" onclick="closeModal();sendLineNow()">💬 ส่งผ่าน Apps Script</button>`:''}
+    </div>
+  </div>`);
 }
 
 // ============================
