@@ -553,8 +553,10 @@ const AS_CODE = `/**
  */
 const CALENDAR_NAME = 'Sugar Sugar Camp';
 const SHEET_NAME    = 'Bookings';
+const PENDING_SHEET = 'PendingBookings';
 const TZ            = 'Asia/Bangkok';
 const N_COLS        = 12;
+const N_PCOLS       = 15;
 
 // ─── CORS helper ───────────────────────────────────────
 function corsOut(o) {
@@ -585,8 +587,14 @@ function doGet(e) {
     } else if (act === 'line_summary_evening') {
       const tom = addDay_(dateStr_(new Date()), 1);
       result = { ok:true, summary: summaryForDate(tom), message: buildEveningMessage() };
+    } else if (act === 'pull_pending') {
+      result = { ok:true, pending: readPending() };
+    } else if (act === 'approve_pending') {
+      result = approvePending(p.requestId);
+    } else if (act === 'reject_pending') {
+      result = rejectPending(p.requestId, p.reason || '');
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v7-line', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v8-line-booking', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -613,6 +621,9 @@ function doPost(e) {
     if (d.action === 'send_line_evening') return corsOut({ ok:true, ...sendEveningLineSummary() });
     if (d.action === 'line_summary') return corsOut({ ok:true, summary: dailySummary(), message: buildMorningMessage() });
     if (d.action === 'line_summary_evening') { const tom=addDay_(dateStr_(new Date()),1); return corsOut({ ok:true, summary: summaryForDate(tom), message: buildEveningMessage() }); }
+    if (d.action === 'pull_pending') return corsOut({ ok:true, pending: readPending() });
+    if (d.action === 'approve_pending') return corsOut(approvePending(d.requestId));
+    if (d.action === 'reject_pending') return corsOut(rejectPending(d.requestId, d.reason || ''));
     return corsOut({ ok:false, error:'Unknown action' });
   } catch(err) {
     return corsOut({ ok:false, error:String(err) });
@@ -629,29 +640,251 @@ function handleLineWebhook(body) {
     // รับเฉพาะแชทส่วนตัว (รายบุคคล) เท่านั้น — ข้าม group/room
     if (src.type === 'user' && src.userId) {
       props.setProperty('LINE_TARGET_ID', src.userId);
-      // ตอบกลับยืนยัน (ถ้ามี replyToken — ใช้ได้เฉพาะ event ที่ตอบได้)
+
+      // ── ข้อความ "จอง" ตามเทมเพลต → เก็บเข้าคิวรออนุมัติ (ยังไม่ลงตารางจริง) ──
+      var msgText = (ev.type === 'message' && ev.message && ev.message.type === 'text')
+        ? String(ev.message.text || '') : '';
+      var msgId = (ev.message && ev.message.id) ? String(ev.message.id) : '';
+      if (isBookingText_(msgText)) {
+        var ack = addPendingBooking_(src.userId, msgText, msgId);
+        if (ev.replyToken) replyLine_(props, ev.replyToken, ack);
+        return;
+      }
+
+      // ── ข้อความทั่วไป → บันทึกผู้รับแจ้งเตือน + แนะนำวิธีจอง ──
       if (ev.replyToken) {
-        const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
-        if (token) {
-          try {
-            UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
-              method: 'post', contentType: 'application/json',
-              headers: { Authorization: 'Bearer ' + token },
-              payload: JSON.stringify({
-                replyToken: ev.replyToken,
-                messages: [{ type:'text', text:
-                  '✅ บันทึกผู้รับแจ้งเตือนเรียบร้อย!\n🐿 Sugar Sugar Camp จะส่งสรุปให้คุณ\n🌅 ทุกเช้า 06:00\n🌆 ทุกเย็น 18:00\n\n(User ID: ' + src.userId + ')' }]
-              }),
-              muteHttpExceptions: true
-            });
-          } catch(_) {}
-        }
+        replyLine_(props, ev.replyToken,
+          '✅ บันทึกผู้รับแจ้งเตือนเรียบร้อย!\\n🐿 Sugar Sugar Camp จะส่งสรุปให้คุณ\\n🌅 ทุกเช้า 06:00\\n🌆 ทุกเย็น 18:00\\n\\n📋 อยากจองที่พัก? พิมพ์ตามนี้ได้เลยค่ะ:\\n' + bookingTemplateText_() + '\\n\\n(User ID: ' + src.userId + ')');
       }
     }
   });
   // LINE ต้องการ HTTP 200 เสมอ
   return ContentService.createTextOutput(JSON.stringify({ ok:true }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ─── ส่งข้อความ LINE ───────────────────────────────────────
+function replyLine_(props, replyToken, text) {
+  const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+  if (!token) return;
+  try {
+    UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
+      method: 'post', contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + token },
+      payload: JSON.stringify({ replyToken: replyToken, messages: [{ type:'text', text: text }] }),
+      muteHttpExceptions: true
+    });
+  } catch(_) {}
+}
+function pushLine_(userId, text) {
+  const props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+  if (!token || !userId) return;
+  try {
+    UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'post', contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + token },
+      payload: JSON.stringify({ to: userId, messages: [{ type:'text', text: text }] }),
+      muteHttpExceptions: true
+    });
+  } catch(_) {}
+}
+
+// ─── เทมเพลตข้อความจอง ─────────────────────────────────────
+function bookingTemplateText_() {
+  return '#จอง\\nชื่อ: (ชื่อเจ้าของ)\\nเบอร์: 08xxxxxxxx\\nน้อง: (ชื่อน้อง)\\nจำนวน: 1\\nเข้า: 2026-07-01\\nออก: 2026-07-03\\nหมายเหตุ: -';
+}
+function isBookingText_(text) {
+  if (!text) return false;
+  var t = String(text).trim();
+  return t.indexOf('#จอง') === 0 || t.indexOf('จอง') === 0;
+}
+
+// ─── แยกข้อมูลจากข้อความเทมเพลต (ไม่ใช้ AI — regex/แยกบรรทัด) ──
+function parseBookingMessage_(text) {
+  var out = { guestName:'', phone:'', gliderName:'', gliderCount:1, checkIn:'', checkOut:'', roomType:'standard', notes:'' };
+  var lines = String(text).split('\\n');
+  for (var i=0;i<lines.length;i++) {
+    var ln = lines[i].replace('：',':');           // colon เต็มความกว้าง → ascii
+    var ci = ln.indexOf(':');
+    if (ci < 0) continue;
+    var key = ln.slice(0,ci).trim().toLowerCase().replace('#','').replace(/\\s/g,'');
+    var val = ln.slice(ci+1).trim();
+    if (!val) continue;
+    if (key==='ชื่อ'||key==='เจ้าของ'||key==='ชื่อเจ้าของ'||key==='name') out.guestName = val;
+    else if (key==='เบอร์'||key==='โทร'||key==='เบอร์โทร'||key==='phone'||key==='tel') out.phone = val;
+    else if (key==='น้อง'||key==='ชื่อน้อง'||key==='glider') out.gliderName = val;
+    else if (key==='จำนวน'||key==='จำนวนน้อง'||key==='count'||key==='qty') { var n=parseInt(val,10); if(n>0) out.gliderCount=n; }
+    else if (key==='เข้า'||key==='เช็คอิน'||key==='checkin'||key==='in') out.checkIn = parseDate_(val);
+    else if (key==='ออก'||key==='เช็คเอาท์'||key==='checkout'||key==='out') out.checkOut = parseDate_(val);
+    else if (key==='ห้อง'||key==='ประเภท'||key==='ประเภทห้อง'||key==='room') { var lv=val.toLowerCase(); out.roomType = (lv.indexOf('suite')>=0||lv.indexOf('grand')>=0||val.indexOf('แกรนด์')>=0||val.indexOf('สวีท')>=0)?'grand_suite':'standard'; }
+    else if (key==='หมายเหตุ'||key==='โน้ต'||key==='note'||key==='notes'||key==='remark') out.notes = val;
+  }
+  return out;
+}
+function parseDate_(s) {
+  s = String(s||'').trim();
+  if (!s) return '';
+  var parts, d, m, y;
+  if (s.indexOf('/') >= 0) {
+    parts = s.split('/');
+    if (parts.length === 3) {
+      d = parseInt(parts[0],10); m = parseInt(parts[1],10); y = parseInt(parts[2],10);
+      if (y < 100) y += 2500;                       // ปี พ.ศ. ย่อ เช่น 69 → 2569
+      if (y > 2400) y -= 543;                        // พ.ศ. → ค.ศ.
+      if (d>0 && m>0 && y>0) return y + '-' + pad2_(m) + '-' + pad2_(d);
+    }
+    return '';
+  }
+  if (s.indexOf('-') >= 0) {
+    parts = s.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      return parts[0] + '-' + pad2_(parts[1]) + '-' + pad2_(parts[2]);
+    }
+  }
+  return '';
+}
+function pad2_(v){ v = String(parseInt(v,10)); return v.length<2 ? '0'+v : v; }
+function normPhone_(p){ return String(p||'').replace(/[^0-9]/g, ''); }
+
+// ─── จับคู่ระบบข้อมูลลูกค้า (ค้นจากการจองเดิมด้วยเบอร์) ──────
+function findCustomerByPhone_(phone) {
+  var target = normPhone_(phone);
+  if (!target || target.length < 9) return null;
+  var rows = readSheet();
+  var matches = rows.filter(function(b){ return normPhone_(b.phone) === target; });
+  if (!matches.length) return null;
+  matches.sort(function(a,b){ return (b.checkIn||'').localeCompare(a.checkIn||''); });
+  var latest = matches[0];
+  return {
+    guestName: latest.guestName || '',
+    gliderName: latest.gliderName || '',
+    gliderCount: Number(latest.gliderCount) || 1,
+    count: matches.length
+  };
+}
+
+// ─── คิวคำขอจอง (Pending) ──────────────────────────────────
+function getPendingSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(PENDING_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(PENDING_SHEET);
+    const h = [['requestId','รับเมื่อ','LINE userId','messageId','ชื่อเจ้าของ',
+      'ชื่อน้อง','จำนวนน้อง','เบอร์','ประเภทห้อง','เช็คอิน','เช็คเอาท์',
+      'หมายเหตุ','สถานะ','ข้อความเดิม','ลูกค้าเดิม']];
+    sh.getRange(1,1,1,N_PCOLS).setValues(h)
+      .setFontWeight('bold').setBackground('#2A1810').setFontColor('#FAF3E9');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function addPendingBooking_(userId, rawText, msgId) {
+  var p = parseBookingMessage_(rawText);
+  // เติมข้อมูลจากระบบลูกค้า (จับคู่ด้วยเบอร์)
+  var matched = '';
+  var prof = p.phone ? findCustomerByPhone_(p.phone) : null;
+  if (prof) {
+    if (!p.guestName) p.guestName = prof.guestName;
+    if (!p.gliderName) p.gliderName = prof.gliderName;
+    if ((!p.gliderCount || p.gliderCount === 1) && prof.gliderCount) p.gliderCount = prof.gliderCount;
+    matched = 'ลูกค้าเดิม · เคยจอง ' + prof.count + ' ครั้ง';
+  }
+  if (p.checkIn && !p.checkOut) p.checkOut = addDay_(p.checkIn, 1);
+
+  // ข้อมูลไม่ครบ → แนะนำเทมเพลต ไม่บันทึก
+  if (!p.guestName || !p.checkIn) {
+    return '⚠️ ข้อมูลยังไม่ครบค่ะ รบกวนพิมพ์ตามนี้นะคะ:\\n' + bookingTemplateText_();
+  }
+
+  const sh = getPendingSheet_();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    // กัน LINE ส่ง webhook ซ้ำด้วย messageId
+    if (msgId && sh.getLastRow() > 1) {
+      var existing = sh.getRange(2,4,sh.getLastRow()-1,1).getValues();
+      for (var i=0;i<existing.length;i++) {
+        if (String(existing[i][0]) === msgId) {
+          return '✅ รับคำขอจองแล้ว กำลังรอแอดมินยืนยันค่ะ 🐿';
+        }
+      }
+    }
+    var reqId = 'P' + Date.now() + Math.floor(Math.random()*1000);
+    var now = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss');
+    sh.appendRow([reqId, now, userId, msgId, p.guestName, p.gliderName, p.gliderCount,
+      p.phone, p.roomType==='grand_suite'?'Grand Suite':'Standard',
+      p.checkIn, p.checkOut, p.notes, 'pending', String(rawText), matched]);
+    SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
+  }
+
+  return '✅ รับคำขอจองแล้ว รอแอดมินยืนยันค่ะ 🐿\\n────────────\\n'
+    + '👤 ' + p.guestName + '\\n'
+    + (p.gliderName ? '🐿 น้อง ' + p.gliderName + ' (' + p.gliderCount + ' ตัว)\\n' : '🐿 ' + p.gliderCount + ' ตัว\\n')
+    + '📅 ' + p.checkIn + ' → ' + p.checkOut + '\\n'
+    + (p.phone ? '📞 ' + p.phone + '\\n' : '')
+    + '────────────\\nแอดมินจะตรวจสอบและแจ้งยืนยันกลับอีกครั้งนะคะ 🙏';
+}
+function readPending() {
+  const sh = getPendingSheet_();
+  if (sh.getLastRow() < 2) return [];
+  return sh.getRange(2,1,sh.getLastRow()-1,N_PCOLS).getValues()
+    .filter(function(r){ return r[0] && String(r[12]) === 'pending'; })
+    .map(function(r){
+      return {
+        requestId:  String(r[0]),
+        receivedAt: String(r[1]),
+        lineUserId: String(r[2]||''),
+        guestName:  String(r[4]||''),
+        gliderName: String(r[5]||''),
+        gliderCount:Number(r[6])||1,
+        phone:      String(r[7]||''),
+        roomType:   String(r[8])==='Grand Suite'?'grand_suite':'standard',
+        checkIn:    fmtD(r[9]),
+        checkOut:   fmtD(r[10]),
+        notes:      String(r[11]||''),
+        rawText:    String(r[13]||''),
+        matched:    String(r[14]||'')
+      };
+    });
+}
+function setPendingStatus_(requestId, status) {
+  const sh = getPendingSheet_();
+  if (sh.getLastRow() < 2) return null;
+  var ids = sh.getRange(2,1,sh.getLastRow()-1,1).getValues();
+  for (var i=0;i<ids.length;i++) {
+    if (String(ids[i][0]) === String(requestId)) {
+      var row = i + 2;
+      sh.getRange(row, 13).setValue(status);
+      SpreadsheetApp.flush();
+      return sh.getRange(row,1,1,N_PCOLS).getValues()[0];
+    }
+  }
+  return null;
+}
+function approvePending(requestId) {
+  const r = setPendingStatus_(requestId, 'approved');
+  if (!r) return { ok:false, error:'ไม่พบคำขอจองนี้' };
+  var userId = String(r[2]||'');
+  var msg = '🎉 ยืนยันการจองเรียบร้อยแล้วค่ะ!\\n────────────\\n'
+    + '👤 ' + r[4] + '\\n'
+    + (r[5] ? '🐿 น้อง ' + r[5] + ' (' + (Number(r[6])||1) + ' ตัว)\\n' : '')
+    + '📅 ' + fmtD(r[9]) + ' → ' + fmtD(r[10]) + '\\n'
+    + '────────────\\nขอบคุณที่ใช้บริการ Sugar Sugar Camp 🐿💛';
+  if (userId) pushLine_(userId, msg);
+  return { ok:true, requestId: String(requestId) };
+}
+function rejectPending(requestId, reason) {
+  const r = setPendingStatus_(requestId, 'rejected');
+  if (!r) return { ok:false, error:'ไม่พบคำขอจองนี้' };
+  var userId = String(r[2]||'');
+  var msg = '🙏 ขออภัยค่ะ คำขอจองของคุณยังไม่สามารถยืนยันได้'
+    + (reason ? '\\nเหตุผล: ' + reason : '')
+    + '\\nรบกวนติดต่อแอดมินเพื่อจัดการอีกครั้งนะคะ 🐿';
+  if (userId) pushLine_(userId, msg);
+  return { ok:true, requestId: String(requestId) };
 }
 
 function getSheet() {
@@ -949,7 +1182,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx3ue8Bd-P6L6Tw
 
 const LS_B='ssc_b3',LS_U='ssc_u3',LS_T='ssc_t3',LS_EX='ssc_ex3';
 let S = {
-  bookings:[], tab:'today', selDate:todayKey(), calStart:todayKey(),
+  bookings:[], pending:[], tab:'today', selDate:todayKey(), calStart:todayKey(),
   search:'', filter:'all',
   syncUrl: APPS_SCRIPT_URL || '',
   syncSt: APPS_SCRIPT_URL ? 'idle' : 'unconfigured',
@@ -1162,6 +1395,83 @@ async function pullCloud(silent){
   }
 }
 
+// ============================
+// PENDING — คำขอจองจาก LINE (รออนุมัติ)
+// ============================
+// callPending — GET + JSONP (ใช้ได้ทั้ง file:// และ https)
+function callPending(action, extraParams){
+  return new Promise((res, rej)=>{
+    if(!S.syncUrl) return rej(new Error('ยังไม่ได้ตั้งค่า URL'));
+    const cb = 'ssc_pcb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    let url = buildUrl(action, extraParams) + '&callback=' + cb;
+    const script = document.createElement('script');
+    const timer = setTimeout(()=>{ cleanup(); rej(new Error('หมดเวลา (20 วิ)')); }, 20000);
+    function cleanup(){ try{delete window[cb];}catch(_){} try{script.remove();}catch(_){} clearTimeout(timer); }
+    window[cb] = function(d){ cleanup(); (d&&d.ok) ? res(d) : rej(new Error((d&&d.error)||'ล้มเหลว')); };
+    script.onerror = ()=>{ cleanup(); rej(new Error('เชื่อมต่อ Apps Script ไม่ได้')); };
+    script.src = url;
+    document.head.appendChild(script);
+  });
+}
+
+async function pullPending(silent){
+  if(!S.syncUrl) return;
+  try{
+    const d = await callPending('pull_pending');
+    S.pending = d.pending || [];
+    render();
+    if(!silent) toast('✓ ดึงคำขอจอง '+S.pending.length+' รายการ','ok');
+  }catch(err){
+    if(!silent) toast('✗ '+err.message,'err');
+  }
+}
+
+// ตรวจ & ยืนยัน — เปิดฟอร์มจองที่เติมข้อมูลจากคำขอ LINE ให้แล้ว
+function reviewPending(reqId){
+  const r = S.pending.find(x=>x.requestId===reqId);
+  if(!r){ toast('ไม่พบคำขอนี้แล้ว','err'); return; }
+  openForm({
+    roomType:r.roomType, checkIn:r.checkIn, checkOut:r.checkOut,
+    guestName:r.guestName, gliderName:r.gliderName, gliderCount:r.gliderCount,
+    phone:r.phone, notes:r.notes, pendingId:r.requestId
+  });
+}
+
+// ปฏิเสธคำขอจอง
+function rejectPendingUI(reqId){
+  const r = S.pending.find(x=>x.requestId===reqId);
+  if(!r) return;
+  showModal(`<div class="modal" style="max-width:420px;" onclick="event.stopPropagation()">
+    <button class="mclose" onclick="closeModal()">✕</button>
+    <h2 style="font-size:22px;">ปฏิเสธคำขอจอง</h2>
+    <p class="msub">ของ <b>${esc(r.guestName)}</b> · ${thD(r.checkIn,true)} – ${thD(r.checkOut,true)}</p>
+    <div class="fg"><label class="fl">เหตุผล (จะส่งให้ลูกค้าทาง LINE)</label>
+      <input id="rej-reason" class="fi" placeholder="เช่น ห้องเต็มในช่วงวันที่ขอ"></div>
+    <div class="factions">
+      <button class="btn btn-g" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-d" onclick="doRejectPending('${reqId}')">ยืนยันการปฏิเสธ</button>
+    </div>
+  </div>`);
+}
+async function doRejectPending(reqId){
+  const reason = (document.getElementById('rej-reason')?.value||'').trim();
+  closeModal();
+  try{
+    await callPending('reject_pending', '&requestId='+encodeURIComponent(reqId)+'&reason='+encodeURIComponent(reason));
+    S.pending = S.pending.filter(x=>x.requestId!==reqId);
+    render();
+    toast('✓ ปฏิเสธคำขอแล้ว · แจ้งลูกค้าทาง LINE','ok');
+  }catch(err){ toast('✗ '+err.message,'err'); }
+}
+
+// เรียกตอน approve สำเร็จ (จาก submitForm) — mark สถานะ + แจ้งลูกค้า
+async function markPendingApproved(reqId){
+  try{
+    await callPending('approve_pending', '&requestId='+encodeURIComponent(reqId));
+    S.pending = S.pending.filter(x=>x.requestId!==reqId);
+  }catch(err){ /* ลงตารางสำเร็จแล้ว — แจ้งเตือนเฉยๆ */ toast('⚠ ลงตารางแล้ว แต่แจ้งลูกค้าไม่สำเร็จ: '+err.message,'err'); }
+}
+
 // แสดง modal แนะนำให้เปิด tab — ใช้เมื่ออยู่บน file:// และ sync
 function showTabSyncModal(action){
   const url = buildUrl(action) + (action==='sync' ? '&data='+encodeURIComponent(JSON.stringify(S.bookings)) : '');
@@ -1337,6 +1647,7 @@ function render(){
       <button class="tab ${S.tab==='today'?'active':''}" onclick="setTab('today')">🏠 สถานะห้อง</button>
       <button class="tab ${S.tab==='calendar'?'active':''}" onclick="setTab('calendar')">📅 ปฏิทิน</button>
       <button class="tab ${S.tab==='bookings'?'active':''}" onclick="setTab('bookings')">📋 รายการจอง</button>
+      ${S.syncUrl?`<button class="tab ${S.tab==='pending'?'active':''}" onclick="setTab('pending')">📥 คำขอจอง${S.pending.length?`<span style="display:inline-block;min-width:18px;margin-left:5px;padding:0 6px;border-radius:9px;background:var(--coral,#e9806e);color:#fff;font-size:11px;line-height:18px;font-weight:700;">${S.pending.length}</span>`:''}</button>`:''}
     </div>
     <div class="bgroup">
       ${S.syncUrl?`<button class="btn btn-s btn-sm" onclick="manualSync()" ${S.syncSt==='syncing'?'disabled':''}>🔄 Sync</button>`:''}
@@ -1347,7 +1658,68 @@ function render(){
   ${S.tab==='today'?renderToday():''}
   ${S.tab==='calendar'?renderCalendar():''}
   ${S.tab==='bookings'?renderBookings():''}
+  ${S.tab==='pending'?renderPending():''}
   `;
+}
+
+// ============================
+// PENDING VIEW — คำขอจองจาก LINE
+// ============================
+function renderPending(){
+  const list=S.pending||[];
+  let cards;
+  if(!list.length){
+    cards=`<div class="empty" style="text-align:center;padding:48px 20px;color:var(--cm,#9a8a7a);">
+      <div style="font-size:40px;">📭</div>
+      <h3 style="margin:10px 0 4px;">ยังไม่มีคำขอจองใหม่</h3>
+      <p style="font-size:13px;">คำขอจองที่ลูกค้าพิมพ์เข้ามาทาง LINE จะแสดงที่นี่ให้ตรวจก่อนยืนยัน</p>
+    </div>`;
+  }else{
+    cards=list.map(r=>{
+      const nights=r.checkOut>r.checkIn?nts(r.checkIn,r.checkOut):0;
+      const isSuite=r.roomType==='grand_suite';
+      // เตือนห้องว่าง: standard ดูทั้งชั้น, suite ดูห้องเดียว
+      let availWarn='';
+      if(isSuite){
+        if(!isAvail(S.bookings,'grand_suite',1,r.checkIn,r.checkOut,null))
+          availWarn='⚠ Grand Suite ไม่ว่างในช่วงนี้';
+      }else{
+        let free=0; for(let n=1;n<=totalStd();n++) if(isAvail(S.bookings,'standard',n,r.checkIn,r.checkOut,null)) free++;
+        if(free===0) availWarn='⚠ ห้อง Standard เต็มในช่วงนี้';
+        else availWarn='✓ ห้อง Standard ว่าง '+free+' กรง';
+      }
+      const warnColor=availWarn.indexOf('⚠')===0?'#e9806e':'#7a9a6a';
+      return `<div class="sec" style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:700;font-size:17px;">${esc(r.guestName||'(ไม่ระบุชื่อ)')}
+              ${r.matched?`<span class="cust-badge" style="margin-left:6px;">🔁 ${esc(r.matched)}</span>`:'<span style="margin-left:6px;font-size:11px;color:var(--cm);">🆕 ลูกค้าใหม่</span>'}</div>
+            <div style="font-size:13px;color:var(--cm);margin-top:3px;">
+              ${r.gliderName?'🐿 '+esc(r.gliderName)+' · ':''}${r.gliderCount} ตัว · ${isSuite?'👑 Grand Suite':'🏠 Standard'}${r.phone?' · 📞 '+esc(r.phone):''}</div>
+          </div>
+          <div style="font-size:11px;color:var(--cm);white-space:nowrap;">รับเมื่อ ${esc(r.receivedAt||'')}</div>
+        </div>
+        <div style="margin-top:8px;font-size:14px;">📅 ${thD(r.checkIn,true)} → ${thD(r.checkOut,true)} <span style="color:var(--cm);">· 🌙 ${nights} คืน</span></div>
+        <div style="margin-top:6px;font-size:12.5px;font-weight:600;color:${warnColor};">${esc(availWarn)}</div>
+        ${r.notes?`<div style="margin-top:6px;font-size:12.5px;color:var(--cm);white-space:pre-wrap;">📝 ${esc(r.notes)}</div>`:''}
+        <details style="margin-top:8px;"><summary style="cursor:pointer;font-size:12px;color:var(--cm);">ดูข้อความต้นฉบับจาก LINE</summary>
+          <pre style="white-space:pre-wrap;font-size:12px;background:var(--cd,#f4ece0);padding:10px;border-radius:10px;margin-top:6px;">${esc(r.rawText||'')}</pre></details>
+        <div class="factions" style="margin-top:12px;">
+          <button class="btn btn-g" onclick="rejectPendingUI('${r.requestId}')">✕ ปฏิเสธ</button>
+          <button class="btn btn-p" onclick="reviewPending('${r.requestId}')">✓ ตรวจ & ยืนยัน</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  return `<div class="sec">
+    <div class="stitle">
+      <div>
+        <h3>📥 คำขอจองจาก LINE</h3>
+        <div class="meta">รอยืนยัน ${list.length} รายการ · ตรวจข้อมูลก่อนลงตารางจริง</div>
+      </div>
+      <button class="btn btn-s btn-sm" onclick="pullPending(false)">🔄 รีเฟรช</button>
+    </div>
+  </div>${cards}`;
 }
 
 // ============================
@@ -1524,7 +1896,7 @@ function renderBookings(){
   </div>`;
 }
 
-function setTab(t){ S.tab=t; render(); }
+function setTab(t){ S.tab=t; render(); if(t==='pending') pullPending(true); }
 
 // ============================
 // MODAL
@@ -1609,10 +1981,14 @@ function applyCust(i){
 
 
 function openForm(pre={}){
-  FS={roomType:pre.roomType||'standard',roomNumber:pre.roomNumber||null,editId:''};
+  FS={roomType:pre.roomType||'standard',roomNumber:pre.roomNumber||null,editId:'',pendingId:pre.pendingId||''};
   if(FS.roomType==='grand_suite') FS.roomNumber=1;
   const ci=pre.checkIn||S.selDate, co=pre.checkOut||addDays(ci,1);
-  drawForm({guestName:'',gliderName:'',gliderCount:1,phone:'',notes:'',checkIn:ci,checkOut:co},false);
+  drawForm({
+    guestName:pre.guestName||'', gliderName:pre.gliderName||'',
+    gliderCount:pre.gliderCount||1, phone:pre.phone||'', notes:pre.notes||'',
+    checkIn:ci, checkOut:co
+  },false);
 }
 function openEditForm(id){
   const b=S.bookings.find(x=>x.id===id); if(!b)return;
@@ -1770,7 +2146,10 @@ function submitForm(){
     roomType:FS.roomType,roomNumber:FS.roomNumber,checkIn:ci,checkOut:co};
   if(FS.editId) S.bookings=S.bookings.map(b=>b.id===FS.editId?{...b,...data}:b);
   else S.bookings=[...S.bookings,{...data,id:genId(),createdAt:Date.now()}];
-  save(); closeModal(); autoSync(); render();
+  save(); closeModal(); autoSync();
+  // ยืนยันจากคำขอจอง LINE → mark approved + แจ้งลูกค้ากลับ
+  if(FS.pendingId){ const pid=FS.pendingId; FS.pendingId=''; markPendingApproved(pid).then(()=>{ render(); toast('✓ ลงตารางจองแล้ว · แจ้งยืนยันลูกค้าทาง LINE','ok'); }); }
+  render();
 }
 
 // ============================
@@ -1945,6 +2324,33 @@ function openSettings(){
             <div style="background:rgba(74,51,38,.05);border-radius:8px;padding:10px 14px;font-size:11.5px;color:var(--cm);">
               <b style="color:var(--cocoa);">เปลี่ยนผู้รับ?</b> แค่ให้คนใหม่ทักหา Bot — ID ล่าสุดจะถูกบันทึกทับให้เอง<br/>
               <b style="color:var(--cocoa);">อยากส่งหลายคน?</b> เว้นว่าง <code>LINE_TARGET_ID</code> = Broadcast ถึงทุกคนที่เพิ่ม Bot เป็นเพื่อน
+            </div>
+          </div>
+        </details>
+
+        <details class="sc" style="margin-top:10px;border-color:rgba(6,199,85,.4);" open>
+          <summary style="font-size:12.5px;color:#06C755;">📥 รับจองจาก LINE อัตโนมัติ — แอดมินยืนยันก่อนลงตารางจริง</summary>
+          <div style="font-size:12px;line-height:1.8;color:var(--cocoa);">
+            <div style="background:#f0faf3;border-radius:8px;padding:12px 14px;margin-bottom:10px;border:1px solid #06C755;">
+              <b style="color:#06C755;">วิธีทำงาน</b>
+              <div style="margin:6px 0;color:var(--cm);">เมื่อลูกค้าพิมพ์ข้อความ <b>ตามเทมเพลต</b>ด้านล่างเข้ามาทาง LINE ระบบจะ
+                <b>อ่านข้อมูล + จับคู่ลูกค้าเดิมจากเบอร์โทร</b> แล้วเก็บเป็น <b>"คำขอจอง"</b> รอไว้
+                (ยังไม่ลงตารางจริง) · แอดมินเปิดแท็บ <b>📥 คำขอจอง</b> เพื่อตรวจ/แก้ แล้วกด
+                <b>ยืนยัน</b> จึงลงตารางจริง พร้อมแจ้งยืนยันกลับลูกค้าทาง LINE อัตโนมัติ</div>
+              <div style="margin-top:8px;color:var(--cocoa);"><b>เทมเพลตให้ลูกค้าพิมพ์:</b></div>
+              <pre style="white-space:pre-wrap;background:var(--cream);border-radius:8px;padding:10px 12px;margin:6px 0 0;font-size:12px;line-height:1.7;">#จอง
+ชื่อ: (ชื่อเจ้าของ)
+เบอร์: 08xxxxxxxx
+น้อง: (ชื่อน้อง)
+จำนวน: 1
+เข้า: 2026-07-01
+ออก: 2026-07-03
+หมายเหตุ: -</pre>
+              <div style="margin-top:6px;color:var(--cm);">รองรับวันที่ทั้ง <code>2026-07-01</code> และ <code>1/7/2569</code> · ถ้าข้อมูลไม่ครบ Bot จะส่งเทมเพลตที่ถูกต้องกลับให้</div>
+            </div>
+            <div style="background:rgba(74,51,38,.05);border-radius:8px;padding:10px 14px;font-size:11.5px;color:var(--cm);">
+              ใช้ Webhook ตัวเดียวกับการจับ User ID ด้านบน — แค่ <b>Deploy code เวอร์ชันนี้ใหม่</b> ก็ใช้ได้ทันที ·
+              คำขอถูกเก็บในชีต <code>PendingBookings</code> (สร้างอัตโนมัติ)
             </div>
           </div>
         </details>
@@ -2339,12 +2745,13 @@ async function initSync(){
   render(); // แสดง UI ก่อนด้วยข้อมูลใน localStorage
   if(S.syncUrl){
     await pullCloud(true);  // silent pull — ไม่ถามยืนยัน ไม่แสดง toast
+    pullPending(true);      // ดึงคำขอจองจาก LINE (รออนุมัติ)
   }
 }
 
 // รีเฟรชข้อมูลจาก Sheet ทุก 5 นาที (สำหรับกรณีเปิดหลายเครื่อง)
 setInterval(()=>{
-  if(S.syncUrl) pullCloud(true);
+  if(S.syncUrl){ pullCloud(true); pullPending(true); }
 }, 5 * 60 * 1000);
 
 
