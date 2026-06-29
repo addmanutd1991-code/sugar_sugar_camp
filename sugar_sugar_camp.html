@@ -1495,7 +1495,9 @@ function sendLine_(text) {
   const props  = PropertiesService.getScriptProperties();
   const token  = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
   if (!token)  throw new Error('ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN ใน Script Properties');
-  const target = (props.getProperty('LINE_TARGET_ID') || '').trim();
+  // สรุปประจำวันส่งเข้า "กลุ่ม" ก่อน ถ้ายังไม่มีกลุ่มค่อยใช้ LINE_TARGET_ID / broadcast
+  const group  = (props.getProperty('LINE_GROUP_ID') || '').trim();
+  const target = group || (props.getProperty('LINE_TARGET_ID') || '').trim();
   const isPush = !!target;
   const url     = 'https://api.line.me/v2/bot/message/' + (isPush ? 'push' : 'broadcast');
   const payload = isPush
