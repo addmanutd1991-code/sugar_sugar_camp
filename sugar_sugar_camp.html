@@ -672,6 +672,11 @@ function handleLineWebhook(body) {
       if (gt.indexOf('ประวัติ') === 0) {
         if (ev.replyToken) replyLine_(props, ev.replyToken, historyReply_(gt.replace('ประวัติ','').trim())); return;
       }
+      // ── ถามผู้ช่วย AI (ภาษาธรรมชาติ) ──
+      if (gt.indexOf('ถาม') === 0 || gt.substring(0,3).toLowerCase() === 'ai ') {
+        var aiq = gt.replace(/^ถาม/, '').replace(/^ai /i, '').trim();
+        askAI_(props, ev, aiq); return;
+      }
       if (firstTime && ev.replyToken) {
         replyLine_(props, ev.replyToken,
           '✅ ตั้งกลุ่มนี้เป็นกลุ่มรับ-อนุมัติการจองแล้วค่ะ 🐿\\nเมื่อมีคำขอจองเข้ามา ระบบจะแจ้งที่นี่พร้อมจัดห้องให้\\nพิมพ์ "อนุมัติ <โค้ด>" เพื่อยืนยัน · "ปฏิเสธ <โค้ด> [เหตุผล]"\\nพิมพ์ "เมนู" เพื่อดูคำสั่งทั้งหมด');
@@ -840,6 +845,7 @@ function helpReply_() {
     + '• ห้องว่าง <วันที่> — เช็คห้องว่าง (เช่น ห้องว่าง 2026-07-01)\\n'
     + '• คิว — ดูคำขอที่รออนุมัติ\\n'
     + '• วันนี้ / พรุ่งนี้ — สรุปเข้าพัก\\n'
+    + '• ถาม <คำถาม> — ผู้ช่วย AI ตอบจากข้อมูลจริง 🤖\\n'
     + '• เมนู — แสดงคำสั่งทั้งหมด';
 }
 // รวมโปรไฟล์ลูกค้าจากชีต Bookings + เติมชื่อ LINE จาก PendingBookings
@@ -948,6 +954,96 @@ function pendingReply_() {
   }
   msg += '\\n━━━━━━━━━━━━\\nพิมพ์ "อนุมัติ <โค้ด>" เพื่อออกใบจอง';
   return msg;
+}
+
+// ─── ผู้ช่วย AI (Claude) — ตอบคำถามทีมงานโดยดึงข้อมูลจริง ──
+//   ตั้งค่า ANTHROPIC_API_KEY ใน Script Properties · เปลี่ยนรุ่นได้ที่ AI_MODEL
+var AI_MODEL = 'claude-opus-4-8';   // ฉลาดสุด · ประหยัดกว่าใช้ 'claude-haiku-4-5'
+function askAI_(props, ev, question) {
+  if (!question) {
+    if (ev.replyToken) replyLine_(props, ev.replyToken, 'พิมพ์คำถามต่อท้ายด้วยค่ะ เช่น "ถาม ห้องว่างเสาร์นี้ไหม"');
+    return;
+  }
+  try {
+    var system = 'คุณคือผู้ช่วย AI ของ "Sugar Sugar Camp" ที่พักรับฝากเลี้ยงชูการ์ไกลเดอร์ '
+      + 'ตอบคำถามให้ทีมงานเป็นภาษาไทย สั้น กระชับ สุภาพ ลงท้ายสุภาพ '
+      + 'ใช้เครื่องมือ (tools) ดึงข้อมูลจริงจากระบบก่อนตอบเสมอ ห้ามเดาข้อมูลเอง '
+      + 'ถ้าข้อมูลไม่พอให้บอกตรงๆ · วันนี้คือ ' + dateStr_(new Date()) + ' (วันที่รูปแบบ YYYY-MM-DD) '
+      + 'มีกรง Standard ' + getStdRooms_() + ' กรง และ Grand Suite 1 ห้อง ราคา 90 บาท/ตัว/คืน';
+    var messages = [{ role:'user', content: question }];
+    var tools = aiTools_();
+    var finalText = '';
+    for (var iter=0; iter<5; iter++) {
+      var resp = callClaude_(messages, tools, system);
+      messages.push({ role:'assistant', content: resp.content });
+      if (resp.stop_reason === 'tool_use') {
+        var results = [];
+        for (var i=0;i<resp.content.length;i++) {
+          var b = resp.content[i];
+          if (b.type === 'tool_use') {
+            var out;
+            try { out = runAiTool_(b.name, b.input); } catch(e) { out = 'เกิดข้อผิดพลาด: ' + e.message; }
+            results.push({ type:'tool_result', tool_use_id:b.id, content:String(out) });
+          }
+        }
+        messages.push({ role:'user', content: results });
+        continue;
+      }
+      for (var j=0;j<resp.content.length;j++) if (resp.content[j].type==='text') finalText += resp.content[j].text;
+      break;
+    }
+    if (!finalText) finalText = 'ขออภัย ตอบไม่ได้ในตอนนี้ค่ะ';
+    if (ev.replyToken) replyLine_(props, ev.replyToken, '🤖 ' + finalText);
+  } catch(e) {
+    if (ev.replyToken) replyLine_(props, ev.replyToken, '⚠ ผู้ช่วย AI ใช้งานไม่ได้: ' + e.message + '\\n(ตรวจ ANTHROPIC_API_KEY ใน Script Properties)');
+  }
+}
+function callClaude_(messages, tools, system) {
+  var key = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+  if (!key) throw new Error('ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY');
+  var payload = { model: AI_MODEL, max_tokens: 1024, system: system, messages: messages };
+  if (tools && tools.length) payload.tools = tools;
+  var res = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+    method:'post', contentType:'application/json',
+    headers:{ 'x-api-key': key, 'anthropic-version':'2023-06-01' },
+    payload: JSON.stringify(payload), muteHttpExceptions:true
+  });
+  if (res.getResponseCode() !== 200) throw new Error('Claude API ' + res.getResponseCode() + ': ' + res.getContentText());
+  return JSON.parse(res.getContentText());
+}
+function aiTools_() {
+  return [
+    { name:'search_customers', description:'ค้นหาข้อมูลลูกค้าจากชื่อ เบอร์โทร ชื่อน้อง หรือชื่อ LINE', input_schema:{ type:'object', properties:{ query:{ type:'string', description:'คำค้น เช่น ชื่อหรือเบอร์โทร' } }, required:['query'] } },
+    { name:'check_availability', description:'เช็คห้องว่างในช่วงวันที่ (รูปแบบ YYYY-MM-DD); ถ้าไม่ระบุ check_out จะคิด  1 คืน', input_schema:{ type:'object', properties:{ check_in:{ type:'string' }, check_out:{ type:'string' } }, required:['check_in'] } },
+    { name:'get_history', description:'ดูประวัติการเข้าพักทั้งหมดของลูกค้า (ค้นด้วยเบอร์หรือชื่อ)', input_schema:{ type:'object', properties:{ query:{ type:'string' } }, required:['query'] } },
+    { name:'get_summary', description:'สรุปการเข้าพัก วันนี้ (today) หรือพรุ่งนี้ (tomorrow)', input_schema:{ type:'object', properties:{ day:{ type:'string' } }, required:[] } },
+    { name:'get_pending', description:'ดูคำขอจองที่รออนุมัติทั้งหมด', input_schema:{ type:'object', properties:{}, required:[] } }
+  ];
+}
+function runAiTool_(name, input) {
+  input = input || {};
+  if (name === 'search_customers') return JSON.stringify(searchCustomers_(input.query || ''));
+  if (name === 'check_availability') {
+    var ci = input.check_in || dateStr_(new Date());
+    var co = input.check_out || addDay_(ci, 1);
+    if (co <= ci) co = addDay_(ci, 1);
+    var n = getStdRooms_(), free = [];
+    for (var i=1;i<=n;i++) if (!roomTakenBy_('standard', i, ci, co)) free.push(i);
+    return JSON.stringify({ checkIn:ci, checkOut:co, standardFree:free.length, standardTotal:n, freeRoomNumbers:free, grandSuiteFree: !roomTakenBy_('grand_suite',1,ci,co) });
+  }
+  if (name === 'get_history') {
+    var ql = String(input.query||'').toLowerCase(), qd = normPhone_(input.query||'');
+    var rows = readSheet().filter(function(b){ return (qd && normPhone_(b.phone).indexOf(qd)>=0) || String(b.guestName||'').toLowerCase().indexOf(ql)>=0; });
+    rows.sort(function(a,b){ return (b.checkIn||'').localeCompare(a.checkIn||''); });
+    return JSON.stringify({ count:rows.length, stays: rows.slice(0,15).map(function(b){ return { guestName:b.guestName, gliderName:b.gliderName, gliderCount:b.gliderCount, room:(b.roomType==='grand_suite'?'Grand Suite':'STD-'+pad2_(b.roomNumber)), checkIn:b.checkIn, checkOut:b.checkOut }; }) });
+  }
+  if (name === 'get_summary') {
+    var d = (input.day === 'tomorrow') ? addDay_(dateStr_(new Date()),1) : dateStr_(new Date());
+    var s = summaryForDate(d);
+    return JSON.stringify({ date:d, checkInCount:s.ci.length, checkOutCount:s.co.length, occupiedCount:s.occ.length, totalGliders:s.gliders, checkIns:s.ci.map(nameOf_), checkOuts:s.co.map(nameOf_) });
+  }
+  if (name === 'get_pending') return JSON.stringify(readPending().map(function(r){ return { code:r.code, guestName:r.guestName, checkIn:r.checkIn, checkOut:r.checkOut, room:r.roomNumber }; }));
+  return JSON.stringify({ error:'unknown tool' });
 }
 
 // ─── คิวคำขอจอง (Pending) ──────────────────────────────────
