@@ -556,7 +556,7 @@ const SHEET_NAME    = 'Bookings';
 const PENDING_SHEET = 'PendingBookings';
 const TZ            = 'Asia/Bangkok';
 const N_COLS        = 12;
-const N_PCOLS       = 15;
+const N_PCOLS       = 17;
 
 // ─── CORS helper ───────────────────────────────────────
 function corsOut(o) {
@@ -637,21 +637,37 @@ function handleLineWebhook(body) {
   const props = PropertiesService.getScriptProperties();
   (body.events || []).forEach(function(ev) {
     const src = ev.source || {};
-    // รับเฉพาะแชทส่วนตัว (รายบุคคล) เท่านั้น — ข้าม group/room
+    var msgText = (ev.type === 'message' && ev.message && ev.message.type === 'text')
+      ? String(ev.message.text || '') : '';
+    var msgId = (ev.message && ev.message.id) ? String(ev.message.id) : '';
+
+    // ── แชทกลุ่ม → เก็บ groupId + รับคำสั่งอนุมัติ/ปฏิเสธ ──
+    if ((src.type === 'group' && src.groupId) || (src.type === 'room' && src.roomId)) {
+      var gid = src.groupId || src.roomId;
+      var firstTime = props.getProperty('LINE_GROUP_ID') !== gid;
+      props.setProperty('LINE_GROUP_ID', gid);
+      var gt = msgText.trim();
+      if (gt.indexOf('อนุมัติ') === 0) { handleGroupApprove_(props, ev, gt, true);  return; }
+      if (gt.indexOf('ปฏิเสธ')  === 0) { handleGroupApprove_(props, ev, gt, false); return; }
+      if (firstTime && ev.replyToken) {
+        replyLine_(props, ev.replyToken,
+          '✅ ตั้งกลุ่มนี้เป็นกลุ่มรับ-อนุมัติการจองแล้วค่ะ 🐿\\nเมื่อมีคำขอจองเข้ามา ระบบจะแจ้งที่นี่พร้อมจัดห้องให้\\nพิมพ์ "อนุมัติ <โค้ด>" เพื่อยืนยัน · "ปฏิเสธ <โค้ด> [เหตุผล]" เพื่อปฏิเสธ');
+      }
+      return;
+    }
+
+    // ── แชทส่วนตัว (ลูกค้า) ──
     if (src.type === 'user' && src.userId) {
       props.setProperty('LINE_TARGET_ID', src.userId);
 
-      // ── ข้อความ "จอง" ตามเทมเพลต → เก็บเข้าคิวรออนุมัติ (ยังไม่ลงตารางจริง) ──
-      var msgText = (ev.type === 'message' && ev.message && ev.message.type === 'text')
-        ? String(ev.message.text || '') : '';
-      var msgId = (ev.message && ev.message.id) ? String(ev.message.id) : '';
+      // ข้อความ "จอง" ตามเทมเพลต → จัดห้องอัตโนมัติ + แจ้งกลุ่มให้อนุมัติ (ยังไม่ลงตารางจริง)
       if (isBookingText_(msgText)) {
-        var ack = addPendingBooking_(src.userId, msgText, msgId);
+        var ack = addPendingBooking_(props, src.userId, msgText, msgId);
         if (ev.replyToken) replyLine_(props, ev.replyToken, ack);
         return;
       }
 
-      // ── ข้อความทั่วไป → บันทึกผู้รับแจ้งเตือน + แนะนำวิธีจอง ──
+      // ข้อความทั่วไป → บันทึกผู้รับแจ้งเตือน + แนะนำวิธีจอง
       if (ev.replyToken) {
         replyLine_(props, ev.replyToken,
           '✅ บันทึกผู้รับแจ้งเตือนเรียบร้อย!\\n🐿 Sugar Sugar Camp จะส่งสรุปให้คุณ\\n🌅 ทุกเช้า 06:00\\n🌆 ทุกเย็น 18:00\\n\\n📋 อยากจองที่พัก? พิมพ์ตามนี้ได้เลยค่ะ:\\n' + bookingTemplateText_() + '\\n\\n(User ID: ' + src.userId + ')');
@@ -768,18 +784,22 @@ function findCustomerByPhone_(phone) {
 function getPendingSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(PENDING_SHEET);
+  const h = ['requestId','รับเมื่อ','LINE userId','messageId','ชื่อเจ้าของ',
+    'ชื่อน้อง','จำนวนน้อง','เบอร์','ประเภทห้อง','เช็คอิน','เช็คเอาท์',
+    'หมายเหตุ','สถานะ','ข้อความเดิม','ลูกค้าเดิม','เลขห้อง','โค้ดอนุมัติ'];
   if (!sh) {
     sh = ss.insertSheet(PENDING_SHEET);
-    const h = [['requestId','รับเมื่อ','LINE userId','messageId','ชื่อเจ้าของ',
-      'ชื่อน้อง','จำนวนน้อง','เบอร์','ประเภทห้อง','เช็คอิน','เช็คเอาท์',
-      'หมายเหตุ','สถานะ','ข้อความเดิม','ลูกค้าเดิม']];
-    sh.getRange(1,1,1,N_PCOLS).setValues(h)
+    sh.getRange(1,1,1,h.length).setValues([h])
       .setFontWeight('bold').setBackground('#2A1810').setFontColor('#FAF3E9');
     sh.setFrozenRows(1);
+  } else if (sh.getLastColumn() < h.length) {
+    // อัพเกรด schema เก่า (เพิ่มคอลัมน์ เลขห้อง / โค้ดอนุมัติ)
+    sh.getRange(1,1,1,h.length).setValues([h])
+      .setFontWeight('bold').setBackground('#2A1810').setFontColor('#FAF3E9');
   }
   return sh;
 }
-function addPendingBooking_(userId, rawText, msgId) {
+function addPendingBooking_(props, userId, rawText, msgId) {
   var p = parseBookingMessage_(rawText);
   // เติมข้อมูลจากระบบลูกค้า (จับคู่ด้วยเบอร์)
   var matched = '';
@@ -797,35 +817,57 @@ function addPendingBooking_(userId, rawText, msgId) {
     return '⚠️ ข้อมูลยังไม่ครบค่ะ รบกวนพิมพ์ตามนี้นะคะ:\\n' + bookingTemplateText_();
   }
 
+  // จัดห้องอัตโนมัติ
+  var pick = autoPickRoom_(p.roomType, p.checkIn, p.checkOut);
+  var assignedNo = pick ? pick.roomNumber : '';
+  if (pick) p.roomType = pick.roomType;
+  var roomLbl = pick ? (pick.roomType==='grand_suite' ? '👑 Grand Suite' : 'STD-'+pad2_(pick.roomNumber))
+                     : '⚠ เต็มในช่วงนี้ (ทีมงานจัดห้องเอง)';
+
   const sh = getPendingSheet_();
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
+  var code;
   try {
     // กัน LINE ส่ง webhook ซ้ำด้วย messageId
     if (msgId && sh.getLastRow() > 1) {
       var existing = sh.getRange(2,4,sh.getLastRow()-1,1).getValues();
       for (var i=0;i<existing.length;i++) {
         if (String(existing[i][0]) === msgId) {
-          return '✅ รับคำขอจองแล้ว กำลังรอแอดมินยืนยันค่ะ 🐿';
+          return '✅ รับคำขอจองแล้ว กำลังตรวจสอบกับทีมงานค่ะ 🐿';
         }
       }
     }
     var reqId = 'P' + Date.now() + Math.floor(Math.random()*1000);
+    code = genApproveCode_(sh);
     var now = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss');
     sh.appendRow([reqId, now, userId, msgId, p.guestName, p.gliderName, p.gliderCount,
       p.phone, p.roomType==='grand_suite'?'Grand Suite':'Standard',
-      p.checkIn, p.checkOut, p.notes, 'pending', String(rawText), matched]);
+      p.checkIn, p.checkOut, p.notes, 'pending', String(rawText), matched, assignedNo, code]);
     SpreadsheetApp.flush();
   } finally {
     lock.releaseLock();
   }
 
-  return '✅ รับคำขอจองแล้ว รอแอดมินยืนยันค่ะ 🐿\\n────────────\\n'
+  // แจ้งกลุ่มให้อนุมัติ (พร้อมห้องที่จัดให้และโค้ด)
+  var groupId = (props.getProperty('LINE_GROUP_ID') || '').trim();
+  var nights = nightsBetween_(p.checkIn, p.checkOut);
+  var groupMsg = '🆕 คำขอจองใหม่ #' + code + '\\n'
+    + '━━━━━━━━━━━━\\n'
     + '👤 ' + p.guestName + '\\n'
     + (p.gliderName ? '🐿 น้อง ' + p.gliderName + ' (' + p.gliderCount + ' ตัว)\\n' : '🐿 ' + p.gliderCount + ' ตัว\\n')
-    + '📅 ' + p.checkIn + ' → ' + p.checkOut + '\\n'
+    + '📅 ' + thDateShort_(p.checkIn) + ' → ' + thDateShort_(p.checkOut) + ' (' + nights + ' คืน)\\n'
+    + '🏠 ห้องที่จัดให้: ' + roomLbl + '\\n'
     + (p.phone ? '📞 ' + p.phone + '\\n' : '')
-    + '────────────\\nแอดมินจะตรวจสอบและแจ้งยืนยันกลับอีกครั้งนะคะ 🙏';
+    + (matched ? '🔁 ' + matched + '\\n' : '🆕 ลูกค้าใหม่\\n')
+    + (p.notes ? '📝 ' + p.notes + '\\n' : '')
+    + '━━━━━━━━━━━━\\n'
+    + 'พิมพ์ "อนุมัติ ' + code + '" เพื่อยืนยัน\\n'
+    + 'หรือ "ปฏิเสธ ' + code + ' [เหตุผล]"';
+  if (groupId) pushLine_(groupId, groupMsg);
+
+  // ตอบลูกค้าแบบสั้น (ยังไม่ใช่ใบจอง — รอกลุ่มอนุมัติ)
+  return '✅ รับคำขอจองแล้วค่ะ 🐿\\nทีมงานกำลังตรวจสอบและจะแจ้งยืนยัน (ใบจอง) กลับให้นะคะ 🙏';
 }
 function readPending() {
   const sh = getPendingSheet_();
@@ -842,11 +884,13 @@ function readPending() {
         gliderCount:Number(r[6])||1,
         phone:      String(r[7]||''),
         roomType:   String(r[8])==='Grand Suite'?'grand_suite':'standard',
+        roomNumber: Number(r[15])||0,
         checkIn:    fmtD(r[9]),
         checkOut:   fmtD(r[10]),
         notes:      String(r[11]||''),
         rawText:    String(r[13]||''),
-        matched:    String(r[14]||'')
+        matched:    String(r[14]||''),
+        code:       String(r[16]||'')
       };
     });
 }
@@ -885,6 +929,157 @@ function rejectPending(requestId, reason) {
     + '\\nรบกวนติดต่อแอดมินเพื่อจัดการอีกครั้งนะคะ 🐿';
   if (userId) pushLine_(userId, msg);
   return { ok:true, requestId: String(requestId) };
+}
+
+// ─── จัดห้องอัตโนมัติ ──────────────────────────────────────
+function getStdRooms_() {
+  var v = parseInt(PropertiesService.getScriptProperties().getProperty('STD_ROOMS'), 10);
+  return (v > 0) ? v : 23;   // ตั้ง STD_ROOMS ใน Script Properties เพื่อปรับจำนวนกรง Standard
+}
+function nightsBetween_(ci, co) {
+  return Math.round((new Date(co+'T00:00:00+07:00') - new Date(ci+'T00:00:00+07:00')) / 86400000);
+}
+// ว่างไหม โดยดูเฉพาะการจองที่ "ยืนยันแล้ว" (ชีต Bookings)
+function availConfirmed_(rt, rn, ci, co) {
+  var rows = readSheet();
+  return !rows.some(function(b){
+    return b.roomType===rt && Number(b.roomNumber)===Number(rn) && !(co<=b.checkIn || ci>=b.checkOut);
+  });
+}
+// ถูกจองไหม โดยนับทั้งที่ยืนยันแล้ว + คำขอที่ยังรออนุมัติ (กันจัดห้องชนกัน)
+function roomTakenBy_(rt, rn, ci, co) {
+  if (!availConfirmed_(rt, rn, ci, co)) return true;
+  var sh = getPendingSheet_();
+  if (sh.getLastRow() > 1) {
+    var d = sh.getRange(2,1,sh.getLastRow()-1,N_PCOLS).getValues();
+    for (var j=0;j<d.length;j++) {
+      var r = d[j];
+      if (String(r[12]) !== 'pending') continue;
+      var prt = String(r[8])==='Grand Suite'?'grand_suite':'standard';
+      var pci = fmtD(r[9]), pco = fmtD(r[10]);
+      if (prt===rt && Number(r[15])===Number(rn) && pci && pco && !(co<=pci || ci>=pco)) return true;
+    }
+  }
+  return false;
+}
+function autoPickRoom_(roomType, ci, co) {
+  if (roomType === 'grand_suite') {
+    return roomTakenBy_('grand_suite',1,ci,co) ? null : { roomType:'grand_suite', roomNumber:1 };
+  }
+  var n = getStdRooms_();
+  for (var i=1;i<=n;i++) {
+    if (!roomTakenBy_('standard',i,ci,co)) return { roomType:'standard', roomNumber:i };
+  }
+  return null;
+}
+// โค้ดอนุมัติ 4 หลัก ไม่ซ้ำกับคำขอที่ยัง pending
+function genApproveCode_(sh) {
+  var used = {};
+  if (sh.getLastRow() > 1) {
+    var codes = sh.getRange(2,17,sh.getLastRow()-1,1).getValues();
+    var sts   = sh.getRange(2,13,sh.getLastRow()-1,1).getValues();
+    for (var i=0;i<codes.length;i++) if (String(sts[i][0])==='pending') used[String(codes[i][0])] = true;
+  }
+  var code, tries=0;
+  do { code = String(Math.floor(Math.random()*9000+1000)); tries++; } while (used[code] && tries<50);
+  return code;
+}
+
+// ─── อนุมัติ/ปฏิเสธจากกลุ่ม LINE ───────────────────────────
+function handleGroupApprove_(props, ev, text, isApprove) {
+  var mt = text.match(/(\\d{3,6})/);
+  var code = mt ? mt[1] : '';
+  var sh = getPendingSheet_();
+  if (sh.getLastRow() < 2) { if (ev.replyToken) replyLine_(props, ev.replyToken, 'ไม่มีคำขอที่รออนุมัติค่ะ'); return; }
+  var data = sh.getRange(2,1,sh.getLastRow()-1,N_PCOLS).getValues();
+  var rowIdx = -1;
+  if (code) {
+    for (var i=0;i<data.length;i++) {
+      if (String(data[i][12])==='pending' && String(data[i][16])===code) { rowIdx=i; break; }
+    }
+  } else {
+    var pend = [];
+    for (var k=0;k<data.length;k++) if (String(data[k][12])==='pending') pend.push(k);
+    if (pend.length === 1) rowIdx = pend[0];
+    else { if (ev.replyToken) replyLine_(props, ev.replyToken, pend.length===0 ? 'ไม่มีคำขอที่รออนุมัติค่ะ' : 'มีหลายคำขอ — ระบุโค้ดด้วยค่ะ เช่น "อนุมัติ 1234"'); return; }
+  }
+  if (rowIdx < 0) { if (ev.replyToken) replyLine_(props, ev.replyToken, 'ไม่พบคำขอโค้ด ' + code + ' (อาจถูกดำเนินการไปแล้ว)'); return; }
+
+  var r = data[rowIdx], row = rowIdx + 2;
+  var userId = String(r[2]||'');
+  var rcode  = String(r[16]||'');
+  var booking = {
+    guestName: String(r[4]||''), gliderName: String(r[5]||''), gliderCount: Number(r[6])||1,
+    phone: String(r[7]||''), roomType: String(r[8])==='Grand Suite'?'grand_suite':'standard',
+    roomNumber: Number(r[15])||0, checkIn: fmtD(r[9]), checkOut: fmtD(r[10]), notes: String(r[11]||'')
+  };
+
+  if (!isApprove) {
+    sh.getRange(row,13).setValue('rejected'); SpreadsheetApp.flush();
+    var reason = text.replace('ปฏิเสธ','').replace(code,'').trim();
+    if (userId) pushLine_(userId, '🙏 ขออภัยค่ะ คำขอจอง #' + rcode + ' ยังไม่สามารถยืนยันได้'
+      + (reason ? '\\nเหตุผล: ' + reason : '') + '\\nรบกวนติดต่อแอดมินอีกครั้งนะคะ 🐿');
+    if (ev.replyToken) replyLine_(props, ev.replyToken, '❌ ปฏิเสธคำขอ #' + rcode + ' แล้ว · แจ้งลูกค้าทาง LINE แล้วค่ะ');
+    return;
+  }
+
+  // อนุมัติ — ตรวจห้องอีกครั้ง (กันถูกจองแทรกระหว่างรอ)
+  if (!booking.roomNumber || !availConfirmed_(booking.roomType, booking.roomNumber, booking.checkIn, booking.checkOut)) {
+    var pick = autoPickRoom_(booking.roomType, booking.checkIn, booking.checkOut);
+    if (!pick) { if (ev.replyToken) replyLine_(props, ev.replyToken, '⚠ ห้องเต็มในช่วงวันที่ขอ จัดห้องให้ไม่ได้ค่ะ (คำขอ #' + rcode + ')'); return; }
+    booking.roomType = pick.roomType; booking.roomNumber = pick.roomNumber;
+    sh.getRange(row,16).setValue(booking.roomNumber);
+  }
+  appendBooking_(booking);
+  sh.getRange(row,13).setValue('approved'); SpreadsheetApp.flush();
+
+  var roomLbl = booking.roomType==='grand_suite' ? '👑 Grand Suite' : 'STD-'+pad2_(booking.roomNumber);
+  if (userId) pushLine_(userId, buildSlip_(rcode, booking, roomLbl));
+  if (ev.replyToken) replyLine_(props, ev.replyToken,
+    '✅ อนุมัติ #' + rcode + ' แล้ว · ห้อง ' + roomLbl + '\\nลงตารางจองและออกใบจองส่งให้ลูกค้าทาง LINE เรียบร้อยค่ะ 🐿');
+}
+
+// ─── ลงการจอง 1 รายการลงชีต Bookings + สร้าง Event ─────────
+function appendBooking_(b) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var sh = getSheet(), cal = getCal();
+    var gc = Number(b.gliderCount)||1;
+    var title = (b.gliderName?'🐿 '+b.gliderName:'🐿 '+b.guestName)+' ('+gc+' ตัว) · '+
+      (b.roomType==='grand_suite'?'Grand Suite':'STD-'+pad2_(b.roomNumber));
+    var desc = ['เจ้าของ: '+b.guestName, b.gliderName?'น้อง: '+b.gliderName:'', 'จำนวน: '+gc+' ตัว',
+      b.phone?'เบอร์: '+b.phone:'', b.notes?'บันทึก: '+b.notes:''].filter(function(x){return x;}).join('\\n');
+    var s = new Date(b.checkIn+'T00:00:00+07:00');
+    var e = new Date(b.checkOut+'T00:00:00+07:00');
+    var ev = cal.createAllDayEvent(title, s, e, { description: desc });
+    var now = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss');
+    var id = b.id || ('B' + Date.now() + Math.floor(Math.random()*1000));
+    sh.appendRow([id, b.guestName||'', b.gliderName||'', b.phone||'',
+      b.roomType==='grand_suite'?'Grand Suite':'Standard',
+      b.roomNumber, b.checkIn, b.checkOut, b.notes||'', gc, ev.getId(), now]);
+    SpreadsheetApp.flush();
+    return id;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ─── ใบจองส่งลูกค้า ────────────────────────────────────────
+function buildSlip_(code, b, roomLbl) {
+  var gc = Number(b.gliderCount)||1;
+  var nights = nightsBetween_(b.checkIn, b.checkOut);
+  return '🎉 ยืนยันการจองเรียบร้อยค่ะ — Sugar Sugar Camp 🐿\\n'
+    + '━━━━━━━━━━━━\\n'
+    + '🧾 ใบจอง #' + code + '\\n'
+    + '👤 ' + b.guestName + '\\n'
+    + (b.gliderName ? '🐿 น้อง ' + b.gliderName + ' (' + gc + ' ตัว)\\n' : '🐿 ' + gc + ' ตัว\\n')
+    + '🏠 ห้อง: ' + roomLbl + '\\n'
+    + '📅 เช็คอิน: ' + thDateShort_(b.checkIn) + '\\n'
+    + '📅 เช็คเอาท์: ' + thDateShort_(b.checkOut) + '\\n'
+    + '🌙 ' + nights + ' คืน\\n'
+    + '━━━━━━━━━━━━\\n'
+    + 'ขอบคุณที่ใช้บริการค่ะ 💛';
 }
 
 function getSheet() {
@@ -1431,7 +1626,7 @@ function reviewPending(reqId){
   const r = S.pending.find(x=>x.requestId===reqId);
   if(!r){ toast('ไม่พบคำขอนี้แล้ว','err'); return; }
   openForm({
-    roomType:r.roomType, checkIn:r.checkIn, checkOut:r.checkOut,
+    roomType:r.roomType, roomNumber:r.roomNumber||null, checkIn:r.checkIn, checkOut:r.checkOut,
     guestName:r.guestName, gliderName:r.gliderName, gliderCount:r.gliderCount,
     phone:r.phone, notes:r.notes, pendingId:r.requestId
   });
@@ -1692,10 +1887,10 @@ function renderPending(){
       return `<div class="sec" style="margin-bottom:14px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
           <div>
-            <div style="font-weight:700;font-size:17px;">${esc(r.guestName||'(ไม่ระบุชื่อ)')}
+            <div style="font-weight:700;font-size:17px;">${r.code?`<span style="color:var(--pd);">#${esc(r.code)}</span> `:''}${esc(r.guestName||'(ไม่ระบุชื่อ)')}
               ${r.matched?`<span class="cust-badge" style="margin-left:6px;">🔁 ${esc(r.matched)}</span>`:'<span style="margin-left:6px;font-size:11px;color:var(--cm);">🆕 ลูกค้าใหม่</span>'}</div>
             <div style="font-size:13px;color:var(--cm);margin-top:3px;">
-              ${r.gliderName?'🐿 '+esc(r.gliderName)+' · ':''}${r.gliderCount} ตัว · ${isSuite?'👑 Grand Suite':'🏠 Standard'}${r.phone?' · 📞 '+esc(r.phone):''}</div>
+              ${r.gliderName?'🐿 '+esc(r.gliderName)+' · ':''}${r.gliderCount} ตัว · ${isSuite?'👑 Grand Suite':(r.roomNumber?'🏠 STD-'+pad(r.roomNumber):'🏠 Standard')}${r.phone?' · 📞 '+esc(r.phone):''}</div>
           </div>
           <div style="font-size:11px;color:var(--cm);white-space:nowrap;">รับเมื่อ ${esc(r.receivedAt||'')}</div>
         </div>
