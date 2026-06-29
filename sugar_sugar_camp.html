@@ -998,6 +998,17 @@ function askAI_(props, ev, question) {
     if (ev.replyToken) replyLine_(props, ev.replyToken, '⚠ ผู้ช่วย AI ใช้งานไม่ได้: ' + e.message + '\\n(ตรวจ ANTHROPIC_API_KEY ใน Script Properties)');
   }
 }
+// ทดสอบ AI: เลือกฟังก์ชันนี้ในเอดิเตอร์ กด ▶ Run แล้วดูที่ Executions/Logs
+function testClaude() {
+  var key = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+  Logger.log('ANTHROPIC_API_KEY: ' + (key ? 'พบ (ความยาว ' + key.length + ', ขึ้นต้น ' + key.slice(0,12) + ')' : '❌ ไม่พบ'));
+  try {
+    var resp = callClaude_([{ role:'user', content:'ตอบสั้นๆ ว่าพร้อมใช้งาน' }], null, 'ตอบภาษาไทยสั้นๆ');
+    Logger.log('✅ ใช้งานได้: ' + JSON.stringify(resp.content));
+  } catch(e) {
+    Logger.log('❌ ' + e.message);
+  }
+}
 function callClaude_(messages, tools, system) {
   var key = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
   if (!key) throw new Error('ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY');
