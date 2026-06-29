@@ -660,6 +660,18 @@ function handleLineWebhook(body) {
       if (gt === 'คิว' || gt === 'รออนุมัติ') {
         if (ev.replyToken) replyLine_(props, ev.replyToken, pendingReply_()); return;
       }
+      if (gt.indexOf('ห้องว่าง') === 0) {
+        if (ev.replyToken) replyLine_(props, ev.replyToken, availabilityReply_(gt.replace('ห้องว่าง','').trim())); return;
+      }
+      if (gt === 'วันนี้') {
+        if (ev.replyToken) replyLine_(props, ev.replyToken, buildMorningMessage()); return;
+      }
+      if (gt === 'พรุ่งนี้') {
+        if (ev.replyToken) replyLine_(props, ev.replyToken, buildEveningMessage()); return;
+      }
+      if (gt.indexOf('ประวัติ') === 0) {
+        if (ev.replyToken) replyLine_(props, ev.replyToken, historyReply_(gt.replace('ประวัติ','').trim())); return;
+      }
       if (firstTime && ev.replyToken) {
         replyLine_(props, ev.replyToken,
           '✅ ตั้งกลุ่มนี้เป็นกลุ่มรับ-อนุมัติการจองแล้วค่ะ 🐿\\nเมื่อมีคำขอจองเข้ามา ระบบจะแจ้งที่นี่พร้อมจัดห้องให้\\nพิมพ์ "อนุมัติ <โค้ด>" เพื่อยืนยัน · "ปฏิเสธ <โค้ด> [เหตุผล]"\\nพิมพ์ "เมนู" เพื่อดูคำสั่งทั้งหมด');
@@ -824,7 +836,10 @@ function helpReply_() {
     + '• อนุมัติ <โค้ด> — ออกใบจองให้ลูกค้า\\n'
     + '• ปฏิเสธ <โค้ด> [เหตุผล]\\n'
     + '• ค้นหา <ชื่อ/เบอร์/ชื่อน้อง/ชื่อ LINE>\\n'
+    + '• ประวัติ <เบอร์/ชื่อ> — ประวัติการพักทั้งหมด\\n'
+    + '• ห้องว่าง <วันที่> — เช็คห้องว่าง (เช่น ห้องว่าง 2026-07-01)\\n'
     + '• คิว — ดูคำขอที่รออนุมัติ\\n'
+    + '• วันนี้ / พรุ่งนี้ — สรุปเข้าพัก\\n'
     + '• เมนู — แสดงคำสั่งทั้งหมด';
 }
 // รวมโปรไฟล์ลูกค้าจากชีต Bookings + เติมชื่อ LINE จาก PendingBookings
@@ -881,6 +896,45 @@ function searchReply_(q) {
       + (c.gliderName ? '\\n   🐿 ' + c.gliderName + ' (' + c.gliderCount + ' ตัว)' : '')
       + '\\n   เคยพัก ' + c.count + ' ครั้ง' + (c.last ? ' · ล่าสุด ' + thDateShort_(c.last) : '');
   }
+  return msg;
+}
+function availabilityReply_(rest) {
+  var toks = String(rest||'').split(/\\s+/).filter(function(x){ return x; });
+  var ci = '', co = '';
+  if (toks.length >= 2) { ci = parseDate_(toks[0]); co = parseDate_(toks[1]); }
+  else if (toks.length === 1) { ci = parseDate_(toks[0]); if (ci) co = addDay_(ci, 1); }
+  if (!ci) { ci = dateStr_(new Date()); co = addDay_(ci, 1); }
+  if (!co || co <= ci) co = addDay_(ci, 1);
+  var n = getStdRooms_(), free = [];
+  for (var i=1;i<=n;i++) { if (!roomTakenBy_('standard', i, ci, co)) free.push(i); }
+  var suite = roomTakenBy_('grand_suite', 1, ci, co) ? 'ไม่ว่าง ❌' : 'ว่าง ✅';
+  var msg = '🏠 ห้องว่าง · ' + thDateShort_(ci) + ' → ' + thDateShort_(co) + ' (' + nightsBetween_(ci, co) + ' คืน)\\n'
+    + '━━━━━━━━━━━━\\n'
+    + '🏠 Standard ว่าง ' + free.length + '/' + n + ' กรง';
+  if (free.length) msg += '\\n   กรงว่าง: ' + free.map(function(x){ return pad2_(x); }).join(', ');
+  msg += '\\n👑 Grand Suite: ' + suite;
+  return msg;
+}
+function historyReply_(q) {
+  q = String(q||'').trim();
+  if (!q) return 'พิมพ์เบอร์หรือชื่อด้วยค่ะ เช่น "ประวัติ 0812345678"';
+  var ql = q.toLowerCase(), qd = normPhone_(q);
+  var rows = readSheet().filter(function(b){
+    if (qd && normPhone_(b.phone).indexOf(qd) >= 0) return true;
+    if (String(b.guestName||'').toLowerCase().indexOf(ql) >= 0) return true;
+    return false;
+  });
+  if (!rows.length) return '🔎 ไม่พบประวัติของ "' + q + '"';
+  rows.sort(function(a,b){ return (b.checkIn||'').localeCompare(a.checkIn||''); });
+  var msg = '📋 ประวัติการพัก · ' + (rows[0].guestName||q) + ' (' + rows.length + ' ครั้ง)\\n━━━━━━━━━━━━';
+  var show = rows.slice(0, 10);
+  for (var i=0;i<show.length;i++) {
+    var b = show[i];
+    var room = b.roomType==='grand_suite' ? 'GS' : 'STD-'+pad2_(b.roomNumber);
+    msg += '\\n• ' + thDateShort_(b.checkIn) + '→' + thDateShort_(b.checkOut) + ' · ' + room
+      + (b.gliderName ? ' · 🐿 ' + b.gliderName + ' (' + (Number(b.gliderCount)||1) + ')' : '');
+  }
+  if (rows.length > 10) msg += '\\n…และอีก ' + (rows.length-10) + ' ครั้ง';
   return msg;
 }
 function pendingReply_() {
