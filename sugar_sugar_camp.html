@@ -590,7 +590,7 @@ function doGet(e) {
     } else if (act === 'pull_pending') {
       result = { ok:true, pending: readPending() };
     } else if (act === 'approve_pending') {
-      result = approvePending(p.requestId);
+      result = approvePending(p.requestId, p);
     } else if (act === 'reject_pending') {
       result = rejectPending(p.requestId, p.reason || '');
     } else {
@@ -622,7 +622,7 @@ function doPost(e) {
     if (d.action === 'line_summary') return corsOut({ ok:true, summary: dailySummary(), message: buildMorningMessage() });
     if (d.action === 'line_summary_evening') { const tom=addDay_(dateStr_(new Date()),1); return corsOut({ ok:true, summary: summaryForDate(tom), message: buildEveningMessage() }); }
     if (d.action === 'pull_pending') return corsOut({ ok:true, pending: readPending() });
-    if (d.action === 'approve_pending') return corsOut(approvePending(d.requestId));
+    if (d.action === 'approve_pending') return corsOut(approvePending(d.requestId, d));
     if (d.action === 'reject_pending') return corsOut(rejectPending(d.requestId, d.reason || ''));
     return corsOut({ ok:false, error:'Unknown action' });
   } catch(err) {
@@ -908,16 +908,20 @@ function setPendingStatus_(requestId, status) {
   }
   return null;
 }
-function approvePending(requestId) {
+function approvePending(requestId, opts) {
+  opts = opts || {};
   const r = setPendingStatus_(requestId, 'approved');
   if (!r) return { ok:false, error:'ไม่พบคำขอจองนี้' };
   var userId = String(r[2]||'');
-  var msg = '🎉 ยืนยันการจองเรียบร้อยแล้วค่ะ!\\n────────────\\n'
-    + '👤 ' + r[4] + '\\n'
-    + (r[5] ? '🐿 น้อง ' + r[5] + ' (' + (Number(r[6])||1) + ' ตัว)\\n' : '')
-    + '📅 ' + fmtD(r[9]) + ' → ' + fmtD(r[10]) + '\\n'
-    + '────────────\\nขอบคุณที่ใช้บริการ Sugar Sugar Camp 🐿💛';
-  if (userId) pushLine_(userId, msg);
+  var booking = {
+    guestName: String(r[4]||''), gliderName: String(r[5]||''), gliderCount: Number(r[6])||1,
+    phone: String(r[7]||''),
+    roomType: (opts.roomType || (String(r[8])==='Grand Suite'?'grand_suite':'standard')),
+    roomNumber: Number(opts.roomNumber || r[15])||0,
+    checkIn: fmtD(r[9]), checkOut: fmtD(r[10]), notes: String(r[11]||'')
+  };
+  var roomLbl = booking.roomType==='grand_suite' ? '👑 Grand Suite' : 'STD-'+pad2_(booking.roomNumber);
+  if (userId) sendCustomerConfirmation_(userId, String(r[16]||''), booking, roomLbl);
   return { ok:true, requestId: String(requestId) };
 }
 function rejectPending(requestId, reason) {
@@ -1034,9 +1038,9 @@ function handleGroupApprove_(props, ev, text, isApprove) {
   sh.getRange(row,13).setValue('approved'); SpreadsheetApp.flush();
 
   var roomLbl = booking.roomType==='grand_suite' ? '👑 Grand Suite' : 'STD-'+pad2_(booking.roomNumber);
-  if (userId) pushLine_(userId, buildSlip_(rcode, booking, roomLbl));
+  if (userId) sendCustomerConfirmation_(userId, rcode, booking, roomLbl);
   if (ev.replyToken) replyLine_(props, ev.replyToken,
-    '✅ อนุมัติ #' + rcode + ' แล้ว · ห้อง ' + roomLbl + '\\nลงตารางจองและออกใบจองส่งให้ลูกค้าทาง LINE เรียบร้อยค่ะ 🐿');
+    '✅ อนุมัติ #' + rcode + ' แล้ว · ห้อง ' + roomLbl + '\\nลงตารางจองและออกใบยืนยัน (รูป+การ์ด) ส่งให้ลูกค้าทาง LINE เรียบร้อยค่ะ 🐿');
 }
 
 // ─── ลงการจอง 1 รายการลงชีต Bookings + สร้าง Event ─────────
@@ -1080,6 +1084,179 @@ function buildSlip_(code, b, roomLbl) {
     + '🌙 ' + nights + ' คืน\\n'
     + '━━━━━━━━━━━━\\n'
     + 'ขอบคุณที่ใช้บริการค่ะ 💛';
+}
+
+// ─── ส่งใบยืนยันให้ลูกค้า: รูป PNG (ดีไซน์เดิม) + การ์ด Flex ──
+function sendCustomerConfirmation_(userId, code, b, roomLbl) {
+  if (!userId) return;
+  var messages = [];
+  try {
+    var imgUrl = makeSlipImageUrl_(code, b, roomLbl);
+    if (imgUrl) messages.push({ type:'image', originalContentUrl: imgUrl, previewImageUrl: imgUrl });
+  } catch(e) { /* สร้างรูปพลาด — ยังมีการ์ด Flex ส่งข้อมูลครบอยู่ */ }
+  messages.push(buildSlipFlex_(code, b, roomLbl));
+  pushMessages_(userId, messages);
+}
+
+function pushMessages_(to, messages) {
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+  if (!token || !to || !messages.length) return;
+  try {
+    UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+      method:'post', contentType:'application/json',
+      headers:{ Authorization:'Bearer ' + token },
+      payload: JSON.stringify({ to: to, messages: messages }),
+      muteHttpExceptions:true
+    });
+  } catch(_) {}
+}
+
+// ─── การ์ด Flex (หน้าตาเหมือนใบยืนยัน) ─────────────────────
+function buildSlipFlex_(code, b, roomLbl) {
+  var gc = Number(b.gliderCount)||1;
+  var nights = nightsBetween_(b.checkIn, b.checkOut);
+  function row(lbl, val) {
+    return { type:'box', layout:'horizontal', margin:'md', contents:[
+      { type:'text', text:lbl, size:'sm', color:'#9A8A7A', flex:4 },
+      { type:'text', text:String(val), size:'sm', color:'#2A1810', weight:'bold', align:'end', flex:6, wrap:true }
+    ]};
+  }
+  var rows = [ row('ชื่อเจ้าของ', b.guestName) ];
+  if (b.gliderName) rows.push(row('ชื่อน้อง', b.gliderName + ' · ' + gc + ' ตัว'));
+  else rows.push(row('จำนวน', gc + ' ตัว'));
+  rows.push(row('ประเภทกรง', roomLbl));
+  rows.push(row('เช็คอิน', thDateFull_(b.checkIn)));
+  rows.push(row('เช็คเอาท์', thDateFull_(b.checkOut)));
+  rows.push(row('ระยะเวลา', nights + ' คืน'));
+
+  return {
+    type:'flex',
+    altText:'ใบยืนยันการจอง #' + code + ' · Sugar Sugar Camp 🐿',
+    contents:{
+      type:'bubble',
+      header:{ type:'box', layout:'vertical', backgroundColor:'#B05C6E', paddingAll:'18px', contents:[
+        { type:'text', text:'🐿 Sugar Sugar Camp', color:'#FFFFFF', size:'sm' },
+        { type:'text', text:'ใบยืนยันการจองที่พัก', color:'#FFFFFF', size:'lg', weight:'bold', margin:'sm' },
+        { type:'box', layout:'vertical', backgroundColor:'#FFFFFF22', cornerRadius:'20px', paddingAll:'6px', margin:'md', contents:[
+          { type:'text', text:'เลขที่อ้างอิง #' + code, color:'#FFFFFF', size:'xs', align:'center', weight:'bold' }
+        ]}
+      ]},
+      body:{ type:'box', layout:'vertical', paddingAll:'18px', contents: rows.concat([
+        { type:'box', layout:'vertical', backgroundColor:'#EEF5E8', cornerRadius:'8px', paddingAll:'10px', margin:'lg', contents:[
+          { type:'text', text:'✓ ยืนยันการจองแล้ว', color:'#557A3E', weight:'bold', size:'sm', align:'center' }
+        ]}
+      ])},
+      footer:{ type:'box', layout:'vertical', paddingAll:'14px', contents:[
+        { type:'text', text:'ดูแลด้วยความรักและใส่ใจทุกตัว 🌿', size:'xs', color:'#9A8A7A', align:'center', wrap:true },
+        { type:'text', text:'ขอบคุณที่ใช้บริการค่ะ 💛', size:'xs', color:'#9A8A7A', align:'center', margin:'sm' }
+      ]}
+    }
+  };
+}
+
+// ─── สร้างรูปใบยืนยัน (PNG) ด้วย Google Slides → คืน URL ────
+// ต้องเปิด Advanced Service: Slides API (ในเอดิเตอร์ Apps Script)
+function makeSlipImageUrl_(code, b, roomLbl) {
+  var W = 480, H = 760;
+  var created = Slides.Presentations.create({
+    title: 'SSC-slip-' + code,
+    pageSize: { width:{ magnitude:W, unit:'PT' }, height:{ magnitude:H, unit:'PT' } }
+  });
+  var pid = created.presentationId;
+  var pres = SlidesApp.openById(pid);
+  var slide = pres.getSlides()[0];
+  slide.getBackground().setSolidFill('#FDF9F2');
+
+  // แถบหัว (ชมพู)
+  var hdr = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 0, W, 150);
+  hdr.getFill().setSolidFill('#B05C6E'); hdr.getBorder().setTransparent();
+  slipText_(slide, 0, 24, W, 36, 'Sugar Sugar Camp', { size:24, color:'#FFFFFF', italic:true, font:'Playfair Display', align:'CENTER' });
+  slipText_(slide, 0, 62, W, 16, 'ที่พักชูการ์ไกลเดอร์', { size:9, color:'#FFFFFF', align:'CENTER' });
+  slipText_(slide, 0, 80, W, 38, '🐿', { size:26, color:'#FFFFFF', align:'CENTER' });
+  slipText_(slide, 0, 118, W, 22, 'ใบยืนยันการจองที่พัก', { size:13, color:'#FFFFFF', bold:true, align:'CENTER' });
+
+  // เลขที่อ้างอิง
+  var refBox = slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 32, 170, W-64, 34);
+  refBox.getFill().setSolidFill('#F6E7EA'); refBox.getBorder().setTransparent();
+  slipText_(slide, 32, 177, W-64, 20, 'เลขที่อ้างอิง #' + code, { size:10, color:'#9B4D5F', bold:true, align:'CENTER' });
+
+  // แถวข้อมูล
+  var gc = Number(b.gliderCount)||1;
+  var rows = [ ['ชื่อเจ้าของ', String(b.guestName||''), true] ];
+  if (b.gliderName) rows.push(['ชื่อน้อง', String(b.gliderName), false]);
+  rows.push(['จำนวน', gc + ' ตัว', false]);
+  if (b.phone) rows.push(['เบอร์โทร', String(b.phone), false]);
+  rows.push(['ประเภทกรง', roomLbl, false]);
+  rows.push(['เช็คอิน', thDateFull_(b.checkIn), false]);
+  rows.push(['เช็คเอาท์', thDateFull_(b.checkOut), false]);
+  rows.push(['ระยะเวลา', nightsBetween_(b.checkIn, b.checkOut) + ' คืน', false]);
+
+  var y = 224, rowH = 36;
+  for (var i=0;i<rows.length;i++) {
+    slipText_(slide, 32, y, 170, 22, rows[i][0], { size:10, color:'#735847', align:'START' });
+    slipText_(slide, W-300, y-(rows[i][2]?3:0), 268, 26, rows[i][1],
+      { size: rows[i][2]?16:12, color:'#2A1810', bold:true, italic:rows[i][2], font:rows[i][2]?'Playfair Display':null, align:'END' });
+    if (i < rows.length-1) {
+      var ln = slide.insertLine(SlidesApp.LineCategory.STRAIGHT, 32, y+28, W-32, y+28);
+      ln.getLineFill().setSolidFill('#E6DDD0');
+      ln.setWeight(1);
+    }
+    y += rowH;
+  }
+
+  // แถบท้าย
+  var ftY = H - 96;
+  var ft = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, ftY, W, 96);
+  ft.getFill().setSolidFill('#F3E2C0'); ft.getBorder().setTransparent();
+  slipText_(slide, 28, ftY+16, 300, 20, 'สถานะ: ยืนยันแล้ว', { size:12, color:'#4A3326', bold:true, align:'START' });
+  slipText_(slide, 28, ftY+40, 320, 40, 'ออกใบยืนยัน: ' + thDateFull_(dateStr_(new Date())) + '\\nดูแลด้วยความรักและใส่ใจทุกตัว 🌿', { size:9, color:'#735847', align:'START' });
+  var stamp = slide.insertShape(SlidesApp.ShapeType.ELLIPSE, W-92, ftY+18, 60, 60);
+  stamp.getFill().setTransparent(); stamp.getBorder().getLineFill().setSolidFill('#6B8A57'); stamp.getBorder().setWeight(3);
+  slipText_(stamp, 0, 0, 60, 60, 'ยืนยันแล้ว', { size:8, color:'#6B8A57', bold:true, align:'CENTER' });
+
+  pres.saveAndClose();
+
+  // ออกรูป PNG (thumbnail) แล้วนำไปฝากไว้บน Drive เป็นไฟล์สาธารณะ (ลิงก์เดารหัสไม่ได้)
+  var thumb = Slides.Presentations.Pages.getThumbnail(pid, slide.getObjectId(),
+    { 'thumbnailProperties.mimeType':'PNG', 'thumbnailProperties.thumbnailSize':'LARGE' });
+  var blob = UrlFetchApp.fetch(thumb.contentUrl).getBlob().setName('SSC-slip-' + code + '.png');
+  var folder = getSlipFolder_();
+  var file = folder.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  try { DriveApp.getFileById(pid).setTrashed(true); } catch(_) {}   // ลบไฟล์ Slides ชั่วคราว
+  return 'https://lh3.googleusercontent.com/d/' + file.getId();
+}
+function getSlipFolder_() {
+  var name = 'SSC-Slips';
+  var it = DriveApp.getFoldersByName(name);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(name);
+}
+function slipText_(parent, x, y, w, h, text, o) {
+  o = o || {};
+  var box = parent.insertTextBox(text, x, y, w, h);
+  var tr = box.getText();
+  var st = tr.getTextStyle();
+  st.setForegroundColor(o.color || '#2A1810');
+  st.setFontSize(o.size || 11);
+  if (o.bold) st.setBold(true);
+  if (o.italic) st.setItalic(true);
+  if (o.font) { try { st.setFontFamily(o.font); } catch(_) {} }
+  try {
+    var al = o.align==='CENTER' ? SlidesApp.ParagraphAlignment.CENTER
+           : o.align==='END'    ? SlidesApp.ParagraphAlignment.END
+           : SlidesApp.ParagraphAlignment.START;
+    tr.getParagraphs()[0].getRange().getParagraphStyle().setParagraphAlignment(al);
+  } catch(_) {}
+  try { box.getBorder().setTransparent(); } catch(_) {}
+  return box;
+}
+function thDateFull_(dateStr) {
+  var M = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  var p = String(dateStr).split('-');   // yyyy-mm-dd — parse ตรงๆ ไม่พึ่ง timezone
+  var y = parseInt(p[0],10), mo = parseInt(p[1],10), da = parseInt(p[2],10);
+  if (!y || !mo || !da) return String(dateStr);
+  return da + ' ' + M[mo-1] + ' ' + (y+543);
 }
 
 function getSheet() {
@@ -1660,9 +1837,11 @@ async function doRejectPending(reqId){
 }
 
 // เรียกตอน approve สำเร็จ (จาก submitForm) — mark สถานะ + แจ้งลูกค้า
-async function markPendingApproved(reqId){
+async function markPendingApproved(reqId, roomType, roomNumber){
   try{
-    await callPending('approve_pending', '&requestId='+encodeURIComponent(reqId));
+    await callPending('approve_pending', '&requestId='+encodeURIComponent(reqId)
+      +'&roomType='+encodeURIComponent(roomType||'')
+      +'&roomNumber='+encodeURIComponent(roomNumber||''));
     S.pending = S.pending.filter(x=>x.requestId!==reqId);
   }catch(err){ /* ลงตารางสำเร็จแล้ว — แจ้งเตือนเฉยๆ */ toast('⚠ ลงตารางแล้ว แต่แจ้งลูกค้าไม่สำเร็จ: '+err.message,'err'); }
 }
@@ -2343,7 +2522,7 @@ function submitForm(){
   else S.bookings=[...S.bookings,{...data,id:genId(),createdAt:Date.now()}];
   save(); closeModal(); autoSync();
   // ยืนยันจากคำขอจอง LINE → mark approved + แจ้งลูกค้ากลับ
-  if(FS.pendingId){ const pid=FS.pendingId; FS.pendingId=''; markPendingApproved(pid).then(()=>{ render(); toast('✓ ลงตารางจองแล้ว · แจ้งยืนยันลูกค้าทาง LINE','ok'); }); }
+  if(FS.pendingId){ const pid=FS.pendingId, prt=FS.roomType, prn=FS.roomNumber; FS.pendingId=''; markPendingApproved(pid,prt,prn).then(()=>{ render(); toast('✓ ลงตารางจองแล้ว · ส่งใบยืนยันลูกค้าทาง LINE','ok'); }); }
   render();
 }
 
