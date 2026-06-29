@@ -556,7 +556,7 @@ const SHEET_NAME    = 'Bookings';
 const PENDING_SHEET = 'PendingBookings';
 const TZ            = 'Asia/Bangkok';
 const N_COLS        = 12;
-const N_PCOLS       = 17;
+const N_PCOLS       = 18;
 
 // ─── CORS helper ───────────────────────────────────────
 function corsOut(o) {
@@ -649,9 +649,20 @@ function handleLineWebhook(body) {
       var gt = msgText.trim();
       if (gt.indexOf('อนุมัติ') === 0) { handleGroupApprove_(props, ev, gt, true);  return; }
       if (gt.indexOf('ปฏิเสธ')  === 0) { handleGroupApprove_(props, ev, gt, false); return; }
+      // ── คำสั่งทีมงาน ──
+      if (gt === 'เมนู' || gt === 'ช่วยเหลือ' || gt.toLowerCase() === 'help') {
+        if (ev.replyToken) replyLine_(props, ev.replyToken, helpReply_()); return;
+      }
+      if (gt.indexOf('ค้นหา') === 0 || gt.indexOf('หา ') === 0) {
+        var q = gt.replace('ค้นหา', '').replace(/^หา /, '').trim();
+        if (ev.replyToken) replyLine_(props, ev.replyToken, searchReply_(q)); return;
+      }
+      if (gt === 'คิว' || gt === 'รออนุมัติ') {
+        if (ev.replyToken) replyLine_(props, ev.replyToken, pendingReply_()); return;
+      }
       if (firstTime && ev.replyToken) {
         replyLine_(props, ev.replyToken,
-          '✅ ตั้งกลุ่มนี้เป็นกลุ่มรับ-อนุมัติการจองแล้วค่ะ 🐿\\nเมื่อมีคำขอจองเข้ามา ระบบจะแจ้งที่นี่พร้อมจัดห้องให้\\nพิมพ์ "อนุมัติ <โค้ด>" เพื่อยืนยัน · "ปฏิเสธ <โค้ด> [เหตุผล]" เพื่อปฏิเสธ');
+          '✅ ตั้งกลุ่มนี้เป็นกลุ่มรับ-อนุมัติการจองแล้วค่ะ 🐿\\nเมื่อมีคำขอจองเข้ามา ระบบจะแจ้งที่นี่พร้อมจัดห้องให้\\nพิมพ์ "อนุมัติ <โค้ด>" เพื่อยืนยัน · "ปฏิเสธ <โค้ด> [เหตุผล]"\\nพิมพ์ "เมนู" เพื่อดูคำสั่งทั้งหมด');
       }
       return;
     }
@@ -662,7 +673,8 @@ function handleLineWebhook(body) {
     if (src.type === 'user' && src.userId) {
       props.setProperty('LINE_TARGET_ID', src.userId);   // เก็บ userId ไว้ (เงียบ)
       if (isBookingText_(msgText)) {
-        addPendingBooking_(props, src.userId, msgText, msgId);
+        var displayName = getLineProfile_(src.userId);   // ดึงชื่อโปรไฟล์ LINE ของลูกค้า
+        addPendingBooking_(props, src.userId, msgText, msgId, displayName);
       }
       return;   // ❌ ไม่ตอบกลับลูกค้าอัตโนมัติ
     }
@@ -793,13 +805,104 @@ function findCustomerByUserId_(userId) {
   };
 }
 
+// ─── ดึงชื่อโปรไฟล์ LINE ของผู้ใช้ ─────────────────────────
+function getLineProfile_(userId) {
+  try {
+    var token = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+    if (!token || !userId) return '';
+    var res = UrlFetchApp.fetch('https://api.line.me/v2/bot/profile/' + userId,
+      { headers:{ Authorization:'Bearer ' + token }, muteHttpExceptions:true });
+    if (res.getResponseCode() !== 200) return '';
+    return String((JSON.parse(res.getContentText()) || {}).displayName || '');
+  } catch(_) { return ''; }
+}
+
+// ─── คำสั่งทีมงานในกลุ่ม: ค้นหา / คิว / เมนู ───────────────
+function helpReply_() {
+  return '🐿 คำสั่งทีมงาน (พิมพ์ในกลุ่มนี้)\\n'
+    + '━━━━━━━━━━━━\\n'
+    + '• อนุมัติ <โค้ด> — ออกใบจองให้ลูกค้า\\n'
+    + '• ปฏิเสธ <โค้ด> [เหตุผล]\\n'
+    + '• ค้นหา <ชื่อ/เบอร์/ชื่อน้อง/ชื่อ LINE>\\n'
+    + '• คิว — ดูคำขอที่รออนุมัติ\\n'
+    + '• เมนู — แสดงคำสั่งทั้งหมด';
+}
+// รวมโปรไฟล์ลูกค้าจากชีต Bookings + เติมชื่อ LINE จาก PendingBookings
+function searchCustomers_(q) {
+  q = String(q||'').trim();
+  if (!q) return [];
+  var ql = q.toLowerCase(), qd = normPhone_(q);
+  var rows = readSheet(), map = {};
+  rows.forEach(function(b){
+    var name = String(b.guestName||'').trim(), ph = normPhone_(b.phone);
+    var key = ph ? ('p:'+ph) : ('n:'+name.toLowerCase());
+    if (!map[key]) map[key] = { name:name, phone:String(b.phone||''), gliderName:String(b.gliderName||''),
+      gliderCount:Number(b.gliderCount)||1, count:0, last:b.checkIn, lineName:'' };
+    var m = map[key]; m.count++;
+    if (name) m.name = name;
+    if (b.phone) m.phone = String(b.phone);
+    if (b.gliderName) m.gliderName = String(b.gliderName);
+    if (b.checkIn > (m.last||'')) m.last = b.checkIn;
+  });
+  // เติมชื่อ LINE (จับด้วยเบอร์) จาก PendingBookings
+  var lineByPhone = {};
+  var psh = getPendingSheet_();
+  if (psh.getLastRow() > 1) {
+    var d = psh.getRange(2,1,psh.getLastRow()-1,N_PCOLS).getValues();
+    for (var i=0;i<d.length;i++) {
+      var pph = normPhone_(d[i][7]), ln = String(d[i][17]||'');
+      if (pph && ln) lineByPhone[pph] = ln;
+    }
+  }
+  var all = [];
+  for (var k in map) {
+    var c = map[k], cph = normPhone_(c.phone);
+    if (cph && lineByPhone[cph]) c.lineName = lineByPhone[cph];
+    all.push(c);
+  }
+  return all.filter(function(c){
+    if ((c.name||'').toLowerCase().indexOf(ql) >= 0) return true;
+    if (qd && normPhone_(c.phone).indexOf(qd) >= 0) return true;
+    if ((c.gliderName||'').toLowerCase().indexOf(ql) >= 0) return true;
+    if ((c.lineName||'').toLowerCase().indexOf(ql) >= 0) return true;
+    return false;
+  }).sort(function(a,b){ return (b.last||'').localeCompare(a.last||''); }).slice(0,5);
+}
+function searchReply_(q) {
+  if (!q) return 'พิมพ์คำค้นด้วยค่ะ เช่น "ค้นหา สมหญิง" หรือ "ค้นหา 0812345678"';
+  var res = searchCustomers_(q);
+  if (!res.length) return '🔎 ไม่พบลูกค้าที่ตรงกับ "' + q + '"';
+  var msg = '🔎 ผลค้นหา "' + q + '" (' + res.length + ' ราย)\\n━━━━━━━━━━━━';
+  for (var i=0;i<res.length;i++) {
+    var c = res[i];
+    msg += '\\n' + (i+1) + '. ' + c.name
+      + (c.lineName ? '  🟢 ' + c.lineName : '')
+      + (c.phone ? '\\n   📞 ' + c.phone : '')
+      + (c.gliderName ? '\\n   🐿 ' + c.gliderName + ' (' + c.gliderCount + ' ตัว)' : '')
+      + '\\n   เคยพัก ' + c.count + ' ครั้ง' + (c.last ? ' · ล่าสุด ' + thDateShort_(c.last) : '');
+  }
+  return msg;
+}
+function pendingReply_() {
+  var list = readPending();
+  if (!list.length) return '✅ ไม่มีคำขอที่รออนุมัติค่ะ';
+  var msg = '📥 คำขอรออนุมัติ (' + list.length + ')\\n━━━━━━━━━━━━';
+  for (var i=0;i<list.length;i++) {
+    var r = list[i];
+    msg += '\\n#' + r.code + ' · ' + r.guestName + ' · ' + thDateShort_(r.checkIn) + '→' + thDateShort_(r.checkOut)
+      + (r.roomNumber ? ' · ' + (r.roomType==='grand_suite'?'GS':'STD-'+pad2_(r.roomNumber)) : '');
+  }
+  msg += '\\n━━━━━━━━━━━━\\nพิมพ์ "อนุมัติ <โค้ด>" เพื่อออกใบจอง';
+  return msg;
+}
+
 // ─── คิวคำขอจอง (Pending) ──────────────────────────────────
 function getPendingSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(PENDING_SHEET);
   const h = ['requestId','รับเมื่อ','LINE userId','messageId','ชื่อเจ้าของ',
     'ชื่อน้อง','จำนวนน้อง','เบอร์','ประเภทห้อง','เช็คอิน','เช็คเอาท์',
-    'หมายเหตุ','สถานะ','ข้อความเดิม','ลูกค้าเดิม','เลขห้อง','โค้ดอนุมัติ'];
+    'หมายเหตุ','สถานะ','ข้อความเดิม','ลูกค้าเดิม','เลขห้อง','โค้ดอนุมัติ','ชื่อ LINE'];
   if (!sh) {
     sh = ss.insertSheet(PENDING_SHEET);
     sh.getRange(1,1,1,h.length).setValues([h])
@@ -812,8 +915,9 @@ function getPendingSheet_() {
   }
   return sh;
 }
-function addPendingBooking_(props, userId, rawText, msgId) {
+function addPendingBooking_(props, userId, rawText, msgId, lineName) {
   var p = parseBookingMessage_(rawText);
+  lineName = String(lineName || '');
 
   // ── ระบุลูกค้าเก่า/ใหม่ จากฐานข้อมูล: เบอร์ก่อน ถ้าไม่เจอใช้ LINE userId ──
   var prof = null, via = '';
@@ -837,6 +941,7 @@ function addPendingBooking_(props, userId, rawText, msgId) {
     if (groupId) pushLine_(groupId,
       '🔔 มีข้อความจองเข้ามา แต่ข้อมูลไม่ครบ — ทีมงานช่วยสอบถามเพิ่มนะคะ\\n'
       + (matched ? '🔁 ' + matched + '\\n' : '🆕 ลูกค้าใหม่\\n')
+      + (lineName ? '🟢 LINE: ' + lineName + '\\n' : '')
       + (p.guestName ? '👤 ' + p.guestName + '\\n' : '')
       + (p.phone ? '📞 ' + p.phone + '\\n' : '')
       + (p.checkIn ? '📅 เข้า ' + p.checkIn + '\\n' : '📅 (ยังไม่ระบุวันเข้าพัก)\\n')
@@ -868,7 +973,7 @@ function addPendingBooking_(props, userId, rawText, msgId) {
     var now = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss');
     sh.appendRow([reqId, now, userId, msgId, p.guestName, p.gliderName, p.gliderCount,
       p.phone, p.roomType==='grand_suite'?'Grand Suite':'Standard',
-      p.checkIn, p.checkOut, p.notes, 'pending', String(rawText), matched, assignedNo, code]);
+      p.checkIn, p.checkOut, p.notes, 'pending', String(rawText), matched, assignedNo, code, lineName]);
     SpreadsheetApp.flush();
   } finally {
     lock.releaseLock();
@@ -880,6 +985,7 @@ function addPendingBooking_(props, userId, rawText, msgId) {
   var groupMsg = '🔔 คำขอจองใหม่ #' + code + '\\n'
     + '━━━━━━━━━━━━\\n'
     + custTag + '\\n'
+    + (lineName ? '🟢 LINE: ' + lineName + '\\n' : '')
     + '👤 ' + p.guestName + '\\n'
     + (p.gliderName ? '🐿 น้อง ' + p.gliderName + ' (' + p.gliderCount + ' ตัว)\\n' : '🐿 ' + p.gliderCount + ' ตัว\\n')
     + (p.phone ? '📞 ' + p.phone + '\\n' : '')
@@ -914,7 +1020,8 @@ function readPending() {
         notes:      String(r[11]||''),
         rawText:    String(r[13]||''),
         matched:    String(r[14]||''),
-        code:       String(r[16]||'')
+        code:       String(r[16]||''),
+        lineName:   String(r[17]||'')
       };
     });
 }
