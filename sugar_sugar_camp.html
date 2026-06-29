@@ -656,22 +656,15 @@ function handleLineWebhook(body) {
       return;
     }
 
-    // ── แชทส่วนตัว (ลูกค้า) ──
+    // ── แชทส่วนตัว (ลูกค้า) — ไม่ตอบกลับลูกค้าอัตโนมัติทุกกรณี ──
+    //   คำสั่งจอง → แจ้งเข้ากลุ่มเพื่อออกใบจอง · ข้อความอื่น ทีมงานตอบเองในแชต
+    //   ลูกค้าจะได้รับเฉพาะ "ใบยืนยัน" ตอนกลุ่มกดอนุมัติเท่านั้น
     if (src.type === 'user' && src.userId) {
-      props.setProperty('LINE_TARGET_ID', src.userId);
-
-      // ข้อความ "จอง" ตามเทมเพลต → จัดห้องอัตโนมัติ + แจ้งกลุ่มให้อนุมัติ (ยังไม่ลงตารางจริง)
+      props.setProperty('LINE_TARGET_ID', src.userId);   // เก็บ userId ไว้ (เงียบ)
       if (isBookingText_(msgText)) {
-        var ack = addPendingBooking_(props, src.userId, msgText, msgId);
-        if (ev.replyToken) replyLine_(props, ev.replyToken, ack);
-        return;
+        addPendingBooking_(props, src.userId, msgText, msgId);
       }
-
-      // ข้อความทั่วไป → บันทึกผู้รับแจ้งเตือน + แนะนำวิธีจอง
-      if (ev.replyToken) {
-        replyLine_(props, ev.replyToken,
-          '✅ บันทึกผู้รับแจ้งเตือนเรียบร้อย!\\n🐿 Sugar Sugar Camp จะส่งสรุปให้คุณ\\n🌅 ทุกเช้า 06:00\\n🌆 ทุกเย็น 18:00\\n\\n📋 อยากจองที่พัก? พิมพ์ตามนี้ได้เลยค่ะ:\\n' + bookingTemplateText_() + '\\n\\n(User ID: ' + src.userId + ')');
-      }
+      return;   // ❌ ไม่ตอบกลับลูกค้าอัตโนมัติ
     }
   });
   // LINE ต้องการ HTTP 200 เสมอ
@@ -776,7 +769,27 @@ function findCustomerByPhone_(phone) {
     guestName: latest.guestName || '',
     gliderName: latest.gliderName || '',
     gliderCount: Number(latest.gliderCount) || 1,
+    phone: latest.phone || '',
     count: matches.length
+  };
+}
+// จับคู่ลูกค้าเก่าจาก LINE userId — ใช้ประวัติคำขอที่เคย "อนุมัติ" แล้ว
+function findCustomerByUserId_(userId) {
+  if (!userId) return null;
+  var sh = getPendingSheet_();
+  if (sh.getLastRow() < 2) return null;
+  var d = sh.getRange(2,1,sh.getLastRow()-1,N_PCOLS).getValues();
+  var last = null, count = 0;
+  for (var i=0;i<d.length;i++) {
+    if (String(d[i][2]) === userId && String(d[i][12]) === 'approved') { count++; last = d[i]; }
+  }
+  if (!last) return null;
+  return {
+    guestName: String(last[4]||''),
+    gliderName: String(last[5]||''),
+    gliderCount: Number(last[6])||1,
+    phone: String(last[7]||''),
+    count: count
   };
 }
 
@@ -801,23 +814,37 @@ function getPendingSheet_() {
 }
 function addPendingBooking_(props, userId, rawText, msgId) {
   var p = parseBookingMessage_(rawText);
-  // เติมข้อมูลจากระบบลูกค้า (จับคู่ด้วยเบอร์)
+
+  // ── ระบุลูกค้าเก่า/ใหม่ จากฐานข้อมูล: เบอร์ก่อน ถ้าไม่เจอใช้ LINE userId ──
+  var prof = null, via = '';
+  if (p.phone) { prof = findCustomerByPhone_(p.phone); if (prof) via = 'phone'; }
+  if (!prof)   { prof = findCustomerByUserId_(userId); if (prof) via = 'line'; }
   var matched = '';
-  var prof = p.phone ? findCustomerByPhone_(p.phone) : null;
   if (prof) {
-    if (!p.guestName) p.guestName = prof.guestName;
+    // เติมข้อมูลเบื้องต้นให้ครบจากประวัติเดิม
+    if (!p.guestName)  p.guestName  = prof.guestName;
     if (!p.gliderName) p.gliderName = prof.gliderName;
     if ((!p.gliderCount || p.gliderCount === 1) && prof.gliderCount) p.gliderCount = prof.gliderCount;
-    matched = 'ลูกค้าเดิม · เคยจอง ' + prof.count + ' ครั้ง';
+    if (!p.phone && prof.phone) p.phone = prof.phone;
+    matched = 'ลูกค้าเก่า · เคยจอง ' + prof.count + ' ครั้ง' + (via === 'line' ? ' (จาก LINE ID)' : '');
   }
   if (p.checkIn && !p.checkOut) p.checkOut = addDay_(p.checkIn, 1);
 
-  // ข้อมูลไม่ครบ → แนะนำเทมเพลต ไม่บันทึก
+  var groupId = (props.getProperty('LINE_GROUP_ID') || '').trim();
+
+  // ── ข้อมูลไม่พอออกใบจอง (ขาดชื่อ/วันเข้าพัก) → แจ้งกลุ่มให้สอบถามเพิ่ม (ไม่ตอบลูกค้า) ──
   if (!p.guestName || !p.checkIn) {
-    return '⚠️ ข้อมูลยังไม่ครบค่ะ รบกวนพิมพ์ตามนี้นะคะ:\\n' + bookingTemplateText_();
+    if (groupId) pushLine_(groupId,
+      '🔔 มีข้อความจองเข้ามา แต่ข้อมูลไม่ครบ — ทีมงานช่วยสอบถามเพิ่มนะคะ\\n'
+      + (matched ? '🔁 ' + matched + '\\n' : '🆕 ลูกค้าใหม่\\n')
+      + (p.guestName ? '👤 ' + p.guestName + '\\n' : '')
+      + (p.phone ? '📞 ' + p.phone + '\\n' : '')
+      + (p.checkIn ? '📅 เข้า ' + p.checkIn + '\\n' : '📅 (ยังไม่ระบุวันเข้าพัก)\\n')
+      + '────────────\\n💬 ข้อความเดิม:\\n' + String(rawText));
+    return '';
   }
 
-  // จัดห้องอัตโนมัติ
+  // ── จัดห้องอัตโนมัติ ──
   var pick = autoPickRoom_(p.roomType, p.checkIn, p.checkOut);
   var assignedNo = pick ? pick.roomNumber : '';
   if (pick) p.roomType = pick.roomType;
@@ -833,9 +860,7 @@ function addPendingBooking_(props, userId, rawText, msgId) {
     if (msgId && sh.getLastRow() > 1) {
       var existing = sh.getRange(2,4,sh.getLastRow()-1,1).getValues();
       for (var i=0;i<existing.length;i++) {
-        if (String(existing[i][0]) === msgId) {
-          return '✅ รับคำขอจองแล้ว กำลังตรวจสอบกับทีมงานค่ะ 🐿';
-        }
+        if (String(existing[i][0]) === msgId) return '';
       }
     }
     var reqId = 'P' + Date.now() + Math.floor(Math.random()*1000);
@@ -849,25 +874,24 @@ function addPendingBooking_(props, userId, rawText, msgId) {
     lock.releaseLock();
   }
 
-  // แจ้งกลุ่มให้อนุมัติ (พร้อมห้องที่จัดให้และโค้ด)
-  var groupId = (props.getProperty('LINE_GROUP_ID') || '').trim();
+  // ── แจ้งกลุ่มพร้อมข้อมูลครบ + ห้องที่จัดให้ + โค้ด (พร้อมออกใบจอง) ──
   var nights = nightsBetween_(p.checkIn, p.checkOut);
-  var groupMsg = '🆕 คำขอจองใหม่ #' + code + '\\n'
+  var custTag = matched ? '🔁 ' + matched : '🆕 ลูกค้าใหม่';
+  var groupMsg = '🔔 คำขอจองใหม่ #' + code + '\\n'
     + '━━━━━━━━━━━━\\n'
+    + custTag + '\\n'
     + '👤 ' + p.guestName + '\\n'
     + (p.gliderName ? '🐿 น้อง ' + p.gliderName + ' (' + p.gliderCount + ' ตัว)\\n' : '🐿 ' + p.gliderCount + ' ตัว\\n')
+    + (p.phone ? '📞 ' + p.phone + '\\n' : '')
     + '📅 ' + thDateShort_(p.checkIn) + ' → ' + thDateShort_(p.checkOut) + ' (' + nights + ' คืน)\\n'
     + '🏠 ห้องที่จัดให้: ' + roomLbl + '\\n'
-    + (p.phone ? '📞 ' + p.phone + '\\n' : '')
-    + (matched ? '🔁 ' + matched + '\\n' : '🆕 ลูกค้าใหม่\\n')
     + (p.notes ? '📝 ' + p.notes + '\\n' : '')
     + '━━━━━━━━━━━━\\n'
-    + 'พิมพ์ "อนุมัติ ' + code + '" เพื่อยืนยัน\\n'
-    + 'หรือ "ปฏิเสธ ' + code + ' [เหตุผล]"';
+    + '✅ พร้อมออกใบจอง — พิมพ์ "อนุมัติ ' + code + '"\\n'
+    + '❌ ไม่รับ — พิมพ์ "ปฏิเสธ ' + code + ' [เหตุผล]"';
   if (groupId) pushLine_(groupId, groupMsg);
 
-  // ตอบลูกค้าแบบสั้น (ยังไม่ใช่ใบจอง — รอกลุ่มอนุมัติ)
-  return '✅ รับคำขอจองแล้วค่ะ 🐿\\nทีมงานกำลังตรวจสอบและจะแจ้งยืนยัน (ใบจอง) กลับให้นะคะ 🙏';
+  return '';   // ไม่ตอบกลับลูกค้า
 }
 function readPending() {
   const sh = getPendingSheet_();
