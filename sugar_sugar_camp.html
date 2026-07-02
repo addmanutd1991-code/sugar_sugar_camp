@@ -543,7 +543,11 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google Apps Script (v8-booking)
+ * Sugar Sugar Camp - Google Apps Script (v9-safe)
+ *
+ * ★ v9: ปิดข้อความอัตโนมัติถึงลูกค้าทุกกรณี
+ *   - Bot ไม่ตอบกลับลูกค้าที่ทักแชทส่วนตัว (ลงทะเบียนต้องพิมพ์ #sugar เท่านั้น)
+ *   - ตัดโหมด broadcast ทิ้งถาวร — ส่งเฉพาะผู้รับที่ลงทะเบียนไว้ (push) เท่านั้น
  * Deploy -> New deployment -> Web app
  * Execute as: Me | Who has access: Anyone
  *
@@ -604,7 +608,7 @@ function doGet(e) {
         return { checkIn: b.checkIn, checkOut: b.checkOut, roomType: b.roomType };
       }) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v8-booking', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v9-safe', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -641,8 +645,9 @@ function doPost(e) {
 }
 
 // ─── LINE Webhook handler ───────────────────────────────────
-// พอมีคนทักหา Bot (รายบุคคล) → บันทึก userId ลง LINE_TARGET_ID
-// แล้วตอบกลับยืนยันใน LINE ทันที
+// ★★ นโยบายสำคัญ: Bot ห้ามส่งข้อความอัตโนมัติหาลูกค้าทุกกรณี ★★
+// ลูกค้าทักมา (ส่งหลักฐานการจอง ฯลฯ) → Bot เงียบเสมอ ไม่ตอบ ไม่บันทึกอะไร
+// เฉพาะเจ้าของร้านพิมพ์ "#sugar" เท่านั้น จึงจะลงทะเบียนเป็นผู้รับแจ้งเตือน
 function handleLineWebhook(body) {
   const props = PropertiesService.getScriptProperties();
   (body.events || []).forEach(function(ev) {
@@ -661,27 +666,19 @@ function handleLineWebhook(body) {
       }
       return;
     }
-    // แชทส่วนตัว (รายบุคคล) → บันทึกผู้รับสรุปประจำวัน
+    // แชทส่วนตัว: ★ ลูกค้าทักมา = Bot เงียบเสมอ (ไม่ตอบ ไม่บันทึก)
+    // เฉพาะข้อความที่ขึ้นต้นด้วย "#sugar" หรือ "#จอง" เท่านั้น (เจ้าของร้านใช้ลงทะเบียน)
+    // จึงจะบันทึกเป็นผู้รับสรุปประจำวัน และตอบกลับยืนยัน
     if (src.type === 'user' && src.userId) {
-      props.setProperty('LINE_TARGET_ID', src.userId);
-      // ตอบกลับยืนยัน (ถ้ามี replyToken — ใช้ได้เฉพาะ event ที่ตอบได้)
-      if (ev.replyToken) {
-        const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
-        if (token) {
-          try {
-            UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
-              method: 'post', contentType: 'application/json',
-              headers: { Authorization: 'Bearer ' + token },
-              payload: JSON.stringify({
-                replyToken: ev.replyToken,
-                messages: [{ type:'text', text:
-                  '✅ บันทึกผู้รับแจ้งเตือนเรียบร้อย!\\n🐿 Sugar Sugar Camp จะส่งสรุปให้คุณ\\n🌅 ทุกเช้า 06:00\\n🌆 ทุกเย็น 18:00\\n\\n(User ID: ' + src.userId + ')' }]
-              }),
-              muteHttpExceptions: true
-            });
-          } catch(_) {}
+      const utxt = (ev.message && ev.message.type === 'text') ? String(ev.message.text || '').trim() : '';
+      if (/^#(sugar|จอง)/i.test(utxt)) {
+        props.setProperty('LINE_TARGET_ID', src.userId);
+        if (ev.replyToken) {
+          replyLine_(ev.replyToken,
+            '✅ บันทึกผู้รับแจ้งเตือนเรียบร้อย!\\n🐿 Sugar Sugar Camp จะส่งสรุปให้คุณ\\n🌅 ทุกเช้า 06:00\\n🌆 ทุกเย็น 18:00\\n\\n(User ID: ' + src.userId + ')');
         }
       }
+      // ข้อความอื่นทั้งหมดจากลูกค้า → ไม่ตอบกลับ ไม่ทำอะไรทั้งสิ้น
     }
   });
   // LINE ต้องการ HTTP 200 เสมอ
@@ -811,7 +808,8 @@ function syncAll(bookings) {
 //  2) ⚙ Project Settings > Script Properties เพิ่ม 2 ค่า:
 //        LINE_CHANNEL_ACCESS_TOKEN = <channel access token>
 //        LINE_TARGET_ID            = <userId/groupId ผู้รับ>
-//        (เว้นว่าง LINE_TARGET_ID = broadcast ถึงผู้ติดตามทุกคน)
+//        (★ ต้องตั้งเสมอ — ถ้าเว้นว่างระบบจะ "ไม่ส่ง" เพื่อกันข้อความหลุดถึงลูกค้า
+//           วิธีง่ายสุด: พิมพ์ #sugar หา Bot ในแชทส่วนตัว ระบบบันทึกให้อัตโนมัติ)
 //  3) ตั้ง Time zone เป็น (GMT+07:00) Bangkok
 //  4) รัน setupDailyLineTrigger() 1 ครั้ง → สร้าง 2 trigger อัตโนมัติ
 //
@@ -896,25 +894,24 @@ function buildEveningMessage() {
 // เข้ากันเดิม — ชื่อเก่าสำหรับ action=send_line
 function buildLineMessage() { return buildMorningMessage(); }
 
-// ── ส่ง LINE ────────────────────────────────────────────────
+// ── ส่ง LINE (สรุปประจำวัน — ส่งหาเจ้าของร้านเท่านั้น) ────────
+// ★★ ห้าม broadcast เด็ดขาด — กันข้อความหลุดถึงลูกค้าที่เพิ่มเพื่อน Bot ★★
+// ต้องตั้ง LINE_TARGET_ID เสมอ (พิมพ์ #sugar หา Bot ในแชทส่วนตัว) ไม่งั้นไม่ส่ง
 function sendLine_(text) {
   const props  = PropertiesService.getScriptProperties();
   const token  = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
   if (!token)  throw new Error('ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN ใน Script Properties');
   const target = (props.getProperty('LINE_TARGET_ID') || '').trim();
-  const isPush = !!target;
-  const url     = 'https://api.line.me/v2/bot/message/' + (isPush ? 'push' : 'broadcast');
-  const payload = isPush
-    ? { to: target, messages: [{ type:'text', text }] }
-    : { messages: [{ type:'text', text }] };
-  const res = UrlFetchApp.fetch(url, {
+  if (!target) throw new Error('ยังไม่ได้ตั้งผู้รับ — พิมพ์ #sugar หา Bot ในแชทส่วนตัวเพื่อลงทะเบียน (ระบบไม่ broadcast หาลูกค้า)');
+  const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
     method: 'post', contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + token },
-    payload: JSON.stringify(payload), muteHttpExceptions: true
+    payload: JSON.stringify({ to: target, messages: [{ type:'text', text }] }),
+    muteHttpExceptions: true
   });
   const code = res.getResponseCode();
   if (code !== 200) throw new Error('LINE API ' + code + ': ' + res.getContentText());
-  return { ok:true, sent: isPush ? 'push→' + target : 'broadcast' };
+  return { ok:true, sent: 'push→' + target };
 }
 
 // 🌅 เช้า 06:00
@@ -1060,22 +1057,20 @@ function buildRequestMessage_(q, id) {
   return m;
 }
 
-// ส่งแจ้งเตือนคำขอจอง — เข้ากลุ่ม (LINE_GROUP_ID) ก่อน
-// ถ้าไม่มีกลุ่ม → ส่งหา LINE_TARGET_ID → ไม่มีทั้งคู่ = broadcast
+// ส่งแจ้งเตือนคำขอจอง — เข้ากลุ่มร้าน (LINE_GROUP_ID) ก่อน
+// ถ้าไม่มีกลุ่ม → ส่งหาเจ้าของร้าน (LINE_TARGET_ID)
+// ★★ ไม่มีทั้งคู่ = ไม่ส่ง — ห้าม broadcast หาลูกค้าเด็ดขาด ★★
 function sendBookingLine_(text) {
   const props  = PropertiesService.getScriptProperties();
   const token  = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
   if (!token)  throw new Error('ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN');
   const target = (props.getProperty('LINE_GROUP_ID') || props.getProperty('LINE_TARGET_ID') || '').trim();
-  const isPush = !!target;
-  const url     = 'https://api.line.me/v2/bot/message/' + (isPush ? 'push' : 'broadcast');
-  const payload = isPush
-    ? { to: target, messages: [{ type:'text', text: text }] }
-    : { messages: [{ type:'text', text: text }] };
-  const res = UrlFetchApp.fetch(url, {
+  if (!target) throw new Error('ยังไม่ได้ตั้งกลุ่ม/ผู้รับ — พิมพ์ #sugar ในกลุ่มร้าน (ระบบไม่ broadcast หาลูกค้า)');
+  const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
     method: 'post', contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + token },
-    payload: JSON.stringify(payload), muteHttpExceptions: true
+    payload: JSON.stringify({ to: target, messages: [{ type:'text', text: text }] }),
+    muteHttpExceptions: true
   });
   const code = res.getResponseCode();
   if (code !== 200) throw new Error('LINE API ' + code + ': ' + res.getContentText());
@@ -2202,7 +2197,7 @@ function openSettings(){
           <li>ตั้งค่า: <b>Execute as: Me</b> | <b>Who has access: Anyone</b></li>
           <li>กด Deploy → อนุญาตสิทธิ์ Sheets + Calendar</li>
           <li>คัดลอก <b>Web app URL</b> มาวางในช่องด้านบน แล้วกด บันทึก</li>
-          <li style="color:#C46C7E;"><b>⚠ ถ้าเคย Deploy ไปแล้ว ต้อง Deploy ใหม่อีกครั้ง</b> (New deployment) เพื่ออัปเดตเป็น v8 — รองรับระบบคำขอจองจากลูกค้า (booking.html)</li>
+          <li style="color:#C46C7E;"><b>⚠ ถ้าเคย Deploy ไปแล้ว ต้องอัปเดตเวอร์ชัน</b> (Manage deployments → ✏️ Edit → New version → Deploy) เพื่ออัปเดตเป็น v9 — ปิดข้อความอัตโนมัติถึงลูกค้าทุกกรณี</li>
         </ol></div>
         <div style="position:relative;">
           <div class="codebx">${codeHtml}</div>
@@ -2248,7 +2243,7 @@ function openSettings(){
           <div style="font-size:12px;line-height:1.8;color:var(--cocoa);">
             <div style="background:#f0faf3;border-radius:8px;padding:12px 14px;margin-bottom:10px;border:1px solid #06C755;">
               <b style="color:#06C755;">✨ วิธีใหม่ — ไม่ต้องใช้ webhook.site / ไม่ต้องคัดลอก ID เอง</b>
-              <div style="margin:6px 0;color:var(--cm);">โค้ดเวอร์ชันนี้ทำตัวเป็น LINE Webhook ในตัว เมื่อคุณทักหา Bot มันจะ <b>บันทึก User ID ลง LINE_TARGET_ID ให้อัตโนมัติ</b> แล้วตอบกลับยืนยันใน LINE</div>
+              <div style="margin:6px 0;color:var(--cm);">โค้ดเวอร์ชันนี้ทำตัวเป็น LINE Webhook ในตัว — พิมพ์ <b>#sugar</b> หา Bot ในแชทส่วนตัว มันจะ <b>บันทึก User ID ลง LINE_TARGET_ID ให้อัตโนมัติ</b> แล้วตอบกลับยืนยัน (ข้อความอื่นๆ จากลูกค้า Bot จะเงียบเสมอ ไม่ตอบอัตโนมัติ)</div>
               <ol style="margin:6px 0 0 16px;">
                 <li>วาง code เวอร์ชันนี้แล้ว <b>Deploy → New deployment</b> · คัดลอก <b>Web app URL</b> (ลงท้าย <code>/exec</code>)</li>
                 <li>ไป <a href="https://developers.line.biz" target="_blank">developers.line.biz</a> → Bot → แท็บ <b>Messaging API</b></li>
@@ -2256,13 +2251,14 @@ function openSettings(){
                 <li>เปิดสวิตช์ <b>Use webhook</b> ให้เป็น <b>Enabled</b></li>
                 <li>ปิด <b>Auto-reply messages</b> / <b>Greeting messages</b> (ที่หัวข้อ LINE Official Account features) เพื่อไม่ให้ข้อความตอบกลับชนกัน</li>
                 <li>ดู <b>Bot basic ID</b> (เช่น <code>@xxx1234</code>) → เปิด LINE มือถือ → ค้นหา ID → <b>เพิ่มเพื่อน</b></li>
-                <li><b>ทักข้อความอะไรก็ได้</b>ไปหา Bot → Bot จะตอบ "✅ บันทึกผู้รับเรียบร้อย" = เสร็จแล้ว!</li>
+                <li>พิมพ์ <b><code>#sugar</code></b> ไปหา Bot → Bot จะตอบ "✅ บันทึกผู้รับเรียบร้อย" = เสร็จแล้ว! (ข้อความอื่นๆ Bot จะไม่ตอบ)</li>
               </ol>
               <div style="margin-top:6px;color:#1a6b35;">→ ตั้งแต่นี้ระบบจะส่งสรุปหาคุณคนเดียว (push) ทุกเช้า 06:00 และเย็น 18:00</div>
             </div>
             <div style="background:rgba(74,51,38,.05);border-radius:8px;padding:10px 14px;font-size:11.5px;color:var(--cm);">
-              <b style="color:var(--cocoa);">เปลี่ยนผู้รับ?</b> แค่ให้คนใหม่ทักหา Bot — ID ล่าสุดจะถูกบันทึกทับให้เอง<br/>
-              <b style="color:var(--cocoa);">อยากส่งหลายคน?</b> เว้นว่าง <code>LINE_TARGET_ID</code> = Broadcast ถึงทุกคนที่เพิ่ม Bot เป็นเพื่อน
+              <b style="color:var(--cocoa);">เปลี่ยนผู้รับ?</b> ให้คนใหม่พิมพ์ <code>#sugar</code> หา Bot — ID ล่าสุดจะถูกบันทึกทับให้เอง<br/>
+              <b style="color:#C46C7E;">🛡 ความปลอดภัย (v9):</b> ระบบ<b>ไม่ broadcast และไม่ตอบลูกค้าอัตโนมัติ</b>ทุกกรณี — ลูกค้าทัก Bot มาส่งหลักฐานได้โดยไม่มีข้อความเด้งกลับ<br/>
+              <b style="color:var(--cocoa);">⚠ อย่าลืม:</b> ปิด <b>Greeting message</b> และ <b>Auto-response</b> ใน LINE Official Account Manager ด้วย (อันนั้นเป็นระบบของ LINE เอง อยู่นอกเหนือโค้ดนี้)
             </div>
             <div style="background:#f0faf3;border:1px solid #06C755;border-radius:8px;padding:10px 14px;font-size:11.5px;color:var(--cocoa);margin-top:8px;line-height:1.8;">
               <b style="color:#06C755;">🔔 แจ้งเตือน "คำขอจองใหม่" เข้ากลุ่ม LINE ของร้าน (v8)</b><br/>
