@@ -3,434 +3,237 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>🐿️ ระบบข้อมูลลูกค้า - Sugar Sugar Camp</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<title>ระบบข้อมูลลูกค้า · Sugar Sugar Camp 🐿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --pink-50:#fff5f8; --pink-100:#ffe4ec; --pink-200:#ffc9da; --pink-300:#ff9fbc;
-    --pink-400:#ff6f9a; --pink-500:#ff3d7f; --pink-600:#e02468; --pink-700:#b71854;
-    --cream:#fffaf5; --brown:#5a3825;
-    --gray-50:#fafafa; --gray-100:#f5f5f5; --gray-200:#e5e5e5;
-    --gray-400:#a3a3a3; --gray-600:#525252; --gray-700:#404040; --gray-800:#262626;
-    --green-500:#10b981;
-    --shadow-sm:0 1px 2px rgba(91,40,80,0.08);
-    --shadow-md:0 4px 12px rgba(91,40,80,0.10);
-    --shadow-lg:0 12px 32px rgba(91,40,80,0.14);
-  }
-  body {
-    font-family:'Prompt','Mali',sans-serif;
-    background: linear-gradient(135deg, #fff5f8 0%, #ffe4ec 50%, #ffd1e0 100%);
-    background-attachment: fixed;
-    min-height:100vh;
-    color: var(--gray-800);
-    padding: 16px;
-  }
-  .container { max-width: 1280px; margin: 0 auto; }
+:root{
+  --cream:#FAF3E9;--cl:#FDF9F2;--cd:#F2E5D2;
+  --cocoa:#2A1810;--cm:#735847;
+  --ps:#F8DBE2;--pd:#C46C7E;
+  --peach:#F0B080;--phs:#FBE3CD;
+  --sage:#9DB089;--ss:#DDE6CE;
+  --coral:#DD8470;--cs:#F5D5C9;
+  --gold:#C9A24E;--gs:#EFE0B6;
+  --ln:rgba(74,51,38,.13);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream);
+  background-image:radial-gradient(circle at 0% 0%,rgba(232,154,171,.18),transparent 45%),
+    radial-gradient(circle at 100% 0%,rgba(240,176,128,.15),transparent 45%),
+    radial-gradient(circle at 50% 100%,rgba(157,176,137,.10),transparent 55%);
+  min-height:100vh;font-size:14px;line-height:1.6;}
+.wrap{padding:28px 22px 80px;max-width:1280px;margin:0 auto;}
 
-  header {
-    background: linear-gradient(135deg, #fff 0%, #fff5f8 100%);
-    border-radius: 24px;
-    padding: 24px 28px;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow-md);
-    display:flex; align-items:center; justify-content:space-between;
-    flex-wrap:wrap; gap: 16px;
-    border: 2px solid var(--pink-100);
-  }
-  .logo { display:flex; align-items:center; gap: 14px; }
-  .logo-icon {
-    width: 56px; height:56px;
-    background: linear-gradient(135deg, var(--pink-400), var(--pink-600));
-    border-radius:18px;
-    display:flex; align-items:center; justify-content:center;
-    font-size:32px;
-    box-shadow: var(--shadow-md);
-  }
-  .logo h1 { font-family:'Mali',sans-serif; font-size:24px; color: var(--pink-700); font-weight:700; }
-  .logo p { font-size:13px; color: var(--gray-600); margin-top:2px; }
-  .header-stats { display:flex; gap: 12px; flex-wrap:wrap; }
-  .stat-pill {
-    background: var(--pink-50);
-    border: 1.5px solid var(--pink-200);
-    padding: 10px 18px;
-    border-radius: 14px;
-    text-align:center;
-  }
-  .stat-pill .num { font-size:22px; font-weight:700; color: var(--pink-700); line-height:1; font-family:'Mali',sans-serif; }
-  .stat-pill .label { font-size:11px; color: var(--gray-600); margin-top:4px; }
+/* ── Header ── */
+.hrow{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:18px;margin-bottom:24px;}
+.backlink{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--cm);
+  text-decoration:none;margin-bottom:10px;padding:6px 14px;border:1px solid var(--ln);
+  border-radius:999px;background:var(--cl);transition:all .15s;}
+.backlink:hover{background:#fff;color:var(--cocoa);}
+.brand{font-family:'Fraunces',serif;font-size:clamp(30px,5.5vw,52px);line-height:.95;letter-spacing:-.025em;font-weight:400;}
+.brand em{color:var(--pd);font-style:italic;}
+.brand .star{color:var(--gold);font-size:.55em;vertical-align:top;margin-left:4px;}
+.tagline{font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:var(--cm);margin-top:8px;}
+.hright{display:flex;flex-direction:column;gap:10px;align-items:flex-end;}
 
-  .status-bar {
-    background: white;
-    border-radius: 16px;
-    padding: 12px 20px;
-    margin-bottom: 16px;
-    box-shadow: var(--shadow-sm);
-    display:flex; align-items:center; justify-content:space-between;
-    flex-wrap:wrap; gap: 12px;
-    border-left: 4px solid var(--gray-400);
-    transition: border-color 0.3s;
-  }
-  .status-bar.connected { border-left-color: var(--green-500); }
-  .status-bar.error { border-left-color: #ef4444; }
-  .status-bar .left { display:flex; align-items:center; gap:10px; font-size:13px; flex:1; min-width: 220px; }
-  .status-dot { width:10px; height:10px; border-radius:50%; background: var(--gray-400); box-shadow: 0 0 0 4px rgba(163,163,163,0.2); flex-shrink: 0; }
-  .status-bar.connected .status-dot { background: var(--green-500); box-shadow: 0 0 0 4px rgba(16,185,129,0.2); animation: pulse 2s infinite; }
-  .status-bar.error .status-dot { background: #ef4444; box-shadow: 0 0 0 4px rgba(239,68,68,0.2); }
-  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 4px rgba(16,185,129,0.2); } 50% { box-shadow: 0 0 0 8px rgba(16,185,129,0.1); } }
-  .status-actions { display:flex; gap:8px; flex-wrap:wrap; }
-  .btn-config, .btn-signin, .btn-signout, .btn-calendars {
-    border:none; padding: 8px 16px; border-radius:10px;
-    font-family:inherit; font-size:13px; font-weight:500;
-    cursor:pointer; transition: all 0.2s; white-space: nowrap;
-  }
-  .btn-config { background: var(--pink-500); color:white; }
-  .btn-config:hover { background: var(--pink-600); transform: translateY(-1px); box-shadow: var(--shadow-md); }
-  .btn-signin { background: #4285f4; color:white; }
-  .btn-signin:hover { background: #3367d6; transform: translateY(-1px); box-shadow: var(--shadow-md); }
-  .btn-signout { background: var(--gray-600); color:white; }
-  .btn-signout:hover { background: var(--gray-800); }
-  .btn-calendars { background: white; color: var(--pink-600); border: 2px solid var(--pink-300); }
-  .btn-calendars:hover { background: var(--pink-50); }
+/* ── Status bar ── */
+.statusbar{background:var(--cl);border:1px solid var(--ln);border-radius:18px;
+  padding:12px 20px;margin-bottom:18px;display:flex;align-items:center;
+  justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.statusbar .left{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--cm);flex:1;min-width:220px;}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--cm);display:inline-block;flex-shrink:0;}
+.statusbar.connected .dot{background:var(--sage);animation:pulse 2s infinite;}
+.statusbar.error .dot{background:var(--coral);}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(157,176,137,.25);}50%{box-shadow:0 0 0 7px rgba(157,176,137,.1);}}
+.status-actions{display:flex;gap:8px;flex-wrap:wrap;}
 
-  .search-section {
-    background: white;
-    border-radius: 20px;
-    padding: 24px;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow-md);
-    border: 2px solid var(--pink-100);
-  }
-  .search-section h2 {
-    font-size:18px; color: var(--pink-700);
-    margin-bottom: 14px;
-    font-family:'Mali',sans-serif;
-    display:flex; align-items:center; gap:8px;
-  }
-  .search-box { display:flex; gap:10px; flex-wrap:wrap; }
-  .search-input-wrap { flex:1; min-width: 260px; position: relative; }
-  .search-input-wrap::before {
-    content: '🔍';
-    position:absolute; left: 18px; top: 50%; transform: translateY(-50%);
-    font-size:18px;
-  }
-  .search-input {
-    width:100%;
-    padding: 14px 18px 14px 50px;
-    border: 2px solid var(--pink-200);
-    border-radius:14px;
-    font-family:inherit; font-size:15px;
-    background: var(--pink-50);
-    transition: all 0.2s;
-  }
-  .search-input:focus {
-    outline:none;
-    border-color: var(--pink-500);
-    background: white;
-    box-shadow: 0 0 0 4px rgba(255,61,127,0.1);
-  }
-  .filter-chips { display:flex; gap: 8px; flex-wrap:wrap; margin-top:14px; }
-  .chip {
-    padding: 6px 14px;
-    border-radius: 999px;
-    background: var(--pink-50);
-    border: 1.5px solid var(--pink-200);
-    color: var(--pink-700);
-    font-size: 12px; font-weight: 500;
-    cursor: pointer; transition: all 0.2s;
-  }
-  .chip:hover { background: var(--pink-100); }
-  .chip.active { background: var(--pink-500); color: white; border-color: var(--pink-500); }
+/* ── Buttons ── */
+.btn{font-family:inherit;font-size:13px;font-weight:500;padding:9px 18px;border-radius:999px;
+  border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .18s;white-space:nowrap;}
+.btn-p{background:var(--pd);color:#fff;} .btn-p:hover{background:var(--cocoa);}
+.btn-s{background:var(--cd);color:var(--cocoa);} .btn-s:hover{background:var(--cl);}
+.btn-o{background:transparent;border:1px solid var(--cocoa);color:var(--cocoa);}
+.btn-o:hover{background:var(--cocoa);color:var(--cl);}
+.btn-g{background:transparent;color:var(--cm);border:1px solid var(--ln);}
+.btn-g:hover{background:var(--cd);color:var(--cocoa);}
 
-  .loading { text-align:center; padding: 60px 20px; color: var(--gray-600); }
-  .loading .spinner {
-    width: 48px; height: 48px;
-    border: 4px solid var(--pink-200);
-    border-top-color: var(--pink-500);
-    border-radius:50%;
-    margin: 0 auto 16px;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* ── Stat cards ── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px;}
+.scard{background:var(--cl);border:1px solid var(--ln);border-radius:20px;padding:18px 22px 16px;position:relative;}
+.sico{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:16px;}
+.sc-sage .sico{background:var(--ss);} .sc-gold .sico{background:var(--gs);} .sc-peach .sico{background:var(--phs);}
+.scard .sl{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cm);font-weight:600;}
+.scard .sv{font-family:'Fraunces',serif;font-size:40px;font-weight:400;line-height:1;margin-top:8px;}
 
-  .results-grid {
-    display:grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 16px;
-  }
-  .customer-card {
-    background: white;
-    border-radius: 18px;
-    padding: 20px;
-    box-shadow: var(--shadow-md);
-    border: 2px solid var(--pink-100);
-    cursor: pointer;
-    transition: all 0.25s;
-    position: relative;
-    overflow: hidden;
-  }
-  .customer-card::before {
-    content:''; position:absolute; top:0; left:0; right:0; height:4px;
-    background: linear-gradient(90deg, var(--pink-400), var(--pink-600));
-  }
-  .customer-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--pink-300);
-  }
-  .card-header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom: 14px; }
-  .card-name { font-family:'Mali',sans-serif; font-size: 19px; font-weight: 700; color: var(--pink-700); line-height: 1.2; }
-  .visit-badge {
-    background: linear-gradient(135deg, var(--pink-100), var(--pink-200));
-    color: var(--pink-700);
-    padding: 4px 10px; border-radius: 999px;
-    font-size:11px; font-weight: 600; white-space: nowrap;
-  }
-  .visit-badge.frequent { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; }
-  .card-row { display:flex; align-items:flex-start; gap:8px; font-size: 13px; color: var(--gray-600); margin: 6px 0; }
-  .card-row .icon { font-size:15px; flex-shrink: 0; }
-  .card-row .val { color: var(--gray-800); font-weight: 500; flex:1; word-break: break-word; }
-  .gliders-list {
-    background: var(--pink-50);
-    border-radius:10px;
-    padding: 10px 12px;
-    margin-top: 10px;
-    font-size: 12.5px;
-    color: var(--brown);
-    line-height: 1.5;
-    border-left: 3px solid var(--pink-300);
-  }
-  .gliders-list .label { font-weight: 600; color: var(--pink-700); display:block; margin-bottom: 4px; font-size:11px; }
-  .last-visit {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px dashed var(--pink-200);
-    font-size:12px;
-    color: var(--gray-600);
-    display:flex; justify-content:space-between; align-items:center; gap: 8px;
-  }
-  .last-visit strong { color: var(--pink-700); }
+/* ── Search section ── */
+.sec{background:var(--cl);border:1px solid var(--ln);border-radius:24px;padding:22px 24px;margin-bottom:18px;}
+.sec h2{font-family:'Fraunces',serif;font-style:italic;font-size:22px;font-weight:400;margin-bottom:14px;}
+.sbox{display:flex;align-items:center;gap:8px;background:var(--cream);
+  border:1px solid var(--ln);border-radius:999px;padding:11px 18px;color:var(--cm);}
+.sbox:focus-within{border-color:var(--pd);background:#fff;box-shadow:0 0 0 3px rgba(196,108,126,.1);}
+.sbox input{flex:1;border:none;background:transparent;font-family:inherit;font-size:14px;outline:none;color:var(--cocoa);}
+.pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;}
+.pill{font-family:inherit;font-size:12px;padding:7px 14px;border-radius:999px;
+  border:1px solid var(--ln);background:var(--cream);color:var(--cm);cursor:pointer;transition:all .12s;}
+.pill:hover{color:var(--cocoa);}
+.pill.act{background:var(--cocoa);color:var(--cl);border-color:var(--cocoa);}
 
-  .empty { text-align:center; padding: 80px 20px; color: var(--gray-600); }
-  .empty-icon { font-size:64px; opacity: 0.4; margin-bottom: 16px; }
-  .empty h3 { font-family:'Mali',sans-serif; color: var(--pink-700); margin-bottom: 8px; }
+/* ── Loading / empty ── */
+.loading{text-align:center;padding:56px 20px;color:var(--cm);}
+.loading .spinner{width:42px;height:42px;border:3px solid var(--cd);border-top-color:var(--pd);
+  border-radius:50%;margin:0 auto 14px;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.empty{text-align:center;padding:56px 20px;color:var(--cm);}
+.empty-icon{font-size:52px;opacity:.5;margin-bottom:12px;}
+.empty h3{font-family:'Fraunces',serif;font-style:italic;font-size:22px;margin-bottom:6px;color:var(--cocoa);}
 
-  .modal-overlay {
-    position:fixed; inset:0;
-    background: rgba(91,40,80,0.5);
-    backdrop-filter: blur(4px);
-    display:none;
-    align-items:center; justify-content:center;
-    z-index: 100; padding: 16px;
-    animation: fadeIn 0.2s;
-  }
-  .modal-overlay.show { display:flex; }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  .modal {
-    background: white;
-    border-radius: 24px;
-    max-width: 720px; width:100%;
-    max-height: 90vh; overflow-y: auto;
-    box-shadow: var(--shadow-lg);
-    animation: slideUp 0.25s ease-out;
-  }
-  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity:1; } }
-  .modal-header {
-    background: linear-gradient(135deg, var(--pink-400), var(--pink-600));
-    color: white; padding: 20px 24px;
-    border-radius: 24px 24px 0 0;
-    display:flex; justify-content:space-between; align-items:center;
-    position: sticky; top:0; z-index: 2;
-  }
-  .modal-header h3 { font-family:'Mali',sans-serif; font-size: 22px; }
-  .btn-close {
-    background: rgba(255,255,255,0.25);
-    border:none; color: white;
-    width: 36px; height: 36px;
-    border-radius: 12px;
-    cursor:pointer; font-size: 20px;
-    transition: all 0.2s;
-  }
-  .btn-close:hover { background: rgba(255,255,255,0.4); }
-  .modal-body { padding: 24px; }
+/* ── Customer cards ── */
+.results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+.customer-card{background:var(--cl);border:1px solid var(--ln);border-radius:20px;
+  padding:20px 22px;cursor:pointer;transition:all .2s;}
+.customer-card:hover{transform:translateY(-2px);border-color:var(--pd);
+  box-shadow:0 10px 24px rgba(42,24,16,.10);}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px;}
+.card-name{font-family:'Fraunces',serif;font-size:20px;font-weight:400;line-height:1.15;}
+.visit-badge{background:var(--ss);color:#4F6938;padding:4px 12px;border-radius:999px;
+  font-size:11px;font-weight:600;white-space:nowrap;}
+.visit-badge.frequent{background:var(--gs);color:#856B2A;}
+.card-row{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--cm);margin:5px 0;}
+.card-row .icon{font-size:14px;flex-shrink:0;}
+.card-row .val{color:var(--cocoa);font-weight:500;flex:1;word-break:break-word;}
+.gliders-list{background:var(--cream);border:1px solid var(--ln);border-radius:12px;
+  padding:10px 14px;margin-top:10px;font-size:12.5px;color:var(--cm);line-height:1.55;}
+.gliders-list .label{font-weight:600;color:var(--pd);display:block;margin-bottom:3px;font-size:11px;
+  letter-spacing:.08em;text-transform:uppercase;}
+.last-visit{margin-top:12px;padding-top:12px;border-top:1px dashed var(--ln);
+  font-size:12px;color:var(--cm);display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.last-visit strong{font-family:'Fraunces',serif;font-style:italic;font-size:14px;color:var(--cocoa);font-weight:400;}
 
-  .detail-grid {
-    display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 14px;
-    margin-bottom: 20px;
-  }
-  .detail-item {
-    background: var(--pink-50);
-    padding: 12px 14px;
-    border-radius:12px;
-    border-left: 3px solid var(--pink-400);
-  }
-  .detail-item .lbl { font-size:11px; color: var(--gray-600); margin-bottom:4px; text-transform: uppercase; letter-spacing:0.5px; }
-  .detail-item .val { font-size:14px; color: var(--gray-800); font-weight: 500; word-break: break-word; }
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(42,24,16,.45);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;z-index:100;padding:20px;animation:fi .15s ease;}
+.modal-overlay.show{display:flex;}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+.modal{background:var(--cl);border-radius:24px;padding:26px 28px;max-width:720px;width:100%;
+  max-height:90vh;overflow-y:auto;position:relative;border:1px solid var(--ln);
+  box-shadow:0 28px 56px rgba(42,24,16,.28);animation:su .2s cubic-bezier(.34,1.56,.64,1);}
+@keyframes su{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal h2{font-family:'Fraunces',serif;font-style:italic;font-size:26px;font-weight:400;margin-bottom:4px;padding-right:40px;}
+.modal .msub{color:var(--cm);font-size:13px;margin-bottom:18px;}
+.mclose{position:absolute;top:18px;right:18px;width:34px;height:34px;border-radius:50%;
+  border:none;background:var(--cd);cursor:pointer;font-size:16px;color:var(--cocoa);}
+.mclose:hover{background:var(--cs);color:var(--coral);}
 
-  .history-section h4 {
-    font-family:'Mali',sans-serif;
-    color: var(--pink-700);
-    font-size: 17px;
-    margin: 20px 0 12px;
-    display:flex; align-items:center; gap: 8px;
-  }
-  .history-item {
-    background: white;
-    border: 2px solid var(--pink-100);
-    border-radius: 14px;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-    transition: all 0.2s;
-  }
-  .history-item:hover {
-    border-color: var(--pink-300);
-    background: var(--pink-50);
-  }
-  .history-top {
-    display:flex; justify-content:space-between; align-items:center;
-    margin-bottom: 8px; flex-wrap:wrap; gap: 8px;
-  }
-  .history-date { font-weight: 600; color: var(--pink-700); font-size:14px; }
-  .history-source {
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: var(--pink-100);
-    color: var(--pink-700);
-    font-weight: 500;
-  }
-  .history-source.calendar { background: #dbeafe; color: #1e40af; }
-  .history-source.form { background: #fce7f3; color: var(--pink-700); }
-  .history-detail { font-size: 12.5px; color: var(--gray-600); line-height: 1.5; }
-  .cal-group-label {
-    font-size:12px; color:var(--gray-600); margin-bottom:6px;
-    padding:4px 10px; background:var(--pink-50);
-    border-radius:8px; display:inline-block; font-weight:500;
-  }
-  .empty-history { text-align:center; padding: 30px; color: var(--gray-400); font-size: 13px; }
+/* ── Detail modal ── */
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:18px;}
+.detail-item{background:var(--cream);border:1px solid var(--ln);border-radius:12px;padding:10px 14px;}
+.detail-item .lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cm);margin-bottom:3px;font-weight:600;}
+.detail-item .val{font-size:13.5px;color:var(--cocoa);font-weight:600;word-break:break-word;}
+.history-section h4{font-family:'Fraunces',serif;font-style:italic;font-size:18px;font-weight:400;
+  margin:20px 0 10px;display:flex;align-items:center;gap:8px;}
+.history-item{background:var(--cream);border:1px solid var(--ln);border-radius:14px;
+  padding:13px 16px;margin-bottom:8px;transition:all .15s;}
+.history-item:hover{border-color:var(--pd);background:#fff;}
+.history-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px;}
+.history-date{font-weight:600;color:var(--cocoa);font-size:13.5px;}
+.history-source{font-size:10px;padding:3px 10px;border-radius:999px;font-weight:600;}
+.history-source.calendar{background:var(--ss);color:#4F6938;}
+.history-source.form{background:var(--ps);color:var(--pd);}
+.history-detail{font-size:12.5px;color:var(--cm);line-height:1.55;}
+.cal-group-label{font-size:12px;color:var(--cm);margin-bottom:6px;padding:4px 12px;
+  background:var(--gs);border-radius:999px;display:inline-block;font-weight:500;}
+.empty-history{text-align:center;padding:26px;color:var(--cm);font-size:13px;font-style:italic;}
+.glider-tag{display:inline-block;background:#fff;border:1px solid var(--ln);padding:4px 12px;
+  border-radius:999px;margin:3px 4px 3px 0;color:var(--pd);font-weight:500;}
 
-  .config-form { display:flex; flex-direction: column; gap: 14px; }
-  .config-form label { font-size: 13px; color: var(--gray-700); font-weight:500; display:block; margin-bottom: 4px; }
-  .config-form input, .config-form select {
-    width:100%; padding: 11px 14px;
-    border: 2px solid var(--pink-200);
-    border-radius: 10px;
-    font-family: inherit; font-size: 14px;
-    background: var(--pink-50);
-  }
-  .config-form input:focus, .config-form select:focus {
-    outline:none; border-color: var(--pink-500); background: white;
-  }
-  .config-form .hint { font-size: 11.5px; color: var(--gray-600); margin-top: 4px; line-height: 1.5; }
-  .config-form .hint code {
-    background: var(--gray-100);
-    padding: 1px 5px; border-radius: 4px;
-    font-size: 11px; color: var(--pink-700);
-  }
-  .config-actions {
-    display:flex; gap: 10px; justify-content:flex-end;
-    margin-top: 14px; padding-top: 14px;
-    border-top: 1px solid var(--pink-100);
-  }
-  .btn { padding: 10px 20px; border-radius:10px; border:none; font-family: inherit; font-size:14px; font-weight:500; cursor:pointer; transition:all 0.2s; }
-  .btn-primary { background: var(--pink-500); color:white; }
-  .btn-primary:hover { background: var(--pink-600); }
-  .btn-secondary { background: var(--gray-100); color: var(--gray-800); }
-  .btn-secondary:hover { background: var(--gray-200); }
+/* ── Config form ── */
+.config-form{display:flex;flex-direction:column;gap:14px;}
+.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--cm);margin-bottom:6px;}
+.fi{width:100%;padding:11px 14px;border:1px solid var(--ln);border-radius:12px;
+  background:var(--cream);font-family:inherit;font-size:14px;color:var(--cocoa);outline:none;transition:all .15s;}
+.fi:focus{border-color:var(--pd);background:#fff;box-shadow:0 0 0 3px rgba(196,108,126,.1);}
+.fhelp{font-size:11.5px;color:var(--cm);margin-top:5px;line-height:1.5;}
+.fhelp code{background:var(--cd);padding:1px 6px;border-radius:5px;font-size:11px;color:var(--pd);}
+.factions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--ln);}
 
-  .calendar-list { display:flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; padding-right: 4px; }
-  .calendar-row {
-    display:flex; align-items:center; gap:12px;
-    padding: 10px 14px;
-    border: 2px solid var(--pink-100);
-    border-radius: 12px;
-    background: var(--pink-50);
-    cursor: pointer; transition: all 0.15s;
-  }
-  .calendar-row:hover { border-color: var(--pink-300); background: white; }
-  .calendar-row.checked { border-color: var(--pink-500); background: white; }
-  .calendar-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--pink-500); flex-shrink: 0; }
-  .calendar-row .info { flex: 1; min-width:0; }
-  .calendar-row .name { font-weight: 500; color: var(--gray-800); font-size: 14px; }
-  .calendar-row .desc { font-size: 11px; color: var(--gray-600); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .calendar-row .badge {
-    font-size: 10px;
-    padding: 2px 7px; border-radius: 999px;
-    background: var(--pink-100); color: var(--pink-700);
-    flex-shrink: 0; font-weight: 500;
-  }
-  .picker-actions { display:flex; gap:8px; flex-wrap:wrap; padding: 8px 0; }
-  .mini-btn {
-    padding: 6px 12px;
-    background: var(--pink-100); color: var(--pink-700);
-    border: none; border-radius: 8px;
-    font-family: inherit; font-size: 12px; font-weight: 500;
-    cursor: pointer;
-  }
-  .mini-btn:hover { background: var(--pink-200); }
+/* ── Calendar picker ── */
+.calendar-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;padding-right:4px;}
+.calendar-row{display:flex;align-items:center;gap:12px;padding:10px 14px;
+  border:1px solid var(--ln);border-radius:14px;background:var(--cream);
+  cursor:pointer;transition:all .15s;}
+.calendar-row:hover{border-color:var(--pd);background:#fff;}
+.calendar-row.checked{border-color:var(--pd);background:#fff;}
+.calendar-row input[type="checkbox"]{width:18px;height:18px;accent-color:var(--pd);flex-shrink:0;}
+.calendar-row .info{flex:1;min-width:0;}
+.calendar-row .name{font-weight:500;color:var(--cocoa);font-size:13.5px;}
+.calendar-row .desc{font-size:11px;color:var(--cm);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.calendar-row .badge{font-size:10px;padding:2px 9px;border-radius:999px;
+  background:var(--gs);color:#856B2A;flex-shrink:0;font-weight:600;}
+.picker-actions{display:flex;gap:8px;flex-wrap:wrap;padding:8px 0;}
+.mini-btn{padding:6px 14px;background:var(--cd);color:var(--cocoa);
+  border:none;border-radius:999px;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;}
+.mini-btn:hover{background:var(--ps);color:var(--pd);}
 
-  @media (max-width: 640px) {
-    body { padding: 10px; }
-    header { padding: 16px; }
-    .logo h1 { font-size: 19px; }
-    .logo-icon { width: 44px; height: 44px; font-size: 24px; }
-    .stat-pill { padding: 8px 12px; }
-    .stat-pill .num { font-size: 18px; }
-    .results-grid { grid-template-columns: 1fr; }
-    .search-section { padding: 18px; }
-    .modal { border-radius: 16px; }
-    .modal-header { border-radius: 16px 16px 0 0; }
-  }
+.more-note{text-align:center;color:var(--cm);margin-top:16px;font-size:13px;font-style:italic;}
+
+@media(max-width:640px){
+  .wrap{padding:18px 14px 60px;}
+  .stats{grid-template-columns:repeat(3,1fr);gap:8px;}
+  .scard{padding:14px;}
+  .scard .sv{font-size:28px;}
+  .sico{display:none;}
+  .results-grid{grid-template-columns:1fr;}
+  .sec{padding:18px 16px;}
+  .modal{padding:22px 18px;}
+  .hright{align-items:flex-start;}
+}
 </style>
 </head>
 <body>
-<div class="container">
+<div class="wrap">
 
-  <header>
-    <div class="logo">
-      <div class="logo-icon">🐿️</div>
-      <div>
-        <h1>ระบบข้อมูลลูกค้า</h1>
-        <p>Sugar Sugar Camp · Customer Database</p>
-      </div>
-    </div>
-    <div class="header-stats">
-      <div class="stat-pill"><div class="num" id="statTotal">-</div><div class="label">ลูกค้าทั้งหมด</div></div>
-      <div class="stat-pill"><div class="num" id="statBookings">-</div><div class="label">การจองจาก Sheet</div></div>
-      <div class="stat-pill"><div class="num" id="statCalEvents">-</div><div class="label">Events ใน Calendar</div></div>
-    </div>
-  </header>
-
-  <div class="status-bar" id="statusBar">
-    <div class="left">
-      <div class="status-dot"></div>
-      <span id="statusText">กำลังเริ่มต้น...</span>
-    </div>
-    <div class="status-actions" id="statusActions">
-      <button class="btn-signin" id="btnSignIn" onclick="signIn()" style="display:none">🔐 Sign in with Google</button>
-      <button class="btn-calendars" id="btnCalendars" onclick="openCalPicker()" style="display:none">📅 เลือก Calendar</button>
-      <button class="btn-config" id="btnConfig" onclick="openConfig()">⚙️ ตั้งค่า</button>
-      <button class="btn-signout" id="btnSignOut" onclick="signOut()" style="display:none">ออกจากระบบ</button>
+  <div class="hrow">
+    <div>
+      <a class="backlink" href="sugar_sugar_camp.html">← กลับหน้าหลัก</a>
+      <h1 class="brand">Sugar <em>Sugar</em> Camp<span class="star">✦</span></h1>
+      <div class="tagline">ระบบข้อมูลลูกค้า · Customer Database 🐿</div>
     </div>
   </div>
 
-  <div class="search-section">
-    <h2>🔎 ค้นหาลูกค้า</h2>
-    <div class="search-box">
-      <div class="search-input-wrap">
-        <input type="text" class="search-input" id="searchInput" placeholder="ค้นหาด้วยชื่อเจ้าของ / ชื่อน้องชูก้า / เบอร์โทร..." />
-      </div>
+  <div class="statusbar" id="statusBar">
+    <div class="left">
+      <span class="dot"></span>
+      <span id="statusText">กำลังเริ่มต้น...</span>
     </div>
-    <div class="filter-chips">
-      <div class="chip active" data-filter="all">ทั้งหมด</div>
-      <div class="chip" data-filter="frequent">ลูกค้าประจำ (3+ ครั้ง)</div>
-      <div class="chip" data-filter="recent">มาใหม่ (3 เดือน)</div>
-      <div class="chip" data-filter="multi">หลายตัว (3+ ตัว)</div>
+    <div class="status-actions" id="statusActions">
+      <button class="btn btn-p" id="btnSignIn" onclick="signIn()" style="display:none">🔐 Sign in with Google</button>
+      <button class="btn btn-o" id="btnCalendars" onclick="openCalPicker()" style="display:none">📅 เลือก Calendar</button>
+      <button class="btn btn-s" id="btnConfig" onclick="openConfig()">⚙️ ตั้งค่า</button>
+      <button class="btn btn-g" id="btnSignOut" onclick="signOut()" style="display:none">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="scard sc-peach"><div class="sico">🏡</div><div class="sl">ลูกค้าทั้งหมด</div><div class="sv" id="statTotal">-</div></div>
+    <div class="scard sc-sage"><div class="sico">📋</div><div class="sl">การจองจาก Sheet</div><div class="sv" id="statBookings">-</div></div>
+    <div class="scard sc-gold"><div class="sico">📅</div><div class="sl">Events ใน Calendar</div><div class="sv" id="statCalEvents">-</div></div>
+  </div>
+
+  <div class="sec">
+    <h2>ค้นหาลูกค้า</h2>
+    <div class="sbox">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="ค้นหาด้วยชื่อเจ้าของ / ชื่อน้องชูก้า / เบอร์โทร..." />
+    </div>
+    <div class="pills">
+      <button class="pill act" data-filter="all">ทั้งหมด</button>
+      <button class="pill" data-filter="frequent">ลูกค้าประจำ (3+ ครั้ง)</button>
+      <button class="pill" data-filter="recent">มาใหม่ (3 เดือน)</button>
+      <button class="pill" data-filter="multi">หลายตัว (3+ ตัว)</button>
     </div>
   </div>
 
@@ -442,51 +245,46 @@
 
 <div class="modal-overlay" id="detailModal" onclick="if(event.target===this)closeDetail()">
   <div class="modal">
-    <div class="modal-header">
-      <h3 id="modalName">รายละเอียดลูกค้า</h3>
-      <button class="btn-close" onclick="closeDetail()">✕</button>
-    </div>
-    <div class="modal-body" id="modalBody"></div>
+    <button class="mclose" onclick="closeDetail()">✕</button>
+    <h2 id="modalName">รายละเอียดลูกค้า</h2>
+    <div id="modalBody"></div>
   </div>
 </div>
 
 <div class="modal-overlay" id="configModal" onclick="if(event.target===this)closeConfig()">
   <div class="modal" style="max-width:560px">
-    <div class="modal-header">
-      <h3>⚙️ ตั้งค่าการเชื่อมต่อ</h3>
-      <button class="btn-close" onclick="closeConfig()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="config-form">
-        <div>
-          <label>Google OAuth Client ID</label>
-          <input type="text" id="cfgClientId" placeholder="xxxxxxx.apps.googleusercontent.com" />
-          <div class="hint">
-            สร้างที่ <code>console.cloud.google.com</code> → APIs &amp; Services → Credentials → Create OAuth Client ID (Web application)
-            <br>เพิ่ม Authorized JavaScript origins: <code>https://addmanutd1991-code.github.io</code>
-          </div>
+    <button class="mclose" onclick="closeConfig()">✕</button>
+    <h2>ตั้งค่าการเชื่อมต่อ</h2>
+    <div class="msub">เชื่อมต่อ Google Sheet และ Calendar</div>
+    <div class="config-form">
+      <div>
+        <label class="fl">Google OAuth Client ID</label>
+        <input type="text" class="fi" id="cfgClientId" placeholder="xxxxxxx.apps.googleusercontent.com" />
+        <div class="fhelp">
+          สร้างที่ <code>console.cloud.google.com</code> → APIs &amp; Services → Credentials → Create OAuth Client ID (Web application)
+          <br>เพิ่ม Authorized JavaScript origins: <code>https://addmanutd1991-code.github.io</code>
         </div>
-        <div>
-          <label>Google API Key</label>
-          <input type="text" id="cfgApiKey" placeholder="AIzaSy..." />
-          <div class="hint">
-            สำหรับโหลด Sheet — สร้างที่ Credentials → Create API Key
-            <br>เปิด API: <code>Google Sheets API</code> และ <code>Google Calendar API</code>
-          </div>
+      </div>
+      <div>
+        <label class="fl">Google API Key</label>
+        <input type="text" class="fi" id="cfgApiKey" placeholder="AIzaSy..." />
+        <div class="fhelp">
+          สำหรับโหลด Sheet — สร้างที่ Credentials → Create API Key
+          <br>เปิด API: <code>Google Sheets API</code> และ <code>Google Calendar API</code>
         </div>
-        <div>
-          <label>Google Sheet ID</label>
-          <input type="text" id="cfgSheetId" value="12rY8_n9zMPwGyaOdR9-3aQyWzijMoU8a9G4iWghz054" />
-          <div class="hint">ID ของไฟล์ Sugar Sugar Camp (การตอบกลับ)</div>
-        </div>
-        <div>
-          <label>ชื่อ Sheet (Tab)</label>
-          <input type="text" id="cfgSheetName" value="การตอบแบบฟอร์ม 1" />
-        </div>
-        <div class="config-actions">
-          <button class="btn btn-secondary" onclick="closeConfig()">ยกเลิก</button>
-          <button class="btn btn-primary" onclick="saveConfig()">💾 บันทึก</button>
-        </div>
+      </div>
+      <div>
+        <label class="fl">Google Sheet ID</label>
+        <input type="text" class="fi" id="cfgSheetId" value="12rY8_n9zMPwGyaOdR9-3aQyWzijMoU8a9G4iWghz054" />
+        <div class="fhelp">ID ของไฟล์ Sugar Sugar Camp (การตอบกลับ)</div>
+      </div>
+      <div>
+        <label class="fl">ชื่อ Sheet (Tab)</label>
+        <input type="text" class="fi" id="cfgSheetName" value="การตอบแบบฟอร์ม 1" />
+      </div>
+      <div class="factions">
+        <button class="btn btn-s" onclick="closeConfig()">ยกเลิก</button>
+        <button class="btn btn-p" onclick="saveConfig()">💾 บันทึก</button>
       </div>
     </div>
   </div>
@@ -494,23 +292,20 @@
 
 <div class="modal-overlay" id="calPickerModal" onclick="if(event.target===this)closeCalPicker()">
   <div class="modal" style="max-width:640px">
-    <div class="modal-header">
-      <h3>📅 เลือก Calendar ที่จะดึงประวัติ</h3>
-      <button class="btn-close" onclick="closeCalPicker()">✕</button>
+    <button class="mclose" onclick="closeCalPicker()">✕</button>
+    <h2>เลือก Calendar</h2>
+    <div class="msub">เลือก Calendar ที่จะดึงประวัติการเข้าพัก</div>
+    <div class="picker-actions">
+      <button class="mini-btn" onclick="pickAll(true)">เลือกทั้งหมด</button>
+      <button class="mini-btn" onclick="pickAll(false)">ยกเลิกทั้งหมด</button>
+      <button class="mini-btn" onclick="pickSugarOnly()">เฉพาะ Sugar เท่านั้น</button>
     </div>
-    <div class="modal-body">
-      <div class="picker-actions">
-        <button class="mini-btn" onclick="pickAll(true)">เลือกทั้งหมด</button>
-        <button class="mini-btn" onclick="pickAll(false)">ยกเลิกทั้งหมด</button>
-        <button class="mini-btn" onclick="pickSugarOnly()">เฉพาะ Sugar เท่านั้น</button>
-      </div>
-      <div class="calendar-list" id="calendarList">
-        <div style="text-align:center;padding:30px;color:var(--gray-400);font-size:13px">กำลังโหลดรายการ Calendar...</div>
-      </div>
-      <div class="config-actions">
-        <button class="btn btn-secondary" onclick="closeCalPicker()">ยกเลิก</button>
-        <button class="btn btn-primary" onclick="applyCalPick()">✅ ดึงประวัติ</button>
-      </div>
+    <div class="calendar-list" id="calendarList">
+      <div class="empty-history">กำลังโหลดรายการ Calendar...</div>
+    </div>
+    <div class="factions">
+      <button class="btn btn-s" onclick="closeCalPicker()">ยกเลิก</button>
+      <button class="btn btn-p" onclick="applyCalPick()">✅ ดึงประวัติ</button>
     </div>
   </div>
 </div>
@@ -521,6 +316,7 @@
 // =====================================================
 const CFG_KEY = 'sugar_customer_cfg_v2';
 const SELECTED_CAL_KEY = 'sugar_selected_cals_v1';
+const TOKEN_KEY = 'sugar_customer_token_v1';
 const SHEET_DEFAULT = '12rY8_n9zMPwGyaOdR9-3aQyWzijMoU8a9G4iWghz054';
 const SHEET_NAME_DEFAULT = 'การตอบแบบฟอร์ม 1';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
@@ -567,6 +363,23 @@ function loadSelectedCals() {
 function saveSelectedCals(ids) { localStorage.setItem(SELECTED_CAL_KEY, JSON.stringify(ids)); }
 
 // =====================================================
+// TOKEN PERSISTENCE (Login ค้างไว้)
+// =====================================================
+function saveToken(token, expiresIn) {
+  const exp = Date.now() + (Number(expiresIn) || 3600) * 1000;
+  try { localStorage.setItem(TOKEN_KEY, JSON.stringify({ token, exp })); } catch(e) {}
+}
+function loadToken() {
+  try {
+    const t = JSON.parse(localStorage.getItem(TOKEN_KEY));
+    // ใช้ token เดิมถ้ายังเหลืออายุมากกว่า 1 นาที
+    if (t && t.token && t.exp && t.exp - Date.now() > 60000) return t.token;
+  } catch(e) {}
+  return null;
+}
+function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+
+// =====================================================
 // AUTH
 // =====================================================
 let tokenClient = null;
@@ -599,10 +412,21 @@ function initAuth() {
           return;
         }
         ACCESS_TOKEN = resp.access_token;
+        saveToken(resp.access_token, resp.expires_in);
         showButtons({ signin:false, signout:true, calendars:true });
         await loadEverything();
       }
     });
+
+    // ★ Login ค้างไว้ — ถ้ามี token เดิมที่ยังไม่หมดอายุ ใช้ต่อได้เลยไม่ต้อง Sign-in ใหม่
+    const saved = loadToken();
+    if (saved) {
+      ACCESS_TOKEN = saved;
+      showButtons({ signin:false, signout:true, calendars:true });
+      loadEverything();
+      return;
+    }
+
     setStatus('', '✋ กรุณา Sign-in ด้วย Google เพื่อดึงข้อมูล');
     showButtons({ signin:true, signout:false, calendars:false });
     document.getElementById('resultsContainer').innerHTML = `
@@ -624,6 +448,7 @@ function signOut() {
     google.accounts.oauth2.revoke(ACCESS_TOKEN, () => {});
   }
   ACCESS_TOKEN = null;
+  clearToken();
   CUSTOMERS = []; RAW_ROWS = []; ALL_CAL_EVENTS = [];
   updateStats();
   setStatus('', '✋ ออกจากระบบแล้ว — Sign-in ใหม่เพื่อใช้งาน');
@@ -633,6 +458,18 @@ function signOut() {
       <div class="empty-icon">🔐</div>
       <h3>ออกจากระบบแล้ว</h3>
       <p>กด Sign-in เพื่อใช้งานต่อ</p>
+    </div>`;
+}
+function sessionExpired() {
+  ACCESS_TOKEN = null;
+  clearToken();
+  setStatus('err', '⏰ Session หมดอายุ — กรุณา Sign-in ใหม่');
+  showButtons({ signin:true, signout:false, calendars:false });
+  document.getElementById('resultsContainer').innerHTML = `
+    <div class="empty">
+      <div class="empty-icon">⏰</div>
+      <h3>Session หมดอายุ</h3>
+      <p>กด "Sign in with Google" เพื่อใช้งานต่อ</p>
     </div>`;
 }
 function showButtons({ signin, signout, calendars }) {
@@ -649,6 +486,10 @@ async function gFetch(url, options = {}) {
   opts.headers = { ...(opts.headers || {}) };
   if (ACCESS_TOKEN) opts.headers['Authorization'] = 'Bearer ' + ACCESS_TOKEN;
   const r = await fetch(url, opts);
+  if (r.status === 401) {
+    sessionExpired();
+    throw new Error('Session หมดอายุ');
+  }
   if (!r.ok) {
     const txt = await r.text();
     throw new Error(`HTTP ${r.status}: ${txt.substring(0, 200)}`);
@@ -869,7 +710,7 @@ function renderResults() {
   wrap.innerHTML = '<div class="results-grid">' +
     display.map((c, i) => renderCard(c, i)).join('') +
     '</div>' +
-    (filtered.length > 200 ? `<p style="text-align:center;color:var(--gray-600);margin-top:16px;font-size:13px">แสดง 200 จาก ${filtered.length} รายการ — ค้นหาเพื่อกรองให้แคบลง</p>` : '');
+    (filtered.length > 200 ? `<p class="more-note">แสดง 200 จาก ${filtered.length} รายการ — ค้นหาเพื่อกรองให้แคบลง</p>` : '');
 }
 function renderCard(c, idx) {
   const isFreq = c.visitCount >= 3;
@@ -917,14 +758,14 @@ function openDetail(idx) {
       <div class="detail-item"><div class="lbl">เบอร์สำรอง</div><div class="val">${escapeHtml(c.phone2 || '-')}</div></div>
       <div class="detail-item"><div class="lbl">LINE</div><div class="val">${escapeHtml(c.line || '-')}</div></div>
       <div class="detail-item"><div class="lbl">จำนวนน้องชูก้า</div><div class="val">${c.gliderNames.length} ตัว</div></div>
-      <div class="detail-item"><div class="lbl">จำนวนครั้งทั้งหมด</div><div class="val">${c.visitCount} ครั้ง <span style="font-size:11px;color:var(--gray-600)">(📋${formBookings.length} · 📅${calBookings.length})</span></div></div>
+      <div class="detail-item"><div class="lbl">จำนวนครั้งทั้งหมด</div><div class="val">${c.visitCount} ครั้ง <span style="font-size:11px;color:var(--cm)">(📋${formBookings.length} · 📅${calBookings.length})</span></div></div>
     </div>
 
     ${c.gliderNames.length ? `
       <div class="history-section">
         <h4>🐿️ น้องชูก้าทั้งหมด</h4>
-        <div class="gliders-list" style="font-size:13.5px">
-          ${c.gliderNames.map(n=>`<span style="display:inline-block;background:white;border:1px solid var(--pink-200);padding:4px 10px;border-radius:999px;margin:3px 4px 3px 0;color:var(--pink-700);font-weight:500">${escapeHtml(n)}</span>`).join('')}
+        <div style="font-size:13px">
+          ${c.gliderNames.map(n=>`<span class="glider-tag">${escapeHtml(n)}</span>`).join('')}
         </div>
       </div>` : ''}
 
@@ -938,8 +779,8 @@ function openDetail(idx) {
           </div>
           <div class="history-detail">
             <strong>${b.count || '-'} ตัว:</strong> ${escapeHtml(b.gliders || '-')}
-            ${b.note ? `<br><span style="color:var(--pink-600)">📌 ${escapeHtml(b.note)}</span>` : ''}
-            ${b.transport ? `<br><span style="color:#10b981">🚗 ${escapeHtml(b.transport)}</span>` : ''}
+            ${b.note ? `<br><span style="color:var(--pd)">📌 ${escapeHtml(b.note)}</span>` : ''}
+            ${b.transport ? `<br><span style="color:#4F6938">🚗 ${escapeHtml(b.transport)}</span>` : ''}
           </div>
         </div>`).join('') : '<div class="empty-history">ไม่มีข้อมูล</div>'}
     </div>
@@ -959,7 +800,7 @@ function openDetail(idx) {
                 <strong>${escapeHtml(b.gliders)}</strong>
                 ${b.note ? `<br>${escapeHtml(b.note).substring(0,250)}` : ''}
                 ${b.location ? `<br>📍 ${escapeHtml(b.location)}` : ''}
-                ${b.htmlLink ? `<br><a href="${b.htmlLink}" target="_blank" style="color:var(--pink-600);font-weight:500;font-size:12px">→ เปิดใน Google Calendar</a>` : ''}
+                ${b.htmlLink ? `<br><a href="${b.htmlLink}" target="_blank" style="color:var(--pd);font-weight:500;font-size:12px">→ เปิดใน Google Calendar</a>` : ''}
               </div>
             </div>`).join('')}
         </div>`).join('') : `<div class="empty-history">ไม่พบ event ที่ match ใน Calendar ที่เลือก</div>`}
@@ -986,7 +827,7 @@ function openCalPicker() {
 function renderCalPicker() {
   const list = document.getElementById('calendarList');
   if (!ALL_CALENDARS.length) {
-    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray-400)">ยังไม่ได้โหลดรายการ Calendar</div>';
+    list.innerHTML = '<div class="empty-history">ยังไม่ได้โหลดรายการ Calendar</div>';
     return;
   }
   const selSet = new Set(SELECTED_CAL_IDS);
@@ -1043,6 +884,7 @@ async function loadEverything() {
     updateStats();
     renderResults();
   } catch(e) {
+    if (!ACCESS_TOKEN) return; // session expired — หน้าจอถูกจัดการแล้ว
     setStatus('err', '❌ โหลด Sheet ผิดพลาด: ' + e.message);
     return;
   }
@@ -1061,6 +903,7 @@ async function loadEverything() {
     }
     saveSelectedCals(SELECTED_CAL_IDS);
   } catch(e) {
+    if (!ACCESS_TOKEN) return;
     setStatus('err', '❌ โหลด Calendar list ผิดพลาด: ' + e.message);
     return;
   }
@@ -1132,11 +975,11 @@ document.getElementById('searchInput').addEventListener('input', e => {
   CURRENT_SEARCH = e.target.value;
   renderResults();
 });
-document.querySelectorAll('.chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    CURRENT_FILTER = chip.dataset.filter;
+document.querySelectorAll('.pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('act'));
+    pill.classList.add('act');
+    CURRENT_FILTER = pill.dataset.filter;
     renderResults();
   });
 });
