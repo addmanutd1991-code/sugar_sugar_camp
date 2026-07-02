@@ -543,9 +543,9 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google Apps Script (v10-silent)
+ * Sugar Sugar Camp - Google Apps Script (v11-group)
  *
- * ★★★ v10: Bot เงียบสนิท 100% — ไม่มีข้อความอัตโนมัติถึงลูกค้าทุกกรณี ★★★
+ * ★★★ Bot เงียบสนิท 100% — ไม่มีข้อความอัตโนมัติถึงลูกค้าทุกกรณี ★★★
  *   - ไม่มีโค้ดตอบกลับ (reply) เหลืออยู่เลย — ใครทักมา Bot ไม่ตอบเด็ดขาด
  *   - ไม่มีการลงทะเบียนผู้รับอัตโนมัติ — ตั้งผู้รับได้ทางเดียวคือเจ้าของร้าน
  *     กดรันฟังก์ชันใน Apps Script เอง (ดู "วิธีตั้งผู้รับ" ด้านล่าง)
@@ -553,13 +553,16 @@ const AS_CODE = `/**
  *     ค่าเก่า LINE_TARGET_ID / LINE_GROUP_ID ที่อาจถูกลูกค้าทับไว้ = ถูกเลิกใช้ทันที
  *   - ไม่มี broadcast — ส่งแบบเจาะจงผู้รับ (push) เท่านั้น
  *
+ * ★ v11: สรุปเช้า-เย็นเข้ากลุ่มร้านเหมือนเดิม
+ *   - ตั้งกลุ่มร้านอย่างเดียว → ทั้ง "สรุปเช้า 06:00 / เย็น 18:00" และ
+ *     "แจ้งคำขอจองใหม่" ส่งเข้ากลุ่มเดียวกันทั้งหมด
+ *
  * ── วิธีตั้งผู้รับ (ทำใน Apps Script Editor เท่านั้น) ──
- *  A) ผู้รับสรุปประจำวัน (เช้า 06:00 / เย็น 18:00):
- *     1. เจ้าของร้านทักหา Bot ในแชทส่วนตัว 1 ข้อความ (อะไรก็ได้ — Bot จะไม่ตอบ)
- *     2. ใน Apps Script เลือกฟังก์ชัน setSummaryTargetFromLastSeen แล้วกด ▶ Run ทันที
- *  B) กลุ่มรับแจ้ง "คำขอจองใหม่":
- *     1. เชิญ Bot เข้ากลุ่มร้าน แล้วส่งข้อความในกลุ่ม 1 ข้อความ
- *     2. เลือกฟังก์ชัน setBookingTargetFromLastSeenGroup แล้วกด ▶ Run ทันที
+ *  ✔ แนะนำ: เชิญ Bot เข้ากลุ่มร้าน → ส่งข้อความในกลุ่ม 1 ข้อความ
+ *    → รัน setBookingTargetFromLastSeenGroup ทันที = จบ ทุกอย่างเข้ากลุ่ม
+ *  (ทางเลือก) อยากให้สรุปประจำวันเข้าแชทส่วนตัวแทน:
+ *    ทักหา Bot 1 ข้อความ → รัน setSummaryTargetFromLastSeen
+ *    ย้ายสรุปกลับเข้ากลุ่ม: รัน setSummaryTargetToGroup
  *  ตรวจสอบ: รัน showLineTargets · ปิดการส่งทั้งหมด: รัน clearAllLineTargets
  * Deploy -> New deployment -> Web app
  * Execute as: Me | Who has access: Anyone
@@ -621,7 +624,7 @@ function doGet(e) {
         return { checkIn: b.checkIn, checkOut: b.checkOut, roomType: b.roomType };
       }) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v10-silent', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v11-group', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -678,31 +681,47 @@ function handleLineWebhook(body) {
 }
 
 // ══ วิธีตั้งผู้รับ — เจ้าของร้านรันเองใน Apps Script Editor เท่านั้น ══
+//
+//  💡 ง่ายสุด (ทุกอย่างเข้ากลุ่มเดียว): ตั้งแค่กลุ่ม (ข้อ B) พอ
+//     → ทั้ง "สรุปเช้า-เย็น" และ "แจ้งคำขอจองใหม่" จะเข้ากลุ่มร้านทั้งหมด
 
-// A) ตั้งผู้รับสรุปประจำวัน: ทักหา Bot 1 ข้อความ แล้วรันฟังก์ชันนี้ทันที
+// A) (ทางเลือก) ให้สรุปประจำวันส่งเข้าแชทส่วนตัวแทนกลุ่ม:
+//    ทักหา Bot 1 ข้อความ แล้วรันฟังก์ชันนี้ทันที
 function setSummaryTargetFromLastSeen() {
   const props = PropertiesService.getScriptProperties();
   const id = (props.getProperty('LAST_SEEN_USER_ID') || '').trim();
   if (!id) throw new Error('ยังไม่เห็น User ID — ทักหา Bot ในแชทส่วนตัว 1 ข้อความก่อน แล้วรันใหม่');
   props.setProperty('SSC_SUMMARY_TARGET', id);
-  return '✅ ตั้งผู้รับสรุปประจำวันแล้ว: ' + id;
+  return '✅ ตั้งผู้รับสรุปประจำวันแล้ว (แชทส่วนตัว): ' + id;
 }
 
-// B) ตั้งกลุ่มรับแจ้งคำขอจอง: ส่งข้อความในกลุ่ม (ที่มี Bot) 1 ข้อความ แล้วรันฟังก์ชันนี้ทันที
+// B) ตั้งกลุ่มร้าน: ส่งข้อความในกลุ่ม (ที่มี Bot) 1 ข้อความ แล้วรันฟังก์ชันนี้ทันที
+//    → กลุ่มนี้จะรับ "แจ้งคำขอจองใหม่" และ "สรุปเช้า-เย็น" (ถ้าไม่ได้ตั้งข้อ A แยก)
 function setBookingTargetFromLastSeenGroup() {
   const props = PropertiesService.getScriptProperties();
   const id = (props.getProperty('LAST_SEEN_GROUP_ID') || '').trim();
   if (!id) throw new Error('ยังไม่เห็น Group ID — ส่งข้อความในกลุ่มที่เชิญ Bot ไว้ 1 ข้อความก่อน แล้วรันใหม่');
   props.setProperty('SSC_BOOKING_TARGET', id);
-  return '✅ ตั้งกลุ่มรับแจ้งคำขอจองแล้ว: ' + id;
+  return '✅ ตั้งกลุ่มร้านแล้ว: ' + id + ' — คำขอจองใหม่ + สรุปเช้า-เย็น จะเข้ากลุ่มนี้';
+}
+
+// C) เคยตั้งสรุปเข้าแชทส่วนตัวไว้ แต่อยากย้ายสรุปกลับเข้ากลุ่ม: รันฟังก์ชันนี้
+function setSummaryTargetToGroup() {
+  const props = PropertiesService.getScriptProperties();
+  const gid = (props.getProperty('SSC_BOOKING_TARGET') || '').trim();
+  if (!gid) throw new Error('ยังไม่ได้ตั้งกลุ่มร้าน — รัน setBookingTargetFromLastSeenGroup ก่อน');
+  props.deleteProperty('SSC_SUMMARY_TARGET'); // ปล่อยให้ fallback ไปที่กลุ่มอัตโนมัติ
+  return '✅ สรุปเช้า-เย็นจะส่งเข้ากลุ่มร้านแล้ว: ' + gid;
 }
 
 // ตรวจสอบว่าตั้งผู้รับไว้เป็นใครบ้าง
 function showLineTargets() {
   const p = PropertiesService.getScriptProperties();
+  const st = p.getProperty('SSC_SUMMARY_TARGET') || '';
+  const bt = p.getProperty('SSC_BOOKING_TARGET') || '';
   return {
-    summaryTarget: p.getProperty('SSC_SUMMARY_TARGET') || '(ยังไม่ตั้ง — จะไม่ส่งสรุปประจำวัน)',
-    bookingTarget: p.getProperty('SSC_BOOKING_TARGET') || '(ยังไม่ตั้ง — จะไม่แจ้งคำขอจอง)',
+    summaryGoesTo: st ? ('แชทส่วนตัว: ' + st) : (bt ? ('กลุ่มร้าน: ' + bt) : '(ยังไม่ตั้ง — จะไม่ส่งสรุปประจำวัน)'),
+    bookingAlertGoesTo: bt || '(ยังไม่ตั้ง — จะไม่แจ้งคำขอจอง)',
     lastSeenUser:  p.getProperty('LAST_SEEN_USER_ID')  || '-',
     lastSeenGroup: p.getProperty('LAST_SEEN_GROUP_ID') || '-'
   };
@@ -840,8 +859,9 @@ function syncAll(bookings) {
 //     แล้วคัดลอก "Channel access token (long-lived)"
 //  2) ⚙ Project Settings > Script Properties เพิ่ม:
 //        LINE_CHANNEL_ACCESS_TOKEN = <channel access token>
-//  3) ตั้งผู้รับสรุป: ทักหา Bot 1 ข้อความ (Bot จะไม่ตอบ)
-//     → รัน setSummaryTargetFromLastSeen ใน Editor ทันที
+//  3) ตั้งกลุ่มร้าน: ส่งข้อความในกลุ่ม (ที่มี Bot) 1 ข้อความ
+//     → รัน setBookingTargetFromLastSeenGroup ใน Editor ทันที
+//     → สรุปเช้า-เย็น + แจ้งคำขอจอง เข้ากลุ่มนี้ทั้งหมด
 //     (★ ถ้าไม่ตั้งผู้รับ ระบบจะ "ไม่ส่ง" — ไม่มีการส่งหาใครเองทุกกรณี)
 //  4) ตั้ง Time zone เป็น (GMT+07:00) Bangkok
 //  5) รัน setupDailyLineTrigger() 1 ครั้ง → สร้าง 2 trigger อัตโนมัติ
@@ -928,15 +948,16 @@ function buildEveningMessage() {
 // เข้ากันเดิม — ชื่อเก่าสำหรับ action=send_line
 function buildLineMessage() { return buildMorningMessage(); }
 
-// ── ส่ง LINE (สรุปประจำวัน — ส่งหาเจ้าของร้านเท่านั้น) ────────
-// ★★ ใช้ SSC_SUMMARY_TARGET ที่เจ้าของร้านตั้งเองเท่านั้น — ค่าเก่า
-//    LINE_TARGET_ID (ที่อาจถูกลูกค้าทับ) ถูกเลิกใช้แล้ว · ไม่มี broadcast ★★
+// ── ส่ง LINE (สรุปประจำวันเช้า-เย็น) ──────────────────────────
+// ★★ ส่งหาผู้รับที่เจ้าของร้านตั้งเองเท่านั้น · ไม่มี broadcast ★★
+// ลำดับผู้รับ: SSC_SUMMARY_TARGET → ถ้าไม่ตั้ง ใช้กลุ่มร้าน (SSC_BOOKING_TARGET)
+// → ตั้งกลุ่มไว้อย่างเดียว = สรุปเช้า-เย็น "เข้ากลุ่ม" อัตโนมัติเหมือนเดิม
 function sendLine_(text) {
   const props  = PropertiesService.getScriptProperties();
   const token  = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
   if (!token)  throw new Error('ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN ใน Script Properties');
-  const target = (props.getProperty('SSC_SUMMARY_TARGET') || '').trim();
-  if (!target) throw new Error('ยังไม่ได้ตั้งผู้รับสรุป — รัน setSummaryTargetFromLastSeen ใน Apps Script (ระบบไม่ส่งหาใครเองเด็ดขาด)');
+  const target = (props.getProperty('SSC_SUMMARY_TARGET') || props.getProperty('SSC_BOOKING_TARGET') || '').trim();
+  if (!target) throw new Error('ยังไม่ได้ตั้งผู้รับ — รัน setBookingTargetFromLastSeenGroup (กลุ่ม) หรือ setSummaryTargetFromLastSeen (ส่วนตัว) ใน Apps Script');
   const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
     method: 'post', contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + token },
@@ -2221,7 +2242,7 @@ function openSettings(){
           <li>ตั้งค่า: <b>Execute as: Me</b> | <b>Who has access: Anyone</b></li>
           <li>กด Deploy → อนุญาตสิทธิ์ Sheets + Calendar</li>
           <li>คัดลอก <b>Web app URL</b> มาวางในช่องด้านบน แล้วกด บันทึก</li>
-          <li style="color:#C46C7E;"><b>⚠ ถ้าเคย Deploy ไปแล้ว ต้องอัปเดตเวอร์ชัน</b> (Manage deployments → ✏️ Edit → New version → Deploy) เพื่ออัปเดตเป็น v10 — Bot เงียบสนิท ไม่มีข้อความอัตโนมัติถึงลูกค้าทุกกรณี</li>
+          <li style="color:#C46C7E;"><b>⚠ ถ้าเคย Deploy ไปแล้ว ต้องอัปเดตเวอร์ชัน</b> (Manage deployments → ✏️ Edit → New version → Deploy) เพื่ออัปเดตเป็น v11 — Bot เงียบกับลูกค้า + สรุปเช้า-เย็นเข้ากลุ่มร้าน</li>
         </ol></div>
         <div style="position:relative;">
           <div class="codebx">${codeHtml}</div>
@@ -2277,26 +2298,28 @@ function openSettings(){
                 <li>ปิด <b>Auto-reply messages</b> / <b>Greeting messages</b> (สำคัญมาก — นี่คือข้อความอัตโนมัติของ LINE เอง อยู่นอกโค้ดนี้)</li>
               </ol>
             </div>
-            <div style="background:#f0faf3;border-radius:8px;padding:12px 14px;margin-bottom:10px;border:1px solid #06C755;">
-              <b style="color:#06C755;">🌅 ตั้งผู้รับสรุปประจำวัน (เจ้าของร้าน)</b>
+            <div style="background:#f0faf3;border-radius:8px;padding:12px 14px;margin-bottom:10px;border:1.5px solid #06C755;">
+              <b style="color:#06C755;">⭐ ตั้งกลุ่มร้าน (แนะนำ — ขั้นตอนเดียว ทุกอย่างเข้ากลุ่ม)</b>
+              <div style="margin:4px 0;color:var(--cm);font-size:11.5px;">ทั้ง <b>สรุปเช้า 06:00 / เย็น 18:00</b> และ <b>แจ้งเตือนคำขอจองใหม่</b> จะส่งเข้ากลุ่มนี้ทั้งหมด</div>
               <ol style="margin:6px 0 0 16px;">
-                <li>เจ้าของร้านทักหา Bot ในแชทส่วนตัว 1 ข้อความ — อะไรก็ได้ (Bot จะไม่ตอบ เป็นเรื่องปกติ)</li>
-                <li>เปิด Apps Script → เลือกฟังก์ชัน <code>setSummaryTargetFromLastSeen</code> → กด <b>▶ Run</b> ทันที</li>
-                <li>ดูผลใน Execution log ต้องขึ้น "✅ ตั้งผู้รับสรุปประจำวันแล้ว"</li>
+                <li>เชิญ Bot เข้ากลุ่ม LINE ของร้าน (เปิด <b>Allow bot to join group chats</b> ใน LINE Developers ก่อน)</li>
+                <li>ส่งข้อความในกลุ่ม 1 ข้อความ — อะไรก็ได้ (Bot จะไม่ตอบ เป็นเรื่องปกติ)</li>
+                <li>เปิด Apps Script → เลือกฟังก์ชัน <code>setBookingTargetFromLastSeenGroup</code> → กด <b>▶ Run</b> ทันที</li>
+                <li>ดูผลใน Execution log ต้องขึ้น "✅ ตั้งกลุ่มร้านแล้ว" = เสร็จ!</li>
               </ol>
             </div>
             <div style="background:#f0faf3;border-radius:8px;padding:12px 14px;margin-bottom:10px;border:1px solid #06C755;">
-              <b style="color:#06C755;">🔔 ตั้งกลุ่มรับแจ้ง "คำขอจองใหม่"</b>
+              <b style="color:#06C755;">🌅 (ทางเลือก) อยากให้สรุปประจำวันเข้าแชทส่วนตัวแทนกลุ่ม</b>
               <ol style="margin:6px 0 0 16px;">
-                <li>เชิญ Bot เข้ากลุ่ม LINE ของร้าน (เปิด <b>Allow bot to join group chats</b> ใน LINE Developers ก่อน)</li>
-                <li>ส่งข้อความในกลุ่ม 1 ข้อความ — อะไรก็ได้ (Bot จะไม่ตอบ)</li>
-                <li>เปิด Apps Script → เลือกฟังก์ชัน <code>setBookingTargetFromLastSeenGroup</code> → กด <b>▶ Run</b> ทันที</li>
+                <li>ทักหา Bot ในแชทส่วนตัว 1 ข้อความ (Bot จะไม่ตอบ)</li>
+                <li>รัน <code>setSummaryTargetFromLastSeen</code> → สรุปจะเข้าแชทส่วนตัว (คำขอจองยังเข้ากลุ่ม)</li>
+                <li>อยากย้ายสรุปกลับเข้ากลุ่ม: รัน <code>setSummaryTargetToGroup</code></li>
               </ol>
             </div>
             <div style="background:rgba(74,51,38,.05);border-radius:8px;padding:10px 14px;font-size:11.5px;color:var(--cm);">
               <b style="color:var(--cocoa);">ตรวจผู้รับปัจจุบัน:</b> รัน <code>showLineTargets</code> ใน Editor แล้วดู Execution log<br/>
               <b style="color:var(--cocoa);">หยุดส่งทุกข้อความทันที:</b> รัน <code>clearAllLineTargets</code> (ลบค่าเก่า LINE_TARGET_ID ที่อาจถูกลูกค้าทับไว้ให้ด้วย)<br/>
-              <b style="color:#C46C7E;">⚠ อัปเดตจากเวอร์ชันเก่า:</b> ค่า LINE_TARGET_ID เดิมถูกเลิกใช้แล้ว — <b>ต้องตั้งผู้รับใหม่ตามขั้นตอนข้างบน</b> ไม่งั้นระบบจะไม่ส่งสรุป/แจ้งเตือนเลย (ปลอดภัยไว้ก่อน)
+              <b style="color:#C46C7E;">⚠ อัปเดตจากเวอร์ชันเก่า:</b> ค่า LINE_TARGET_ID เดิมถูกเลิกใช้แล้ว — <b>ต้องตั้งกลุ่ม/ผู้รับใหม่ตามขั้นตอนข้างบน</b> ไม่งั้นระบบจะไม่ส่งสรุป/แจ้งเตือนเลย (ปลอดภัยไว้ก่อน)
             </div>
           </div>
         </details>
