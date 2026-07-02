@@ -543,11 +543,24 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google Apps Script (v9-safe)
+ * Sugar Sugar Camp - Google Apps Script (v10-silent)
  *
- * ★ v9: ปิดข้อความอัตโนมัติถึงลูกค้าทุกกรณี
- *   - Bot ไม่ตอบกลับลูกค้าที่ทักแชทส่วนตัว (ลงทะเบียนต้องพิมพ์ #sugar เท่านั้น)
- *   - ตัดโหมด broadcast ทิ้งถาวร — ส่งเฉพาะผู้รับที่ลงทะเบียนไว้ (push) เท่านั้น
+ * ★★★ v10: Bot เงียบสนิท 100% — ไม่มีข้อความอัตโนมัติถึงลูกค้าทุกกรณี ★★★
+ *   - ไม่มีโค้ดตอบกลับ (reply) เหลืออยู่เลย — ใครทักมา Bot ไม่ตอบเด็ดขาด
+ *   - ไม่มีการลงทะเบียนผู้รับอัตโนมัติ — ตั้งผู้รับได้ทางเดียวคือเจ้าของร้าน
+ *     กดรันฟังก์ชันใน Apps Script เอง (ดู "วิธีตั้งผู้รับ" ด้านล่าง)
+ *   - ใช้ชื่อ property ใหม่ (SSC_SUMMARY_TARGET / SSC_BOOKING_TARGET)
+ *     ค่าเก่า LINE_TARGET_ID / LINE_GROUP_ID ที่อาจถูกลูกค้าทับไว้ = ถูกเลิกใช้ทันที
+ *   - ไม่มี broadcast — ส่งแบบเจาะจงผู้รับ (push) เท่านั้น
+ *
+ * ── วิธีตั้งผู้รับ (ทำใน Apps Script Editor เท่านั้น) ──
+ *  A) ผู้รับสรุปประจำวัน (เช้า 06:00 / เย็น 18:00):
+ *     1. เจ้าของร้านทักหา Bot ในแชทส่วนตัว 1 ข้อความ (อะไรก็ได้ — Bot จะไม่ตอบ)
+ *     2. ใน Apps Script เลือกฟังก์ชัน setSummaryTargetFromLastSeen แล้วกด ▶ Run ทันที
+ *  B) กลุ่มรับแจ้ง "คำขอจองใหม่":
+ *     1. เชิญ Bot เข้ากลุ่มร้าน แล้วส่งข้อความในกลุ่ม 1 ข้อความ
+ *     2. เลือกฟังก์ชัน setBookingTargetFromLastSeenGroup แล้วกด ▶ Run ทันที
+ *  ตรวจสอบ: รัน showLineTargets · ปิดการส่งทั้งหมด: รัน clearAllLineTargets
  * Deploy -> New deployment -> Web app
  * Execute as: Me | Who has access: Anyone
  *
@@ -557,7 +570,7 @@ const AS_CODE = `/**
  *
  * ★ v8: ระบบคำขอจองจากลูกค้า (booking.html)
  *   - Sheet "BookingRequests" เก็บคำขอ + สถานะ pending/approved/rejected
- *   - แจ้งเตือนคำขอใหม่เข้า LINE กลุ่ม (พิมพ์ #sugar ในกลุ่มเพื่อลงทะเบียน)
+ *   - แจ้งเตือนคำขอใหม่เข้า LINE กลุ่มร้าน (ตั้งกลุ่มด้วยการรันฟังก์ชันใน Editor)
  *   - action: request_booking / pending_requests / update_request / availability
  */
 const CALENDAR_NAME = 'Sugar Sugar Camp';
@@ -608,7 +621,7 @@ function doGet(e) {
         return { checkIn: b.checkIn, checkOut: b.checkOut, roomType: b.roomType };
       }) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v9-safe', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v10-silent', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -645,45 +658,65 @@ function doPost(e) {
 }
 
 // ─── LINE Webhook handler ───────────────────────────────────
-// ★★ นโยบายสำคัญ: Bot ห้ามส่งข้อความอัตโนมัติหาลูกค้าทุกกรณี ★★
-// ลูกค้าทักมา (ส่งหลักฐานการจอง ฯลฯ) → Bot เงียบเสมอ ไม่ตอบ ไม่บันทึกอะไร
-// เฉพาะเจ้าของร้านพิมพ์ "#sugar" เท่านั้น จึงจะลงทะเบียนเป็นผู้รับแจ้งเตือน
+// ★★★ Bot เงียบสนิท: ไม่ตอบกลับใครทั้งสิ้น ไม่มีข้อความอัตโนมัติทุกกรณี ★★★
+// หน้าที่เดียวคือ "จด ID ล่าสุดที่เห็น" ไว้เงียบๆ เพื่อให้เจ้าของร้าน
+// กดรันฟังก์ชันตั้งผู้รับใน Apps Script เอง (ไม่มีการตั้งผู้รับอัตโนมัติ)
 function handleLineWebhook(body) {
   const props = PropertiesService.getScriptProperties();
   (body.events || []).forEach(function(ev) {
     const src = ev.source || {};
-    // ★ กลุ่ม/ห้อง: พิมพ์ "#sugar" หรือ "#จอง" ในกลุ่มที่เชิญ Bot เข้าไป
-    //   → บันทึกกลุ่มนั้นเป็นผู้รับแจ้งเตือน "คำขอจองใหม่" (LINE_GROUP_ID)
     if (src.type === 'group' || src.type === 'room') {
       const gid = src.groupId || src.roomId || '';
-      const txt = (ev.message && ev.message.type === 'text') ? String(ev.message.text || '').trim() : '';
-      if (gid && /^#(sugar|จอง)/i.test(txt)) {
-        props.setProperty('LINE_GROUP_ID', gid);
-        if (ev.replyToken) {
-          replyLine_(ev.replyToken,
-            '✅ บันทึกกลุ่มนี้เป็นผู้รับแจ้งเตือนเรียบร้อย!\\n🐿 Sugar Sugar Camp จะแจ้ง "คำขอจองใหม่" จากลูกค้าเข้ากลุ่มนี้ทันทีที่มีคนกดจอง');
-        }
-      }
-      return;
-    }
-    // แชทส่วนตัว: ★ ลูกค้าทักมา = Bot เงียบเสมอ (ไม่ตอบ ไม่บันทึก)
-    // เฉพาะข้อความที่ขึ้นต้นด้วย "#sugar" หรือ "#จอง" เท่านั้น (เจ้าของร้านใช้ลงทะเบียน)
-    // จึงจะบันทึกเป็นผู้รับสรุปประจำวัน และตอบกลับยืนยัน
-    if (src.type === 'user' && src.userId) {
-      const utxt = (ev.message && ev.message.type === 'text') ? String(ev.message.text || '').trim() : '';
-      if (/^#(sugar|จอง)/i.test(utxt)) {
-        props.setProperty('LINE_TARGET_ID', src.userId);
-        if (ev.replyToken) {
-          replyLine_(ev.replyToken,
-            '✅ บันทึกผู้รับแจ้งเตือนเรียบร้อย!\\n🐿 Sugar Sugar Camp จะส่งสรุปให้คุณ\\n🌅 ทุกเช้า 06:00\\n🌆 ทุกเย็น 18:00\\n\\n(User ID: ' + src.userId + ')');
-        }
-      }
-      // ข้อความอื่นทั้งหมดจากลูกค้า → ไม่ตอบกลับ ไม่ทำอะไรทั้งสิ้น
+      if (gid) props.setProperty('LAST_SEEN_GROUP_ID', gid);
+    } else if (src.type === 'user' && src.userId) {
+      props.setProperty('LAST_SEEN_USER_ID', src.userId);
     }
   });
-  // LINE ต้องการ HTTP 200 เสมอ
+  // LINE ต้องการ HTTP 200 เสมอ — ตอบ ok เฉยๆ ไม่ส่งข้อความใดๆ กลับหาผู้ใช้
   return ContentService.createTextOutput(JSON.stringify({ ok:true }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ══ วิธีตั้งผู้รับ — เจ้าของร้านรันเองใน Apps Script Editor เท่านั้น ══
+
+// A) ตั้งผู้รับสรุปประจำวัน: ทักหา Bot 1 ข้อความ แล้วรันฟังก์ชันนี้ทันที
+function setSummaryTargetFromLastSeen() {
+  const props = PropertiesService.getScriptProperties();
+  const id = (props.getProperty('LAST_SEEN_USER_ID') || '').trim();
+  if (!id) throw new Error('ยังไม่เห็น User ID — ทักหา Bot ในแชทส่วนตัว 1 ข้อความก่อน แล้วรันใหม่');
+  props.setProperty('SSC_SUMMARY_TARGET', id);
+  return '✅ ตั้งผู้รับสรุปประจำวันแล้ว: ' + id;
+}
+
+// B) ตั้งกลุ่มรับแจ้งคำขอจอง: ส่งข้อความในกลุ่ม (ที่มี Bot) 1 ข้อความ แล้วรันฟังก์ชันนี้ทันที
+function setBookingTargetFromLastSeenGroup() {
+  const props = PropertiesService.getScriptProperties();
+  const id = (props.getProperty('LAST_SEEN_GROUP_ID') || '').trim();
+  if (!id) throw new Error('ยังไม่เห็น Group ID — ส่งข้อความในกลุ่มที่เชิญ Bot ไว้ 1 ข้อความก่อน แล้วรันใหม่');
+  props.setProperty('SSC_BOOKING_TARGET', id);
+  return '✅ ตั้งกลุ่มรับแจ้งคำขอจองแล้ว: ' + id;
+}
+
+// ตรวจสอบว่าตั้งผู้รับไว้เป็นใครบ้าง
+function showLineTargets() {
+  const p = PropertiesService.getScriptProperties();
+  return {
+    summaryTarget: p.getProperty('SSC_SUMMARY_TARGET') || '(ยังไม่ตั้ง — จะไม่ส่งสรุปประจำวัน)',
+    bookingTarget: p.getProperty('SSC_BOOKING_TARGET') || '(ยังไม่ตั้ง — จะไม่แจ้งคำขอจอง)',
+    lastSeenUser:  p.getProperty('LAST_SEEN_USER_ID')  || '-',
+    lastSeenGroup: p.getProperty('LAST_SEEN_GROUP_ID') || '-'
+  };
+}
+
+// ปุ่มฉุกเฉิน: ล้างผู้รับทั้งหมด = ระบบหยุดส่ง LINE ทุกข้อความทันที
+function clearAllLineTargets() {
+  const p = PropertiesService.getScriptProperties();
+  p.deleteProperty('SSC_SUMMARY_TARGET');
+  p.deleteProperty('SSC_BOOKING_TARGET');
+  // เผื่อค่าเก่าจากเวอร์ชันก่อนยังค้าง — ลบทิ้งให้หมด
+  p.deleteProperty('LINE_TARGET_ID');
+  p.deleteProperty('LINE_GROUP_ID');
+  return '✅ ล้างผู้รับทั้งหมดแล้ว — ระบบจะไม่ส่งข้อความ LINE ใดๆ จนกว่าจะตั้งใหม่';
 }
 
 function getSheet() {
@@ -805,15 +838,16 @@ function syncAll(bookings) {
 // ตั้งค่าครั้งเดียว:
 //  1) สร้าง Messaging API channel ที่ https://developers.line.biz
 //     แล้วคัดลอก "Channel access token (long-lived)"
-//  2) ⚙ Project Settings > Script Properties เพิ่ม 2 ค่า:
+//  2) ⚙ Project Settings > Script Properties เพิ่ม:
 //        LINE_CHANNEL_ACCESS_TOKEN = <channel access token>
-//        LINE_TARGET_ID            = <userId/groupId ผู้รับ>
-//        (★ ต้องตั้งเสมอ — ถ้าเว้นว่างระบบจะ "ไม่ส่ง" เพื่อกันข้อความหลุดถึงลูกค้า
-//           วิธีง่ายสุด: พิมพ์ #sugar หา Bot ในแชทส่วนตัว ระบบบันทึกให้อัตโนมัติ)
-//  3) ตั้ง Time zone เป็น (GMT+07:00) Bangkok
-//  4) รัน setupDailyLineTrigger() 1 ครั้ง → สร้าง 2 trigger อัตโนมัติ
+//  3) ตั้งผู้รับสรุป: ทักหา Bot 1 ข้อความ (Bot จะไม่ตอบ)
+//     → รัน setSummaryTargetFromLastSeen ใน Editor ทันที
+//     (★ ถ้าไม่ตั้งผู้รับ ระบบจะ "ไม่ส่ง" — ไม่มีการส่งหาใครเองทุกกรณี)
+//  4) ตั้ง Time zone เป็น (GMT+07:00) Bangkok
+//  5) รัน setupDailyLineTrigger() 1 ครั้ง → สร้าง 2 trigger อัตโนมัติ
 //
 //  ทดสอบ: รัน sendMorningLineSummary() หรือ sendEveningLineSummary()
+//  ตรวจผู้รับ: รัน showLineTargets · หยุดส่งทั้งหมด: รัน clearAllLineTargets
 // ════════════════════════════════════════════════════════════
 
 // ── ยูทิลิตี้วันที่ ─────────────────────────────────────────
@@ -895,14 +929,14 @@ function buildEveningMessage() {
 function buildLineMessage() { return buildMorningMessage(); }
 
 // ── ส่ง LINE (สรุปประจำวัน — ส่งหาเจ้าของร้านเท่านั้น) ────────
-// ★★ ห้าม broadcast เด็ดขาด — กันข้อความหลุดถึงลูกค้าที่เพิ่มเพื่อน Bot ★★
-// ต้องตั้ง LINE_TARGET_ID เสมอ (พิมพ์ #sugar หา Bot ในแชทส่วนตัว) ไม่งั้นไม่ส่ง
+// ★★ ใช้ SSC_SUMMARY_TARGET ที่เจ้าของร้านตั้งเองเท่านั้น — ค่าเก่า
+//    LINE_TARGET_ID (ที่อาจถูกลูกค้าทับ) ถูกเลิกใช้แล้ว · ไม่มี broadcast ★★
 function sendLine_(text) {
   const props  = PropertiesService.getScriptProperties();
   const token  = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
   if (!token)  throw new Error('ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN ใน Script Properties');
-  const target = (props.getProperty('LINE_TARGET_ID') || '').trim();
-  if (!target) throw new Error('ยังไม่ได้ตั้งผู้รับ — พิมพ์ #sugar หา Bot ในแชทส่วนตัวเพื่อลงทะเบียน (ระบบไม่ broadcast หาลูกค้า)');
+  const target = (props.getProperty('SSC_SUMMARY_TARGET') || '').trim();
+  if (!target) throw new Error('ยังไม่ได้ตั้งผู้รับสรุป — รัน setSummaryTargetFromLastSeen ใน Apps Script (ระบบไม่ส่งหาใครเองเด็ดขาด)');
   const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
     method: 'post', contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + token },
@@ -947,10 +981,11 @@ function setupDailyLineTrigger() {
 //  "BookingRequests" สถานะ pending → แจ้งเข้า LINE กลุ่มทันที
 //  ทางร้านอนุมัติจาก Dashboard → เลือกกรง → ลงจองจริง
 //
-//  ตั้งค่าแจ้งเตือนเข้ากลุ่ม LINE:
-//   1) เชิญ Bot เข้ากลุ่มของร้าน
-//   2) พิมพ์ "#sugar" ในกลุ่ม → Bot ตอบยืนยัน = เสร็จ
-//   (ถ้าไม่ตั้งกลุ่ม จะส่งหา LINE_TARGET_ID รายบุคคลแทน)
+//  ตั้งค่าแจ้งเตือนเข้ากลุ่ม LINE (Bot ไม่ตอบใครทั้งสิ้น):
+//   1) เชิญ Bot เข้ากลุ่มของร้าน แล้วส่งข้อความในกลุ่ม 1 ข้อความ
+//   2) รัน setBookingTargetFromLastSeenGroup ใน Editor ทันที = เสร็จ
+//   (ถ้าไม่ตั้งกลุ่ม จะส่งหาผู้รับสรุป SSC_SUMMARY_TARGET แทน
+//    ไม่มีทั้งคู่ = ไม่ส่งเลย)
 // ════════════════════════════════════════════════════════════
 const REQ_SHEET_NAME = 'BookingRequests';
 const REQ_COLS = 12;
@@ -1057,15 +1092,15 @@ function buildRequestMessage_(q, id) {
   return m;
 }
 
-// ส่งแจ้งเตือนคำขอจอง — เข้ากลุ่มร้าน (LINE_GROUP_ID) ก่อน
-// ถ้าไม่มีกลุ่ม → ส่งหาเจ้าของร้าน (LINE_TARGET_ID)
-// ★★ ไม่มีทั้งคู่ = ไม่ส่ง — ห้าม broadcast หาลูกค้าเด็ดขาด ★★
+// ส่งแจ้งเตือนคำขอจอง — เข้ากลุ่มร้าน (SSC_BOOKING_TARGET) ก่อน
+// ถ้าไม่มีกลุ่ม → ส่งหาเจ้าของร้าน (SSC_SUMMARY_TARGET)
+// ★★ ไม่มีทั้งคู่ = ไม่ส่ง — ไม่มี broadcast · ค่าเก่าถูกเลิกใช้แล้ว ★★
 function sendBookingLine_(text) {
   const props  = PropertiesService.getScriptProperties();
   const token  = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
   if (!token)  throw new Error('ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN');
-  const target = (props.getProperty('LINE_GROUP_ID') || props.getProperty('LINE_TARGET_ID') || '').trim();
-  if (!target) throw new Error('ยังไม่ได้ตั้งกลุ่ม/ผู้รับ — พิมพ์ #sugar ในกลุ่มร้าน (ระบบไม่ broadcast หาลูกค้า)');
+  const target = (props.getProperty('SSC_BOOKING_TARGET') || props.getProperty('SSC_SUMMARY_TARGET') || '').trim();
+  if (!target) throw new Error('ยังไม่ได้ตั้งกลุ่ม/ผู้รับ — รัน setBookingTargetFromLastSeenGroup ใน Apps Script (ระบบไม่ส่งหาใครเองเด็ดขาด)');
   const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
     method: 'post', contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + token },
@@ -1077,19 +1112,8 @@ function sendBookingLine_(text) {
   return { ok:true };
 }
 
-// ตอบกลับข้อความใน LINE (ใช้กับ webhook)
-function replyLine_(replyToken, text) {
-  const token = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN');
-  if (!token || !replyToken) return;
-  try {
-    UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
-      method: 'post', contentType: 'application/json',
-      headers: { Authorization: 'Bearer ' + token },
-      payload: JSON.stringify({ replyToken: replyToken, messages: [{ type:'text', text: text }] }),
-      muteHttpExceptions: true
-    });
-  } catch(_) {}
-}`;
+// ★ v10: ไม่มีฟังก์ชันตอบกลับ (reply) ในโค้ดนี้อีกต่อไป —
+//   ช่องทางส่งข้อความมีแค่ push ไปยังผู้รับที่เจ้าของร้านตั้งเองเท่านั้น`;
 
 // ============================
 // HELPERS
@@ -2197,7 +2221,7 @@ function openSettings(){
           <li>ตั้งค่า: <b>Execute as: Me</b> | <b>Who has access: Anyone</b></li>
           <li>กด Deploy → อนุญาตสิทธิ์ Sheets + Calendar</li>
           <li>คัดลอก <b>Web app URL</b> มาวางในช่องด้านบน แล้วกด บันทึก</li>
-          <li style="color:#C46C7E;"><b>⚠ ถ้าเคย Deploy ไปแล้ว ต้องอัปเดตเวอร์ชัน</b> (Manage deployments → ✏️ Edit → New version → Deploy) เพื่ออัปเดตเป็น v9 — ปิดข้อความอัตโนมัติถึงลูกค้าทุกกรณี</li>
+          <li style="color:#C46C7E;"><b>⚠ ถ้าเคย Deploy ไปแล้ว ต้องอัปเดตเวอร์ชัน</b> (Manage deployments → ✏️ Edit → New version → Deploy) เพื่ออัปเดตเป็น v10 — Bot เงียบสนิท ไม่มีข้อความอัตโนมัติถึงลูกค้าทุกกรณี</li>
         </ol></div>
         <div style="position:relative;">
           <div class="codebx">${codeHtml}</div>
@@ -2226,46 +2250,53 @@ function openSettings(){
         <div class="steps"><ol>
           <li>สร้าง <b>Messaging API channel</b> ที่ <a href="https://developers.line.biz" target="_blank">developers.line.biz</a>
             → <b>Messaging API</b> → คัดลอก <b>Channel access token (long-lived)</b></li>
-          <li>ในหน้า Apps Script กด ⚙ <b>Project Settings → Script Properties</b> เพิ่ม 2 ค่า:
+          <li>ในหน้า Apps Script กด ⚙ <b>Project Settings → Script Properties</b> เพิ่ม 1 ค่า:
             <div style="margin-top:6px;background:var(--cream);border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.9;">
-              <code style="color:#C46C7E;">LINE_CHANNEL_ACCESS_TOKEN</code> = token ที่คัดลอกมา<br/>
-              <code style="color:#C46C7E;">LINE_TARGET_ID</code> = userId หรือ groupId <span style="color:var(--cm);">(ดูวิธีหาด้านล่าง)</span>
+              <code style="color:#C46C7E;">LINE_CHANNEL_ACCESS_TOKEN</code> = token ที่คัดลอกมา
             </div>
           </li>
+          <li>ตั้ง "ผู้รับ" ด้วยการรันฟังก์ชันใน Editor (ดูขั้นตอนในกล่องเขียวด้านล่าง)</li>
           <li>ตั้ง <b>Time zone</b> ของโปรเจกต์เป็น <b>(GMT+07:00) Bangkok</b></li>
           <li>เลือกฟังก์ชัน <code>setupDailyLineTrigger</code> กด <b>▶ Run</b> 1 ครั้ง
             → สร้าง Trigger <b>2 รอบ</b> อัตโนมัติ (06:00 + 18:00)</li>
           <li style="color:#3F7B23;">ทดสอบ: เลือก <code>sendMorningLineSummary</code> หรือ <code>sendEveningLineSummary</code> กด ▶ Run</li>
         </ol></div>
 
-        <details class="sc" style="margin-top:10px;border-color:rgba(6,199,85,.4);" open>
-          <summary style="font-size:12.5px;color:#06C755;">🎯 ตั้งค่าผู้รับรายบุคคล — จับ User ID อัตโนมัติ</summary>
+        <details class="sc" style="margin-top:10px;border-color:rgba(196,108,126,.5);" open>
+          <summary style="font-size:12.5px;color:#C46C7E;">🛡 v10: Bot เงียบสนิท — ตั้งผู้รับด้วยตัวเองเท่านั้น</summary>
           <div style="font-size:12px;line-height:1.8;color:var(--cocoa);">
+            <div style="background:rgba(196,108,126,.08);border-radius:8px;padding:12px 14px;margin-bottom:10px;border:1px solid rgba(196,108,126,.4);">
+              <b style="color:#C46C7E;">★ นโยบาย: ไม่มีข้อความอัตโนมัติถึงลูกค้าทุกกรณี</b>
+              <div style="margin:6px 0;color:var(--cm);">Bot จะ<b>ไม่ตอบกลับใครเลย</b>ไม่ว่าจะพิมพ์อะไรมา และ<b>ไม่ลงทะเบียนผู้รับอัตโนมัติ</b> — การตั้งผู้รับทำได้ทางเดียวคือเจ้าของร้านกดรันฟังก์ชันใน Apps Script Editor เอง</div>
+            </div>
             <div style="background:#f0faf3;border-radius:8px;padding:12px 14px;margin-bottom:10px;border:1px solid #06C755;">
-              <b style="color:#06C755;">✨ วิธีใหม่ — ไม่ต้องใช้ webhook.site / ไม่ต้องคัดลอก ID เอง</b>
-              <div style="margin:6px 0;color:var(--cm);">โค้ดเวอร์ชันนี้ทำตัวเป็น LINE Webhook ในตัว — พิมพ์ <b>#sugar</b> หา Bot ในแชทส่วนตัว มันจะ <b>บันทึก User ID ลง LINE_TARGET_ID ให้อัตโนมัติ</b> แล้วตอบกลับยืนยัน (ข้อความอื่นๆ จากลูกค้า Bot จะเงียบเสมอ ไม่ตอบอัตโนมัติ)</div>
+              <b style="color:#06C755;">📶 เตรียม Webhook (ครั้งเดียว)</b>
               <ol style="margin:6px 0 0 16px;">
-                <li>วาง code เวอร์ชันนี้แล้ว <b>Deploy → New deployment</b> · คัดลอก <b>Web app URL</b> (ลงท้าย <code>/exec</code>)</li>
                 <li>ไป <a href="https://developers.line.biz" target="_blank">developers.line.biz</a> → Bot → แท็บ <b>Messaging API</b></li>
-                <li>หัวข้อ <b>Webhook settings</b> → วาง <b>Web app URL</b> ลงช่อง Webhook URL → กด <b>Update</b></li>
-                <li>เปิดสวิตช์ <b>Use webhook</b> ให้เป็น <b>Enabled</b></li>
-                <li>ปิด <b>Auto-reply messages</b> / <b>Greeting messages</b> (ที่หัวข้อ LINE Official Account features) เพื่อไม่ให้ข้อความตอบกลับชนกัน</li>
-                <li>ดู <b>Bot basic ID</b> (เช่น <code>@xxx1234</code>) → เปิด LINE มือถือ → ค้นหา ID → <b>เพิ่มเพื่อน</b></li>
-                <li>พิมพ์ <b><code>#sugar</code></b> ไปหา Bot → Bot จะตอบ "✅ บันทึกผู้รับเรียบร้อย" = เสร็จแล้ว! (ข้อความอื่นๆ Bot จะไม่ตอบ)</li>
+                <li><b>Webhook settings</b> → วาง Web app URL (ลงท้าย <code>/exec</code>) → <b>Update</b> → เปิด <b>Use webhook</b></li>
+                <li>ปิด <b>Auto-reply messages</b> / <b>Greeting messages</b> (สำคัญมาก — นี่คือข้อความอัตโนมัติของ LINE เอง อยู่นอกโค้ดนี้)</li>
               </ol>
-              <div style="margin-top:6px;color:#1a6b35;">→ ตั้งแต่นี้ระบบจะส่งสรุปหาคุณคนเดียว (push) ทุกเช้า 06:00 และเย็น 18:00</div>
+            </div>
+            <div style="background:#f0faf3;border-radius:8px;padding:12px 14px;margin-bottom:10px;border:1px solid #06C755;">
+              <b style="color:#06C755;">🌅 ตั้งผู้รับสรุปประจำวัน (เจ้าของร้าน)</b>
+              <ol style="margin:6px 0 0 16px;">
+                <li>เจ้าของร้านทักหา Bot ในแชทส่วนตัว 1 ข้อความ — อะไรก็ได้ (Bot จะไม่ตอบ เป็นเรื่องปกติ)</li>
+                <li>เปิด Apps Script → เลือกฟังก์ชัน <code>setSummaryTargetFromLastSeen</code> → กด <b>▶ Run</b> ทันที</li>
+                <li>ดูผลใน Execution log ต้องขึ้น "✅ ตั้งผู้รับสรุปประจำวันแล้ว"</li>
+              </ol>
+            </div>
+            <div style="background:#f0faf3;border-radius:8px;padding:12px 14px;margin-bottom:10px;border:1px solid #06C755;">
+              <b style="color:#06C755;">🔔 ตั้งกลุ่มรับแจ้ง "คำขอจองใหม่"</b>
+              <ol style="margin:6px 0 0 16px;">
+                <li>เชิญ Bot เข้ากลุ่ม LINE ของร้าน (เปิด <b>Allow bot to join group chats</b> ใน LINE Developers ก่อน)</li>
+                <li>ส่งข้อความในกลุ่ม 1 ข้อความ — อะไรก็ได้ (Bot จะไม่ตอบ)</li>
+                <li>เปิด Apps Script → เลือกฟังก์ชัน <code>setBookingTargetFromLastSeenGroup</code> → กด <b>▶ Run</b> ทันที</li>
+              </ol>
             </div>
             <div style="background:rgba(74,51,38,.05);border-radius:8px;padding:10px 14px;font-size:11.5px;color:var(--cm);">
-              <b style="color:var(--cocoa);">เปลี่ยนผู้รับ?</b> ให้คนใหม่พิมพ์ <code>#sugar</code> หา Bot — ID ล่าสุดจะถูกบันทึกทับให้เอง<br/>
-              <b style="color:#C46C7E;">🛡 ความปลอดภัย (v9):</b> ระบบ<b>ไม่ broadcast และไม่ตอบลูกค้าอัตโนมัติ</b>ทุกกรณี — ลูกค้าทัก Bot มาส่งหลักฐานได้โดยไม่มีข้อความเด้งกลับ<br/>
-              <b style="color:var(--cocoa);">⚠ อย่าลืม:</b> ปิด <b>Greeting message</b> และ <b>Auto-response</b> ใน LINE Official Account Manager ด้วย (อันนั้นเป็นระบบของ LINE เอง อยู่นอกเหนือโค้ดนี้)
-            </div>
-            <div style="background:#f0faf3;border:1px solid #06C755;border-radius:8px;padding:10px 14px;font-size:11.5px;color:var(--cocoa);margin-top:8px;line-height:1.8;">
-              <b style="color:#06C755;">🔔 แจ้งเตือน "คำขอจองใหม่" เข้ากลุ่ม LINE ของร้าน (v8)</b><br/>
-              1. เชิญ Bot เข้ากลุ่ม LINE ของร้าน (Settings ของ Bot ต้องเปิด <b>Allow bot to join group chats</b>)<br/>
-              2. พิมพ์ <code style="color:#C46C7E;">#sugar</code> ในกลุ่ม → Bot ตอบ "✅ บันทึกกลุ่มนี้..." = เสร็จ!<br/>
-              → ทุกครั้งที่ลูกค้ากดส่งคำขอจองผ่านลิงก์ ข้อความจะเด้งเข้ากลุ่มนี้ทันที
-              <span style="color:var(--cm);">(ถ้าไม่ตั้งกลุ่ม ระบบจะส่งหาผู้รับรายบุคคลตาม LINE_TARGET_ID แทน)</span>
+              <b style="color:var(--cocoa);">ตรวจผู้รับปัจจุบัน:</b> รัน <code>showLineTargets</code> ใน Editor แล้วดู Execution log<br/>
+              <b style="color:var(--cocoa);">หยุดส่งทุกข้อความทันที:</b> รัน <code>clearAllLineTargets</code> (ลบค่าเก่า LINE_TARGET_ID ที่อาจถูกลูกค้าทับไว้ให้ด้วย)<br/>
+              <b style="color:#C46C7E;">⚠ อัปเดตจากเวอร์ชันเก่า:</b> ค่า LINE_TARGET_ID เดิมถูกเลิกใช้แล้ว — <b>ต้องตั้งผู้รับใหม่ตามขั้นตอนข้างบน</b> ไม่งั้นระบบจะไม่ส่งสรุป/แจ้งเตือนเลย (ปลอดภัยไว้ก่อน)
             </div>
           </div>
         </details>
