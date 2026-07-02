@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>จองที่พัก · Sugar Sugar Camp 🐿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#FAF3E9;--cl:#FDF9F2;--cd:#F2E5D2;
+  --cocoa:#2A1810;--cm:#735847;
+  --ps:#F8DBE2;--pd:#C46C7E;
+  --peach:#F0B080;--phs:#FBE3CD;
+  --sage:#9DB089;--ss:#DDE6CE;
+  --coral:#DD8470;--cs:#F5D5C9;
+  --gold:#C9A24E;--gs:#EFE0B6;
+  --ln:rgba(74,51,38,.13);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream);
+  background-image:radial-gradient(circle at 0% 0%,rgba(232,154,171,.18),transparent 45%),
+    radial-gradient(circle at 100% 0%,rgba(240,176,128,.15),transparent 45%),
+    radial-gradient(circle at 50% 100%,rgba(157,176,137,.10),transparent 55%);
+  min-height:100vh;font-size:14px;line-height:1.6;}
+.wrap{padding:28px 18px 70px;max-width:560px;margin:0 auto;}
+.brand{font-family:'Fraunces',serif;font-size:clamp(32px,8vw,46px);line-height:.95;
+  letter-spacing:-.025em;font-weight:400;text-align:center;}
+.brand em{color:var(--pd);font-style:italic;}
+.brand .star{color:var(--gold);font-size:.55em;vertical-align:top;margin-left:4px;}
+.tagline{font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:var(--cm);
+  margin-top:8px;text-align:center;margin-bottom:24px;}
+
+.steps-bar{display:flex;justify-content:center;gap:6px;margin-bottom:22px;flex-wrap:wrap;}
+.step{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--cm);
+  background:var(--cl);border:1px solid var(--ln);border-radius:999px;padding:6px 12px;}
+.step b{color:var(--pd);font-weight:700;}
+
+.card{background:var(--cl);border:1px solid var(--ln);border-radius:24px;padding:26px 24px;
+  box-shadow:0 10px 30px rgba(42,24,16,.06);}
+.card h2{font-family:'Fraunces',serif;font-style:italic;font-size:24px;font-weight:400;margin-bottom:4px;}
+.card .msub{color:var(--cm);font-size:13px;margin-bottom:18px;}
+
+.fg{margin-bottom:14px;}
+.frow2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--cm);margin-bottom:6px;}
+.fi{width:100%;padding:11px 14px;border:1px solid var(--ln);border-radius:12px;
+  background:var(--cream);font-family:inherit;font-size:14px;color:var(--cocoa);outline:none;transition:all .15s;}
+.fi:focus{border-color:var(--pd);background:#fff;box-shadow:0 0 0 3px rgba(196,108,126,.1);}
+textarea.fi{resize:vertical;min-height:64px;}
+
+.counter{display:flex;align-items:center;gap:0;border:1px solid var(--ln);border-radius:12px;
+  overflow:hidden;background:var(--cream);}
+.counter button{width:42px;height:44px;border:none;background:transparent;font-size:20px;
+  cursor:pointer;font-family:inherit;color:var(--cocoa);}
+.counter .num{flex:1;text-align:center;font-family:'Fraunces',serif;font-size:24px;color:var(--cocoa);}
+
+.nights{font-size:12.5px;color:var(--cm);background:var(--cd);padding:9px 14px;border-radius:999px;
+  display:none;align-items:center;gap:6px;margin:2px 0 14px;justify-content:center;text-align:center;}
+.avail{font-size:12.5px;border-radius:12px;padding:10px 14px;margin:0 0 14px;display:none;line-height:1.6;}
+.avail.ok{background:var(--ss);color:#3F5828;border:1px solid var(--sage);}
+.avail.warn{background:var(--gs);color:#856B2A;border:1px solid var(--gold);}
+.avail.full{background:var(--cs);color:#8a3d2a;border:1px solid var(--coral);}
+
+.errbx{background:var(--cs);color:#8a3d2a;border:1px solid var(--coral);border-radius:12px;
+  padding:11px 14px;font-size:13px;margin-bottom:12px;}
+
+.btn-submit{width:100%;font-family:inherit;font-size:15px;font-weight:600;padding:14px 20px;
+  border-radius:999px;border:none;cursor:pointer;background:var(--pd);color:#fff;
+  transition:all .2s;margin-top:6px;}
+.btn-submit:hover{background:var(--cocoa);}
+.btn-submit:disabled{opacity:.55;cursor:not-allowed;}
+
+.note-box{background:var(--cream);border:1px dashed var(--ln);border-radius:14px;
+  padding:13px 16px;font-size:12px;color:var(--cm);line-height:1.7;margin-top:16px;}
+.note-box b{color:var(--cocoa);}
+
+/* success view */
+.success{display:none;text-align:center;}
+.success .big{font-size:56px;margin-bottom:8px;}
+.success h2{font-family:'Fraunces',serif;font-style:italic;font-size:26px;font-weight:400;margin-bottom:6px;}
+.success .ref{display:inline-block;background:rgba(196,108,126,.1);color:var(--pd);
+  border-radius:10px;padding:8px 16px;font-size:12px;letter-spacing:.14em;
+  text-transform:uppercase;font-weight:600;margin:8px 0 16px;}
+.sum{background:var(--cream);border:1px solid var(--ln);border-radius:14px;padding:4px 16px;
+  margin:10px 0 16px;text-align:left;}
+.sum .dr{display:flex;justify-content:space-between;align-items:center;padding:10px 0;
+  border-bottom:1px dashed var(--ln);gap:12px;}
+.sum .dr:last-child{border-bottom:none;}
+.sum .dlb{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--cm);font-weight:600;flex-shrink:0;}
+.sum .dv{font-size:13.5px;font-weight:600;text-align:right;}
+.success .waiting{background:var(--gs);border:1px solid var(--gold);color:#856B2A;
+  border-radius:14px;padding:13px 16px;font-size:13px;line-height:1.7;margin-bottom:16px;}
+.btn-again{font-family:inherit;font-size:13px;font-weight:500;padding:10px 22px;border-radius:999px;
+  border:1px solid var(--ln);background:var(--cream);color:var(--cm);cursor:pointer;}
+.btn-again:hover{background:var(--cd);color:var(--cocoa);}
+
+.foot{text-align:center;font-size:11.5px;color:var(--cm);margin-top:20px;font-style:italic;}
+@media(max-width:480px){ .frow2{grid-template-columns:1fr;} .card{padding:20px 16px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1 class="brand"><em>Sugar Sugar</em> Camp<span class="star">✦</span></h1>
+  <div class="tagline">— แบบฟอร์มขอจองที่พักสำหรับน้องชูการ์ไกลเดอร์ —</div>
+
+  <div class="steps-bar">
+    <div class="step"><b>1</b> ส่งคำขอจอง</div>
+    <div class="step"><b>2</b> ทางร้านตรวจสอบ</div>
+    <div class="step"><b>3</b> ยืนยันการจอง ✓</div>
+  </div>
+
+  <div class="card" id="formCard">
+    <h2>ขอจองที่พัก</h2>
+    <div class="msub">กรอกข้อมูลและเลือกวันเข้าพัก — ทางร้านจะติดต่อกลับเพื่อยืนยันอีกครั้งค่ะ 🐿</div>
+    <div id="ferr"></div>
+
+    <div class="frow2">
+      <div class="fg"><label class="fl">ชื่อเจ้าของ *</label>
+        <input id="fName" class="fi" placeholder="เช่น คุณสมหญิง" /></div>
+      <div class="fg"><label class="fl">เบอร์โทร *</label>
+        <input id="fPhone" class="fi" inputmode="tel" placeholder="08X-XXX-XXXX" /></div>
+    </div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">LINE ID</label>
+        <input id="fLine" class="fi" placeholder="(ถ้ามี)" /></div>
+      <div class="fg"><label class="fl">ชื่อน้องชูการ์ฯ</label>
+        <input id="fGlider" class="fi" placeholder="เช่น โมจิ, ลาเต้…" /></div>
+    </div>
+    <div class="fg"><label class="fl">จำนวนน้อง 🐿 *</label>
+      <div class="counter">
+        <button type="button" onclick="changeCount(-1)" id="cntMinus" style="opacity:.3;">−</button>
+        <div class="num" id="cntNum">1</div>
+        <button type="button" onclick="changeCount(1)">＋</button>
+      </div>
+    </div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">วันเช็คอิน *</label>
+        <input type="date" id="fci" class="fi" onchange="onDates()" /></div>
+      <div class="fg"><label class="fl">วันเช็คเอาท์ *</label>
+        <input type="date" id="fco" class="fi" onchange="onDates()" /></div>
+    </div>
+    <div class="nights" id="nights"></div>
+    <div class="avail" id="avail"></div>
+    <div class="fg"><label class="fl">หมายเหตุถึงทางร้าน</label>
+      <textarea id="fNote" class="fi" placeholder="อาหาร, นิสัย, ของใช้, บริการรับ-ส่ง…"></textarea></div>
+
+    <button class="btn-submit" id="btnSubmit" onclick="submitRequest()">🐿 ส่งคำขอจอง</button>
+
+    <div class="note-box">
+      <b>📌 หมายเหตุ:</b> การส่งแบบฟอร์มนี้เป็น "คำขอจอง" เท่านั้น ยังไม่ใช่การยืนยันการจอง<br/>
+      ทางร้านจะตรวจสอบกรงว่างและติดต่อกลับทางเบอร์โทร/LINE เพื่อยืนยันอีกครั้งค่ะ 💕
+    </div>
+  </div>
+
+  <div class="card success" id="successCard">
+    <div class="big">💌</div>
+    <h2>ส่งคำขอจองเรียบร้อย!</h2>
+    <div class="ref" id="refNo">อ้างอิง —</div>
+    <div class="sum" id="sumRows"></div>
+    <div class="waiting">
+      ⏳ คำขอของคุณถูกส่งถึงทางร้านแล้ว<br/>
+      ทางร้านจะตรวจสอบและ<b>ติดต่อกลับเพื่อยืนยันการจอง</b>ทางเบอร์โทรหรือ LINE ที่ให้ไว้ค่ะ
+    </div>
+    <button class="btn-again" onclick="resetForm()">← ส่งคำขอเพิ่มอีกรายการ</button>
+  </div>
+
+  <div class="foot">Sugar Sugar Camp · ที่พักสำหรับชูการ์ไกลเดอร์ตัวโปรดของคุณ 🌿</div>
+</div>
+
+<script>
+'use strict';
+// ══════════════════════════════════════════════════════
+// Apps Script URL — ต้องเป็นตัวเดียวกับหน้า Dashboard
+// ══════════════════════════════════════════════════════
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzw1My-iOOnMNZ1xCW2kW5M01MB4PjRU81SEs9bEZETWG3EVPZ2WoFuEO8wB6Z7aPVz/exec';
+
+const CAPACITY = 24; // 23 Standard + 1 Grand Suite (โดยประมาณ — ทางร้านยืนยันอีกครั้ง)
+const pad = n => String(n).padStart(2,'0');
+const todayKey = () => { const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+const parseD = s => new Date(s+'T00:00:00');
+const addDays = (s,n) => { const d=parseD(s); d.setDate(d.getDate()+n); const f=x=>String(x).padStart(2,'0'); return d.getFullYear()+'-'+f(d.getMonth()+1)+'-'+f(d.getDate()); };
+const nts = (a,b) => Math.round((parseD(b)-parseD(a))/86400000);
+const TH_MS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const thD = s => { const d=parseD(s); return d.getDate()+' '+TH_MS[d.getMonth()]+' '+String(d.getFullYear()+543).slice(2); };
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// ── init dates ──
+const fci = document.getElementById('fci');
+const fco = document.getElementById('fco');
+fci.min = todayKey();
+fci.value = todayKey();
+fco.min = addDays(todayKey(),1);
+fco.value = addDays(todayKey(),1);
+
+// ── glider counter ──
+let COUNT = 1;
+function changeCount(d){
+  COUNT = Math.min(20, Math.max(1, COUNT + d));
+  document.getElementById('cntNum').textContent = COUNT;
+  document.getElementById('cntMinus').style.opacity = COUNT<=1 ? '.3' : '1';
+}
+
+// ── availability (ดึงเฉพาะวันที่ที่ถูกจอง — ไม่มีข้อมูลส่วนตัว) ──
+let BOOKED = null; // [{checkIn, checkOut, roomType}]
+function jsonp(action, params){
+  return new Promise((res, rej) => {
+    const cb = 'ssc_bk_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    let url = APPS_SCRIPT_URL + (APPS_SCRIPT_URL.includes('?')?'&':'?') + 'action=' + action + '&_=' + Date.now();
+    if (params) Object.keys(params).forEach(k => { url += '&' + k + '=' + encodeURIComponent(params[k]); });
+    url += '&callback=' + cb;
+    const s = document.createElement('script');
+    const t = setTimeout(() => { cleanup(); rej(new Error('หมดเวลา — เชื่อมต่อไม่ได้')); }, 20000);
+    function cleanup(){ try{delete window[cb];}catch(_){} try{s.remove();}catch(_){} clearTimeout(t); }
+    window[cb] = d => { cleanup(); (d && d.ok) ? res(d) : rej(new Error((d && d.error) || 'ล้มเหลว')); };
+    s.onerror = () => { cleanup(); rej(new Error('เชื่อมต่อระบบร้านไม่ได้')); };
+    s.src = url; document.head.appendChild(s);
+  });
+}
+async function loadAvailability(){
+  try {
+    const d = await jsonp('availability');
+    BOOKED = d.booked || [];
+    onDates();
+  } catch(e) { BOOKED = null; /* แสดงฟอร์มได้ตามปกติ — ร้านตรวจสอบเองตอนอนุมัติ */ }
+}
+
+function onDates(){
+  const ci = fci.value, co = fco.value;
+  fco.min = ci ? addDays(ci,1) : '';
+  const nEl = document.getElementById('nights');
+  const aEl = document.getElementById('avail');
+  if (!ci || !co || co <= ci) { nEl.style.display='none'; aEl.style.display='none'; return; }
+  const n = nts(ci, co);
+  nEl.style.display = 'flex';
+  nEl.textContent = '🌙 ' + n + ' คืน · ' + thD(ci) + ' → ' + thD(co);
+  if (!BOOKED) { aEl.style.display='none'; return; }
+  // หาคืนที่มีการจองหนาแน่นที่สุดในช่วงที่เลือก
+  let maxOcc = 0;
+  for (let d = ci; d < co; d = addDays(d,1)) {
+    const occ = BOOKED.filter(b => d >= b.checkIn && d < b.checkOut).length;
+    if (occ > maxOcc) maxOcc = occ;
+  }
+  const left = CAPACITY - maxOcc;
+  aEl.style.display = 'block';
+  if (left <= 0) {
+    aEl.className = 'avail full';
+    aEl.innerHTML = '⚠️ ช่วงที่เลือก<b>อาจเต็ม</b> (มีจองแล้ว ' + maxOcc + ' กรง) — ส่งคำขอได้ ทางร้านจะเช็คและแจ้งผลอีกครั้งค่ะ';
+  } else if (left <= 4) {
+    aEl.className = 'avail warn';
+    aEl.innerHTML = '🏠 ช่วงที่เลือกเหลือกรงว่างประมาณ <b>' + left + ' กรง</b> — รีบจองเลยค่ะ (ทางร้านยืนยันอีกครั้ง)';
+  } else {
+    aEl.className = 'avail ok';
+    aEl.innerHTML = '🏠 ช่วงที่เลือกมีกรงว่างประมาณ <b>' + left + ' กรง</b> (ทางร้านยืนยันอีกครั้งค่ะ)';
+  }
+}
+
+// ── submit ──
+function showErr(t){
+  document.getElementById('ferr').innerHTML = t ? '<div class="errbx">⚠ '+esc(t)+'</div>' : '';
+  if (t) window.scrollTo({top:0, behavior:'smooth'});
+}
+async function submitRequest(){
+  showErr('');
+  const q = {
+    guestName:  document.getElementById('fName').value.trim(),
+    phone:      document.getElementById('fPhone').value.trim(),
+    line:       document.getElementById('fLine').value.trim(),
+    gliderName: document.getElementById('fGlider').value.trim(),
+    gliderCount: COUNT,
+    checkIn:  fci.value,
+    checkOut: fco.value,
+    notes:    document.getElementById('fNote').value.trim()
+  };
+  if (!q.guestName) return showErr('กรุณาใส่ชื่อเจ้าของ');
+  if (!q.phone)     return showErr('กรุณาใส่เบอร์โทร เพื่อให้ทางร้านติดต่อยืนยันได้');
+  if (!q.checkIn || !q.checkOut) return showErr('กรุณาเลือกวันเช็คอินและเช็คเอาท์');
+  if (q.checkOut <= q.checkIn)   return showErr('วันเช็คเอาท์ต้องอยู่หลังวันเช็คอิน');
+  if (q.checkIn < todayKey())    return showErr('วันเช็คอินต้องไม่ย้อนหลัง');
+
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true; btn.textContent = '⏳ กำลังส่งคำขอ…';
+  try {
+    let d;
+    if (location.protocol !== 'file:') {
+      const r = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },   // text/plain หลีกเลี่ยง CORS preflight
+        body: JSON.stringify({ action: 'request_booking', request: q })
+      });
+      d = await r.json();
+      if (!d || !d.ok) throw new Error((d && d.error) || 'ส่งไม่สำเร็จ');
+    } else {
+      d = await jsonp('request_booking', { data: encodeURIComponent(JSON.stringify(q)) });
+    }
+    showSuccess(q, d.id || '');
+  } catch(err) {
+    showErr('ส่งคำขอไม่สำเร็จ: ' + err.message + ' — ลองอีกครั้ง หรือติดต่อทางร้านโดยตรงค่ะ');
+    btn.disabled = false; btn.textContent = '🐿 ส่งคำขอจอง';
+  }
+}
+
+function showSuccess(q, id){
+  document.getElementById('formCard').style.display = 'none';
+  const sc = document.getElementById('successCard');
+  sc.style.display = 'block';
+  document.getElementById('refNo').textContent = 'เลขอ้างอิง ' + (id || '-');
+  document.getElementById('sumRows').innerHTML = `
+    <div class="dr"><span class="dlb">ชื่อเจ้าของ</span><span class="dv">${esc(q.guestName)}</span></div>
+    ${q.gliderName?`<div class="dr"><span class="dlb">น้องชูการ์</span><span class="dv">${esc(q.gliderName)}</span></div>`:''}
+    <div class="dr"><span class="dlb">จำนวน</span><span class="dv">${q.gliderCount} ตัว</span></div>
+    <div class="dr"><span class="dlb">เช็คอิน</span><span class="dv">${thD(q.checkIn)}</span></div>
+    <div class="dr"><span class="dlb">เช็คเอาท์</span><span class="dv">${thD(q.checkOut)}</span></div>
+    <div class="dr"><span class="dlb">ระยะเวลา</span><span class="dv">${nts(q.checkIn,q.checkOut)} คืน</span></div>`;
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function resetForm(){
+  document.getElementById('successCard').style.display = 'none';
+  const fc = document.getElementById('formCard');
+  fc.style.display = 'block';
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = false; btn.textContent = '🐿 ส่งคำขอจอง';
+  document.getElementById('fNote').value = '';
+  onDates();
+}
+
+loadAvailability();
+onDates();
+</script>
+</body>
+</html>
