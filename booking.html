@@ -174,8 +174,29 @@ textarea.fi{resize:vertical;min-height:64px;}
 'use strict';
 // ══════════════════════════════════════════════════════
 // Apps Script URL — ต้องเป็นตัวเดียวกับหน้า Dashboard
+// (ลิงก์ที่คัดลอกจาก Dashboard จะแนบ ?api=... มาให้เอง
+//  และจะถูกใช้ก่อนค่าที่ฝังไว้ด้านล่างเสมอ)
 // ══════════════════════════════════════════════════════
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzw1My-iOOnMNZ1xCW2kW5M01MB4PjRU81SEs9bEZETWG3EVPZ2WoFuEO8wB6Z7aPVz/exec';
+const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz6UB9iuwZk0taErErfDIG3ojEN4WEmQwUMZtinQwRl4EkPqWRms9WW0A_Snf5nSX_g/exec';
+const API_LS_KEY = 'ssc_booking_api_url';
+function resolveApiUrl(){
+  // 1) ?api=... จากลิงก์ที่ Dashboard สร้างให้ (จำลง localStorage ไว้ด้วย)
+  try {
+    const p = new URLSearchParams(location.search).get('api');
+    if (p && /^https:\/\/script\.google\.com\/macros\//.test(p)) {
+      try { localStorage.setItem(API_LS_KEY, p); } catch(_) {}
+      return p;
+    }
+  } catch(_) {}
+  // 2) ค่าที่เคยจำไว้ในเครื่องนี้
+  try {
+    const s = localStorage.getItem(API_LS_KEY);
+    if (s && /^https:\/\/script\.google\.com\/macros\//.test(s)) return s;
+  } catch(_) {}
+  // 3) ค่าที่ฝังไว้ในไฟล์
+  return DEFAULT_APPS_SCRIPT_URL;
+}
+const APPS_SCRIPT_URL = resolveApiUrl();
 
 const CAPACITY = 24; // 23 Standard + 1 Grand Suite (โดยประมาณ — ทางร้านยืนยันอีกครั้ง)
 const pad = n => String(n).padStart(2,'0');
