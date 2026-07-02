@@ -2471,10 +2471,14 @@ function showLinePreview(type){
 // ============================
 function getBookingUrl() {
   const base = window.location.href.replace(/[^/]*$/, '');
-  return base + 'booking.html';
+  let url = base + 'booking.html';
+  // แนบ URL ของ Apps Script ที่เชื่อมต่ออยู่จริงไปกับลิงก์
+  // → หน้า booking จะใช้ตัวเดียวกับ Dashboard เสมอ แม้จะ Deploy ใหม่/เปลี่ยน URL
+  if (S.syncUrl) url += '?api=' + encodeURIComponent(S.syncUrl);
+  return url;
 }
 function previewBookingPage() {
-  window.open('booking.html', '_blank');
+  window.open(getBookingUrl(), '_blank');
 }
 function copyBookingLink() {
   const url = getBookingUrl();
