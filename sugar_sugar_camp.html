@@ -543,13 +543,14 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google t (v6-lock)
+ * Sugar Sugar Camp - Google t (v8-fast)
  * Deploy -> New deployment -> Web app
  * Execute as: Me | Who has access: Anyone
  *
  * Schema: 12 columns (เพิ่ม "จำนวนน้อง" col 10)
  * sync ใช้ POST (ไม่มี URL limit) — รองรับข้อมูลจำนวนมาก
  * pull/ping ใช้ GET + JSONP — รองรับ file:// ด้วย
+ * v8: sync แบบ diff — แตะ Calendar/Sheet เฉพาะรายการที่เปลี่ยนจริง (เร็วขึ้นมาก)
  */
 const CALENDAR_NAME = 'Sugar Sugar Camp';
 const SHEET_NAME    = 'Bookings';
@@ -586,7 +587,7 @@ function doGet(e) {
       const tom = addDay_(dateStr_(new Date()), 1);
       result = { ok:true, summary: summaryForDate(tom), message: buildEveningMessage() };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v7-line', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v8-fast', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -640,7 +641,7 @@ function handleLineWebhook(body) {
               payload: JSON.stringify({
                 replyToken: ev.replyToken,
                 messages: [{ type:'text', text:
-                  '✅ บันทึกผู้รับแจ้งเตือนเรียบร้อย!\n🐿 Sugar Sugar Camp จะส่งสรุปให้คุณ\n🌅 ทุกเช้า 06:00\n🌆 ทุกเย็น 18:00\n\n(User ID: ' + src.userId + ')' }]
+                  '✅ บันทึกผู้รับแจ้งเตือนเรียบร้อย!\\n🐿 Sugar Sugar Camp จะส่งสรุปให้คุณ\\n🌅 ทุกเช้า 06:00\\n🌆 ทุกเย็น 18:00\\n\\n(User ID: ' + src.userId + ')' }]
               }),
               muteHttpExceptions: true
             });
@@ -698,6 +699,23 @@ function fmtD(v) {
   return String(v);
 }
 
+function fmtDT(v) {
+  if (!v) return '';
+  if (v instanceof Date) return Utilities.formatDate(v,TZ,'yyyy-MM-dd HH:mm:ss');
+  return String(v);
+}
+
+// เทียบเบอร์โทรเป็นตัวเลขล้วน — Sheets อาจตัด 0 นำหน้า/เปลี่ยน format ทำให้เทียบตรงๆ ไม่ได้
+function normPhone_(v) {
+  return String(v == null ? '' : v).replace(/\\D/g,'').replace(/^0+/,'');
+}
+
+// สร้าง key จากทุกฟิลด์ที่มีผลต่อ Sheet/Calendar — ใช้เช็คว่า booking เปลี่ยนจริงหรือไม่
+function bookingKey_(id,guest,glider,phone,typeTxt,room,ci,co,notes,gc) {
+  return JSON.stringify([String(id),String(guest||''),String(glider||''),normPhone_(phone),
+    String(typeTxt||''),Number(room)||0,String(ci||''),String(co||''),String(notes||''),Number(gc)||1]);
+}
+
 function readSheet() {
   const sh = getSheet();
   if (sh.getLastRow() < 2) return [];
@@ -721,22 +739,42 @@ function syncAll(bookings) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-  const sh = getSheet(), cal = getCal();
-  const evMap = {};
+  const sh = getSheet();
+  // ★ เปิด Calendar แบบ lazy — ถ้าไม่มีรายการไหนเปลี่ยน จะไม่แตะ Calendar API เลย
+  let cal = null;
+  const calOnce = () => cal || (cal = getCal());
+
+  // อ่านข้อมูลเดิมครั้งเดียว: id → { eid, key สำหรับเทียบความเปลี่ยนแปลง, updatedAt เดิม }
+  const old = {};
   if (sh.getLastRow()>1)
     sh.getRange(2,1,sh.getLastRow()-1,N_COLS).getValues()
-      .forEach(r=>{ if(r[0]) evMap[String(r[0])]=String(r[10]||''); });
+      .forEach(r=>{ if(r[0]) old[String(r[0])] = {
+        eid: String(r[10]||''),
+        key: bookingKey_(r[0],r[1],r[2],r[3],r[4],r[5],fmtD(r[6]),fmtD(r[7]),r[8],r[9]),
+        at:  fmtDT(r[11])
+      };});
 
-  const ids = new Set(bookings.map(b=>b.id));
-  let del=0,cre=0,upd=0;
-  Object.keys(evMap).forEach(id=>{
-    if(!ids.has(id)&&evMap[id]){
-      try{const e=cal.getEventById(evMap[id]);if(e){e.deleteEvent();del++;}}catch(_){}
+  const ids = new Set(bookings.map(b=>String(b.id)));
+  let del=0,cre=0,upd=0,skip=0;
+  Object.keys(old).forEach(id=>{
+    if(!ids.has(id)&&old[id].eid){
+      try{const e=calOnce().getEventById(old[id].eid);if(e){e.deleteEvent();del++;}}catch(_){}
     }
   });
   const now = Utilities.formatDate(new Date(),TZ,'yyyy-MM-dd HH:mm:ss');
   const rows = bookings.map(b=>{
     const gc = Number(b.gliderCount)||1;
+    const typeTxt = b.roomType==='grand_suite'?'Grand Suite':'Standard';
+    const prev = old[String(b.id)];
+    const key = bookingKey_(b.id,b.guestName,b.gliderName,b.phone,typeTxt,b.roomNumber,b.checkIn,b.checkOut,b.notes,gc);
+
+    // ★ ข้อมูลไม่เปลี่ยน + มี event อยู่แล้ว → ข้าม Calendar API (จุดที่ทำให้ sync ช้า)
+    if(prev && prev.eid && prev.key===key){
+      skip++;
+      return [b.id,b.guestName||'',b.gliderName||'',b.phone||'',typeTxt,
+        b.roomNumber,b.checkIn,b.checkOut,b.notes||'',gc,prev.eid,prev.at||now];
+    }
+
     const title = (b.gliderName?'🐿 '+b.gliderName:'🐿 '+b.guestName)+' ('+gc+' ตัว) · '+
       (b.roomType==='grand_suite'?'Grand Suite':'STD-'+String(b.roomNumber).padStart(2,'0'));
     const desc = ['เจ้าของ: '+b.guestName,
@@ -746,18 +784,20 @@ function syncAll(bookings) {
       b.notes?'บันทึก: '+b.notes:''].filter(Boolean).join('\\n');
     const s = new Date(b.checkIn+'T00:00:00+07:00');
     const e = new Date(b.checkOut+'T00:00:00+07:00');
-    let eid = evMap[b.id]||'', ev=null;
-    if(eid) try{ev=cal.getEventById(eid);}catch(_){ev=null;}
+    let eid = prev?prev.eid:'', ev=null;
+    if(eid) try{ev=calOnce().getEventById(eid);}catch(_){ev=null;}
     if(ev){ev.setTitle(title);ev.setDescription(desc);ev.setAllDayDates(s,e);upd++;}
-    else{ev=cal.createAllDayEvent(title,s,e,{description:desc});eid=ev.getId();cre++;}
-    return [b.id,b.guestName||'',b.gliderName||'',b.phone||'',
-      b.roomType==='grand_suite'?'Grand Suite':'Standard',
+    else{ev=calOnce().createAllDayEvent(title,s,e,{description:desc});eid=ev.getId();cre++;}
+    return [b.id,b.guestName||'',b.gliderName||'',b.phone||'',typeTxt,
       b.roomNumber,b.checkIn,b.checkOut,b.notes||'',gc,eid,now];
   });
-  if(sh.getLastRow()>1) sh.getRange(2,1,sh.getLastRow()-1,N_COLS).clearContent();
-  if(rows.length) sh.getRange(2,1,rows.length,N_COLS).setValues(rows);
-  SpreadsheetApp.flush();
-  return {created:cre,updated:upd,deleted:del,total:bookings.length};
+  // ★ เขียน Sheet เฉพาะเมื่อมีอะไรเปลี่ยนจริง
+  if(cre||upd||del||rows.length!==Object.keys(old).length){
+    if(sh.getLastRow()>1) sh.getRange(2,1,sh.getLastRow()-1,N_COLS).clearContent();
+    if(rows.length) sh.getRange(2,1,rows.length,N_COLS).setValues(rows);
+    SpreadsheetApp.flush();
+  }
+  return {created:cre,updated:upd,deleted:del,skipped:skip,total:bookings.length};
   } finally {
     lock.releaseLock();
   }
@@ -1085,7 +1125,7 @@ function autoSync(){
   S.dirty=true;                       // มีของค้างที่ต้อง push ก่อน pull เสมอ
   if(syncT)clearTimeout(syncT);
   S.syncSt='syncing'; updateSyncBadge();
-  syncT=setTimeout(()=>{ pushNow(3); },1500);
+  syncT=setTimeout(()=>{ pushNow(3); },600);
 }
 
 function updateSyncBadge(){
@@ -2316,7 +2356,7 @@ function downloadSlip(id,name){
 setInterval(updateSyncBadge, 30000);
 
 // ★ flush ตอนปิด/สลับแท็บ: ถ้ายังมีของค้าง (dirty) ส่งด้วย sendBeacon
-//   sendBeacon ส่งได้แม้หน้ากำลังปิด — กันเคสปิดแท็บภายใน 1.5 วิหลังกดจอง
+//   sendBeacon ส่งได้แม้หน้ากำลังปิด — กันเคสปิดแท็บทันทีหลังกดจอง
 function flushOnExit(){
   if(S.dirty && S.syncUrl && navigator.sendBeacon){
     try{
