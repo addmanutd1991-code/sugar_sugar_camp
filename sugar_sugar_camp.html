@@ -95,25 +95,6 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
 .btn-o{background:transparent;border:1px solid var(--cocoa);color:var(--cocoa);}
 .btn-o:hover{background:var(--cocoa);color:var(--cl);}
 .btn:disabled{opacity:.5;cursor:not-allowed;}
-.cage-bar{background:var(--cl);border:1px solid var(--ln);border-radius:18px;
-  padding:14px 22px;margin-bottom:18px;display:flex;align-items:center;
-  justify-content:space-between;gap:16px;flex-wrap:wrap;}
-.cage-info{display:flex;align-items:center;gap:14px;}
-.cage-label{font-size:12px;color:var(--cm);line-height:1.5;}
-.cage-label b{color:var(--cocoa);font-size:13px;}
-.cage-counter{display:flex;align-items:center;gap:0;border:1px solid var(--ln);
-  border-radius:10px;overflow:hidden;background:var(--cream);}
-.cage-btn{width:36px;height:36px;border:none;background:transparent;font-size:18px;
-  cursor:pointer;font-family:inherit;color:var(--cocoa);transition:background .12s;
-  display:flex;align-items:center;justify-content:center;}
-.cage-btn:hover{background:var(--cd);}
-.cage-btn:disabled{opacity:.3;cursor:not-allowed;}
-.cage-num{min-width:48px;text-align:center;font-family:"Fraunces",serif;
-  font-size:22px;font-weight:400;color:var(--cocoa);padding:0 4px;}
-.cage-dots{display:flex;gap:3px;flex-wrap:wrap;max-width:320px;}
-.cage-dot{width:16px;height:16px;border-radius:4px;display:inline-block;}
-.cage-dot.main{background:var(--ss);border:1px solid var(--sage);}
-.cage-dot.extra{background:rgba(201,162,78,.3);border:1px solid var(--gold);}
 .sec{background:var(--cl);border:1px solid var(--ln);border-radius:24px;padding:26px 28px;margin-bottom:18px;}
 .stitle{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;gap:16px;flex-wrap:wrap;}
 .stitle h3{font-family:'Fraunces',serif;font-style:italic;font-size:24px;font-weight:400;}
@@ -144,6 +125,15 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
 .rc.suite.oc{background:linear-gradient(135deg,var(--cs),var(--ps));border-color:var(--coral);}
 .rc.suite.av:hover{background:linear-gradient(135deg,var(--gold),var(--peach));color:#fff;}
 .rc.suite.oc:hover{background:linear-gradient(135deg,var(--coral),var(--pd));color:#fff;}
+.rc.backup.av{background:var(--cream);border:1.5px dashed var(--gold);}
+.rc.backup.av:hover{background:var(--gs);color:var(--cocoa);}
+.rc.backup .rcr{color:#A07E2D;opacity:1;}
+.bdivider{display:flex;align-items:center;gap:10px;margin:20px 0 12px;font-size:11.5px;
+  letter-spacing:.08em;text-transform:uppercase;color:#A07E2D;font-weight:600;}
+.bdivider::before,.bdivider::after{content:'';flex:1;border-top:1px dashed var(--gold);}
+.warnbx{background:var(--gs);border:1px solid var(--gold);color:#856B2A;border-radius:12px;
+  padding:11px 14px;font-size:12.5px;line-height:1.65;margin-bottom:12px;}
+.warnbx b{color:#6d5720;}
 .rnum{font-family:'Fraunces',serif;font-size:28px;font-weight:400;line-height:1;letter-spacing:-.02em;}
 .rcr{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.7;margin-top:2px;}
 .rname{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -160,6 +150,7 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
   display:flex;align-items:center;gap:5px;height:36px;}
 .crl.suite{background:linear-gradient(90deg,var(--gs),var(--cl));
   font-style:italic;font-family:'Fraunces',serif;font-size:13px;}
+.crl.bk{color:#A07E2D;}
 .cc{background:var(--cl);height:36px;border:none;cursor:pointer;position:relative;
   transition:background .12s;padding:0;font-family:inherit;}
 .cc:hover{background:var(--cd);}
@@ -301,6 +292,9 @@ textarea.fi{resize:vertical;min-height:72px;}
 .rnb:hover:not(:disabled){border-color:var(--pd);background:#fff;}
 .rnb.sel{background:var(--pd);color:#fff;border-color:var(--pd);}
 .rnb:disabled{background:var(--cs);color:var(--coral);cursor:not-allowed;opacity:.55;text-decoration:line-through;}
+.rnb.backup{border:1px dashed var(--gold);background:var(--gs);}
+.rnb.backup:hover:not(:disabled){border-color:var(--gold);background:#fff;}
+.rnb.backup.sel{background:var(--gold);color:#fff;border:1px solid var(--gold);}
 .spick{display:flex;align-items:center;gap:12px;padding:14px 18px;
   background:linear-gradient(135deg,var(--gs),var(--phs));border:1px solid var(--gold);border-radius:14px;}
 .spick.na{background:var(--cs);border-color:var(--coral);opacity:.7;}
@@ -1304,7 +1298,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz2CN6l00K8T-qG
 // ตัวอย่าง: const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/ABC123.../exec';
 // ══════════════════════════════════════════════════════
 
-const LS_B='ssc_b3',LS_U='ssc_u3',LS_T='ssc_t3',LS_EX='ssc_ex3',
+const LS_B='ssc_b3',LS_U='ssc_u3',LS_T='ssc_t3',
       LS_FP='ssc_fp3',LS_REV='ssc_rev3',LS_D='ssc_d3';
 let S = {
   bookings:[], requests:[], tab:'today', selDate:todayKey(), calStart:todayKey(),
@@ -1312,7 +1306,7 @@ let S = {
   syncUrl: APPS_SCRIPT_URL || '',
   syncSt: APPS_SCRIPT_URL ? 'idle' : 'unconfigured',
   lastSync:0, syncErr:'',
-  extraCages:0,
+  showBackup:false,  // แสดงกรงสำรองทั้งหมดในหน้า Dashboard หรือไม่ (ค่าเริ่มต้น: ซ่อน)
   dirty:false,       // มีการแก้ไขที่ยัง sync ขึ้น Sheet ไม่สำเร็จหรือยัง
   pullRev:''         // rev ล่าสุดจาก Sheet — ใช้ให้ pull ตอบ "ไม่เปลี่ยน" ได้โดยไม่ส่งข้อมูลซ้ำ
 };
@@ -1341,7 +1335,6 @@ try{
   if(u){ S.syncUrl=u; S.syncSt='idle'; }          // ถ้าเคยตั้งค่าผ่าน UI ให้ใช้ค่านั้น
   else if(APPS_SCRIPT_URL){ S.syncUrl=APPS_SCRIPT_URL; S.syncSt='idle'; } // fallback hardcoded
 }catch(e){}
-try{const ex=localStorage.getItem(LS_EX);if(ex)S.extraCages=parseInt(ex,10)||0;}catch(e){}
 try{const t=localStorage.getItem(LS_T);if(t)S.lastSync=parseInt(t,10);}catch(e){}
 try{const f=localStorage.getItem(LS_FP);if(f)FP=JSON.parse(f);}catch(e){}
 try{const rv=localStorage.getItem(LS_REV);if(rv)S.pullRev=rv;}catch(e){}
@@ -1354,10 +1347,13 @@ function countGlidersOnDate(dateStr){
   return onDate(S.bookings, dateStr)
     .reduce((sum,b) => sum + (parseInt(b.gliderCount)||1), 0);
 }
-function saveExtra(){try{localStorage.setItem(LS_EX,String(S.extraCages));}catch(e){}}
-const MAIN_CAGES=25; // จำนวนกรงหลัก Standard
-function totalStd(){return MAIN_CAGES+S.extraCages;}
+const MAIN_CAGES=25;   // จำนวนกรงหลัก Standard (กรง Stainless + มีกล้องดูน้อง)
+const BACKUP_CAGES=35; // จำนวนกรงสำรอง — ไม่ใช่กรง Stainless และไม่มีกล้องไว้ดูน้อง
+function totalStd(){return MAIN_CAGES+BACKUP_CAGES;}
 function totalRooms(){return totalStd()+1;} // +1 grand suite
+function isBackup(rn){return Number(rn)>MAIN_CAGES;}
+function stdLabel(rn){rn=Number(rn)||1;return rn<=MAIN_CAGES?'STD-'+pad(rn):'สำรอง-'+pad(rn-MAIN_CAGES);}
+const BACKUP_NOTE='ไม่ใช่กรง Stainless และไม่มีกล้องไว้ดูน้องชูก้า';
 
 // ============================
 // SYNC
@@ -1835,37 +1831,6 @@ function render(){
     <div class="blist">${S.requests.map(rqCard).join('')}</div>
   </div>`:''}
 
-  <div class="cage-bar">
-    <div class="cage-info">
-      <div>
-        <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--cm);font-weight:600;margin-bottom:2px;">กรง Standard ทั้งหมด</div>
-        <div style="display:flex;align-items:baseline;gap:6px;">
-          <span style="font-family:'Fraunces',serif;font-size:32px;font-weight:400;color:var(--cocoa);">${totalStd()}</span>
-          <span style="font-size:12px;color:var(--cm);">กรง (หลัก ${MAIN_CAGES} + สำรอง ${S.extraCages})</span>
-        </div>
-      </div>
-      <div class="cage-dots" title="กรงทั้งหมด">
-        ${(()=>{
-          const total=Math.min(totalStd(),40);
-          let dots='';
-          for(let i=0;i<total;i++) dots+=`<span class="cage-dot ${i<MAIN_CAGES?'main':'extra'}" title="${i<MAIN_CAGES?'STD-'+pad(i+1):'สำรอง-'+pad(i+1)}"></span>`;
-          if(totalStd()>40) dots+=`<span style="font-size:11px;color:var(--cm);align-self:center;margin-left:2px;">+${totalStd()-40}</span>`;
-          return dots;
-        })()}
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-      <div style="font-size:11.5px;color:var(--cm);text-align:right;line-height:1.5;">
-        กรงสำรอง<br/><span style="font-size:10.5px;">กด − / ＋ เพื่อปรับ</span>
-      </div>
-      <div class="cage-counter">
-        <button class="cage-btn" onclick="changeExtra(-1)" ${S.extraCages===0?'disabled':''} title="ลดกรงสำรอง">−</button>
-        <div class="cage-num" id="cage-num-main">${S.extraCages}</div>
-        <button class="cage-btn" onclick="changeExtra(1)" title="เพิ่มกรงสำรอง">＋</button>
-      </div>
-    </div>
-  </div>
-
   <div class="stats">
     <div class="scard sc-sage"><div class="sico">🏠</div><div class="sl">กรงว่าง</div><div class="sv">${avail}</div><div class="ss2">จากทั้งหมด ${total} กรง</div></div>
     <div class="scard sc-coral"><div class="sico">🌙</div><div class="sl">กรงที่เข้าพัก</div><div class="sv">${occ}</div><div class="ss2">กรง</div></div>
@@ -1938,7 +1903,27 @@ function renderToday(){
   const occ=onDate(S.bookings,S.selDate).length;
   const glidersToday=countGlidersOnDate(S.selDate);
   let rooms='';
-  for(let n=1;n<=totalStd();n++) rooms+=roomCell('standard',n,false);
+  for(let n=1;n<=MAIN_CAGES;n++) rooms+=roomCell('standard',n,false);
+  // กรงสำรอง: ปกติซ่อนไว้ไม่ให้รกหน้า Dashboard — โชว์เฉพาะกรงที่มีน้องเข้าพัก
+  // กด "ดูกรงทั้งหมด" เพื่อกางกรงสำรองครบทุกกรง
+  const occBk=[];
+  for(let n=MAIN_CAGES+1;n<=totalStd();n++) if(roomOf(S.bookings,'standard',n,S.selDate)) occBk.push(n);
+  let backupSec='';
+  if(S.showBackup){
+    let br='';
+    for(let n=MAIN_CAGES+1;n<=totalStd();n++) br+=roomCell('standard',n,false);
+    backupSec=`<div class="bdivider">กรงสำรอง ${BACKUP_CAGES} กรง</div>
+      <div class="warnbx">📌 <b>กรงสำรอง</b> ${BACKUP_NOTE} — แจ้งลูกค้าให้ทราบตอนจองด้วยนะคะ</div>
+      <div class="rgrid">${br}</div>`;
+  }else if(occBk.length){
+    backupSec=`<div class="bdivider">กรงสำรองที่มีน้องเข้าพัก (${occBk.length})</div>
+      <div class="rgrid">${occBk.map(n=>roomCell('standard',n,false)).join('')}</div>`;
+  }
+  const backupToggle=`<div style="text-align:center;margin-top:16px;">
+    <button class="btn btn-o btn-sm" onclick="toggleBackup()">
+      ${S.showBackup?'▲ ซ่อนกรงสำรอง':'▼ ดูกรงทั้งหมด (รวมกรงสำรอง '+BACKUP_CAGES+' กรง)'}
+    </button>
+  </div>`;
   return `<div class="sec">
     <div class="stitle">
       <div>
@@ -1960,15 +1945,20 @@ function renderToday(){
     </div>
     <div style="margin-bottom:12px;">${roomCell('grand_suite',1,true)}</div>
     <div class="rgrid">${rooms}</div>
+    ${backupSec}
+    ${backupToggle}
   </div>`;
 }
+
+function toggleBackup(){S.showBackup=!S.showBackup;render();}
 
 function roomCell(rt,rn,isSuite){
   const b=roomOf(S.bookings,rt,rn,S.selDate);
   const oc=!!b;
-  const cls='rc '+(oc?'oc':'av')+(isSuite?' suite':'');
-  const num=isSuite?'GS':pad(rn);
-  const lbl=isSuite?'GRAND SUITE':'STD-'+pad(rn);
+  const bk=!isSuite&&isBackup(rn);
+  const cls='rc '+(oc?'oc':'av')+(isSuite?' suite':'')+(bk?' backup':'');
+  const num=isSuite?'GS':(bk?pad(rn-MAIN_CAGES):pad(rn));
+  const lbl=isSuite?'GRAND SUITE':(bk?'สำรอง':'STD-'+pad(rn));
   const cnt=b?(parseInt(b.gliderCount)||1):0;
   const nameDisp=b?(b.gliderName||b.guestName):'';
   const bot=oc?`<div class="rname">${esc(nameDisp)}</div><div class="rstat" style="font-size:10px;opacity:.8;">🐿 ${cnt} ตัว</div>`:`<div class="rstat">ว่าง</div>`;
@@ -1993,7 +1983,15 @@ function renderCalendar(){
   const dates=[]; for(let i=0;i<DAYS;i++) dates.push(addDays(S.calStart,i));
   const today=todayKey();
   const allRooms=[{type:'grand_suite',num:1,label:'Grand Suite',isSuite:true}];
-  for(let i=0;i<totalStd();i++) allRooms.push({type:'standard',num:i+1,label:'STD-'+pad(i+1),isSuite:false});
+  for(let i=0;i<MAIN_CAGES;i++) allRooms.push({type:'standard',num:i+1,label:'STD-'+pad(i+1),isSuite:false});
+  // กรงสำรอง: โชว์เฉพาะแถวที่มีการจองคาบเกี่ยวช่วงวันที่แสดง — กด "ดูกรงทั้งหมด" เพื่อกางครบ
+  const rangeEnd=addDays(dates[DAYS-1],1);
+  let hiddenBk=0;
+  for(let n=MAIN_CAGES+1;n<=totalStd();n++){
+    const used=S.bookings.some(b=>b.roomType==='standard'&&Number(b.roomNumber)===n&&b.checkIn<rangeEnd&&b.checkOut>dates[0]);
+    if(S.showBackup||used) allRooms.push({type:'standard',num:n,label:'สำรอง-'+pad(n-MAIN_CAGES),isSuite:false,backup:true});
+    else hiddenBk++;
+  }
 
   let head='<div class="ccorner">ห้อง</div>';
   dates.forEach(d=>{
@@ -2003,7 +2001,7 @@ function renderCalendar(){
 
   let body='';
   allRooms.forEach(room=>{
-    body+=`<div class="crl ${room.isSuite?'suite':''}">${room.isSuite?'👑 ':''}${room.label}</div>`;
+    body+=`<div class="crl ${room.isSuite?'suite':''}${room.backup?' bk':''}">${room.isSuite?'👑 ':''}${room.label}</div>`;
     dates.forEach((d,di)=>{
       const b=roomOf(S.bookings,room.type,room.num,d);
       const prev=di>0?roomOf(S.bookings,room.type,room.num,dates[di-1]):null;
@@ -2034,6 +2032,11 @@ function renderCalendar(){
         ${head}${body}
       </div>
     </div>
+    <div style="text-align:center;margin-top:14px;">
+      <button class="btn btn-o btn-sm" onclick="toggleBackup()">
+        ${S.showBackup?'▲ ซ่อนกรงสำรองที่ว่าง':'▼ ดูกรงทั้งหมด (ซ่อนกรงสำรองว่างอยู่ '+hiddenBk+' กรง)'}
+      </button>
+    </div>
   </div>`;
 }
 
@@ -2062,7 +2065,9 @@ function renderBookings(){
     const st=bSt(b), nights=nts(b.checkIn,b.checkOut), isS=b.roomType==='grand_suite';
     return `<div class="bc ${st}">
       <div class="badge ${isS?'suite':''}">
-        ${isS?`<span style="font-size:20px;">👑</span><div class="bt">SUITE</div>`:`<div class="bn">${pad(b.roomNumber)}</div><div class="bt">STD</div>`}
+        ${isS?`<span style="font-size:20px;">👑</span><div class="bt">SUITE</div>`
+          :isBackup(b.roomNumber)?`<div class="bn">${pad(Number(b.roomNumber)-MAIN_CAGES)}</div><div class="bt">สำรอง</div>`
+          :`<div class="bn">${pad(b.roomNumber)}</div><div class="bt">STD</div>`}
       </div>
       <div class="binfo">
         <div class="bhead">
@@ -2203,10 +2208,15 @@ function openEditForm(id){
 function drawForm(v,isEdit){
   const ci=v.checkIn, co=v.checkOut;
   const nights=co>ci?nts(ci,co):0;
-  let rng=''; for(let n=1;n<=totalStd();n++){
+  let rng=''; for(let n=1;n<=MAIN_CAGES;n++){
     const av=isAvail(S.bookings,'standard',n,ci,co,FS.editId||null);
     rng+=`<button type="button" class="rnb ${FS.roomNumber===n&&FS.roomType==='standard'?'sel':''}" id="rnb-${n}"
       ${!av?'disabled':''} onclick="selRoom(${n})">${pad(n)}</button>`;
+  }
+  let brng=''; for(let n=MAIN_CAGES+1;n<=totalStd();n++){
+    const av=isAvail(S.bookings,'standard',n,ci,co,FS.editId||null);
+    brng+=`<button type="button" class="rnb backup ${FS.roomNumber===n&&FS.roomType==='standard'?'sel':''}" id="rnb-${n}"
+      ${!av?'disabled':''} onclick="selRoom(${n})">${pad(n-MAIN_CAGES)}</button>`;
   }
   const gsAvail=isAvail(S.bookings,'grand_suite',1,ci,co,FS.editId||null);
   showModal(`<div class="modal" onclick="event.stopPropagation()">
@@ -2239,7 +2249,7 @@ function drawForm(v,isEdit){
     <div class="fg"><label class="fl">ประเภทห้อง</label>
       <div class="rttog">
         <button type="button" id="rt-s" class="rtbtn ${FS.roomType==='standard'?'act':''}"
-          onclick="switchRT('standard')">🏠 Standard (${totalStd()} กรง)</button>
+          onclick="switchRT('standard')">🏠 Standard (หลัก ${MAIN_CAGES} + สำรอง ${BACKUP_CAGES})</button>
         <button type="button" id="rt-g" class="rtbtn ${FS.roomType==='grand_suite'?'act':''}"
           onclick="switchRT('grand_suite')">👑 Grand Suite</button>
       </div>
@@ -2252,8 +2262,13 @@ function drawForm(v,isEdit){
     </div>
     <div id="fnights" class="nights" style="${nights>0?'':'display:none'}">🌙 ${nights} คืน · ${thD(ci,true)} → ${thD(co,true)}</div>
     <div class="fg" id="rns" style="${FS.roomType==='standard'?'':'display:none'}">
-      <label class="fl">เลือกหมายเลขกรง (สีแดง = ไม่ว่าง)</label>
+      <label class="fl">เลือกหมายเลขกรงหลัก (สีแดง = ไม่ว่าง)</label>
       <div class="rng">${rng}</div>
+      <label class="fl" style="margin-top:12px;color:#A07E2D;">กรงสำรอง — ${BACKUP_NOTE}</label>
+      <div class="rng">${brng}</div>
+      <div id="backup-note" class="warnbx" style="margin:10px 0 0;${FS.roomType==='standard'&&isBackup(FS.roomNumber)?'':'display:none;'}">
+        📌 <b>เลือกกรงสำรอง:</b> ${BACKUP_NOTE} — กรุณาแจ้งลูกค้าให้ทราบก่อนยืนยันการจองนะคะ
+      </div>
     </div>
     <div class="fg" id="gs-sec" style="${FS.roomType==='grand_suite'?'':'display:none'}">
       <label class="fl">Grand Suite</label>
@@ -2293,6 +2308,7 @@ function switchRT(rt){
   document.getElementById('rns').style.display=rt==='standard'?'':'none';
   document.getElementById('gs-sec').style.display=rt==='grand_suite'?'':'none';
   refreshAvail();
+  updateBackupNote();
 }
 
 function selRoom(n){
@@ -2300,6 +2316,13 @@ function selRoom(n){
   document.querySelectorAll('.rnb').forEach(b=>b.classList.remove('sel'));
   const el=document.getElementById('rnb-'+n);
   if(el&&!el.disabled) el.classList.add('sel');
+  updateBackupNote();
+}
+
+// โชว์หมายเหตุกรงสำรองในฟอร์มจอง เมื่อกรงที่เลือกอยู่เป็นกรงสำรอง
+function updateBackupNote(){
+  const el=document.getElementById('backup-note'); if(!el)return;
+  el.style.display=(FS.roomType==='standard'&&isBackup(FS.roomNumber))?'':'none';
 }
 
 function onDates(){
@@ -2320,7 +2343,7 @@ function refreshAvail(){
     const btn=document.getElementById('rnb-'+n); if(!btn)continue;
     const av=isAvail(S.bookings,'standard',n,ci,co,FS.editId||null);
     btn.disabled=!av;
-    if(!av&&FS.roomNumber===n){FS.roomNumber=null;btn.classList.remove('sel');}
+    if(!av&&FS.roomNumber===n){FS.roomNumber=null;btn.classList.remove('sel');updateBackupNote();}
   }
   const gs=document.getElementById('gs-sec');
   if(gs){
@@ -2365,8 +2388,9 @@ function showDetail(b,rt,rn){
     <button class="mclose" onclick="closeModal()">✕</button>
     <div class="dh">
       ${isS?'<span style="font-size:28px;">👑</span>':''}
-      <div class="drn">${isS?'Grand Suite':'STD-'+pad(rn)}</div>
+      <div class="drn">${isS?'Grand Suite':stdLabel(rn)}</div>
     </div>
+    ${!isS&&isBackup(rn)?`<div class="warnbx" style="margin-top:12px;">📌 <b>กรงสำรอง</b> — ${BACKUP_NOTE}ค่ะ</div>`:''}
     <h2 style="margin-top:14px;">${esc(b.guestName)}</h2>
     ${b.gliderName?`<p class="msub" style="font-style:italic;">มากับน้อง ${esc(b.gliderName)} · ${b.gliderCount||1} ตัว</p>`:''}
     <div class="dg">
@@ -2412,16 +2436,6 @@ function doDel(id){ S.bookings=S.bookings.filter(b=>b.id!==id); save(); closeMod
 // ============================
 // SETTINGS
 // ============================
-function changeExtra(delta){
-  const next = S.extraCages + delta;
-  if(next < 0 || next > 77) return;
-  S.extraCages = next;
-  saveExtra();
-  closeModal();
-  render();
-  toast((delta>0?'＋ เพิ่มกรงสำรอง':'− ลดกรงสำรอง')+' · รวม Standard '+totalStd()+' กรง','ok');
-}
-
 function openSettings(){
   const lbl={synced:'✓ เชื่อมต่อแล้ว'+(S.lastSync?' · ซิงก์ล่าสุด '+rel(S.lastSync):''),
     error:'✗ '+esc(S.syncErr||'เชื่อมต่อล้มเหลว')}[S.syncSt]||'';
@@ -2627,7 +2641,7 @@ function saveSettings(){
 function localNameOf(b){
   return (b.gliderName||b.guestName||'ไม่ระบุ')+
     ' ('+(Number(b.gliderCount)||1)+' ตัว · '+
-    (b.roomType==='grand_suite'?'Grand Suite':'STD-'+pad(b.roomNumber))+')';
+    (b.roomType==='grand_suite'?'Grand Suite':stdLabel(b.roomNumber))+')';
 }
 function localThDate(dateStr){
   const dt=parseD(dateStr);
@@ -2798,7 +2812,7 @@ function showSlip(id){
   const st=bSt(b);
   const stLabel={'upcoming':'ยืนยันแล้ว','active':'เข้าพักอยู่','past':'เสร็จสิ้น'}[st];
   const stColor={'upcoming':'#6B8A57','active':'#6B8A57','past':'#735847'}[st];
-  const roomLabel=isS?'👑 Grand Suite':'Standard #'+pad(b.roomNumber);
+  const roomLabel=isS?'👑 Grand Suite':(isBackup(b.roomNumber)?'Standard สำรอง #'+pad(Number(b.roomNumber)-MAIN_CAGES):'Standard #'+pad(b.roomNumber));
   const now=new Date();
   const issueDate=now.getDate()+' '+TH_M_FULL[now.getMonth()]+' '+(now.getFullYear()+543);
   const qr=genQRDataUrl(ref+b.guestName);
@@ -3046,7 +3060,7 @@ function openCheckout(id){
   const gliders=parseInt(b.gliderCount)||1;
   const sub=gliders*PRICE_PER_GLIDER_NIGHT*nights;
   const isS=b.roomType==='grand_suite';
-  const roomLabel=isS?'👑 Grand Suite':'Standard #'+pad(b.roomNumber);
+  const roomLabel=isS?'👑 Grand Suite':(isBackup(b.roomNumber)?'Standard สำรอง #'+pad(Number(b.roomNumber)-MAIN_CAGES):'Standard #'+pad(b.roomNumber));
 
   showModal(`<div class="co-modal" onclick="event.stopPropagation()">
     <button class="mclose" style="position:absolute;top:14px;right:14px;z-index:10;background:rgba(255,255,255,.25);color:#fff;" onclick="closeModal()">✕</button>
@@ -3106,7 +3120,7 @@ function showCheckoutReceipt(id){
   const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras}=calcCheckout();
   const notes=(document.getElementById('co-notes')?.value||'').trim();
   const isS=b.roomType==='grand_suite';
-  const roomLabel=isS?'👑 Grand Suite':'Standard #'+pad(b.roomNumber);
+  const roomLabel=isS?'👑 Grand Suite':(isBackup(b.roomNumber)?'Standard สำรอง #'+pad(Number(b.roomNumber)-MAIN_CAGES):'Standard #'+pad(b.roomNumber));
   const rno=genReceiptNo();
   const now=new Date();
   const issueDate=formatDateTH(fmtD(now));
