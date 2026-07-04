@@ -543,7 +543,13 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google Apps Script (v11-group)
+ * Sugar Sugar Camp - Google Apps Script (v12-fastsync)
+ *
+ * ★ v12: Sync เร็วขึ้นมาก
+ *   - ข้าม Calendar API สำหรับรายการที่ข้อมูลไม่เปลี่ยน (เดิมอ่าน/เขียนทุกรายการทุกครั้ง)
+ *   - action ใหม่ "sync_delta" — รับเฉพาะรายการที่เพิ่ม/แก้/ลบ ไม่ต้องส่งทั้งหมด
+ *   - pull รองรับ rev — ถ้าข้อมูลบน Sheet ไม่เปลี่ยน ตอบ "unchanged" สั้นๆ ไม่ส่งข้อมูลซ้ำ
+ *   (เข้ากันได้กับหน้าเว็บเวอร์ชันเก่า — action เดิมใช้ได้ทั้งหมด)
  *
  * ★★★ Bot เงียบสนิท 100% — ไม่มีข้อความอัตโนมัติถึงลูกค้าทุกกรณี ★★★
  *   - ไม่มีโค้ดตอบกลับ (reply) เหลืออยู่เลย — ใครทักมา Bot ไม่ตอบเด็ดขาด
@@ -596,7 +602,7 @@ function doGet(e) {
   let result;
   try {
     if (act === 'pull') {
-      result = { ok:true, bookings: readSheet() };
+      result = { ok:true, ...pullResult_(p.rev || '') };
     } else if (act === 'sync' && p.data) {
       // fallback สำหรับ GET sync (data สั้น / file://)
       const bookings = JSON.parse(decodeURIComponent(p.data));
@@ -624,7 +630,7 @@ function doGet(e) {
         return { checkIn: b.checkIn, checkOut: b.checkOut, roomType: b.roomType };
       }) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v11-group', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v12-fastsync', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -646,7 +652,8 @@ function doPost(e) {
     }
 
     if (d.action === 'sync') return corsOut({ ok:true, ...syncAll(d.bookings||[]) });
-    if (d.action === 'pull') return corsOut({ ok:true, bookings: readSheet() });
+    if (d.action === 'sync_delta') return corsOut({ ok:true, ...syncDelta(d.changed||[], d.deleted||[]) });
+    if (d.action === 'pull') return corsOut({ ok:true, ...pullResult_(d.rev||'') });
     if (d.action === 'request_booking') return corsOut({ ok:true, ...addBookingRequest(d.request||{}) });
     if (d.action === 'pending_requests') return corsOut({ ok:true, requests: readRequests('pending') });
     if (d.action === 'update_request') return corsOut({ ok:true, ...updateRequestStatus(d.id, d.status) });
@@ -782,11 +789,14 @@ function fmtD(v) {
   return String(v);
 }
 
-function readSheet() {
+function readRaw_() {
   const sh = getSheet();
   if (sh.getLastRow() < 2) return [];
-  return sh.getRange(2,1,sh.getLastRow()-1,N_COLS).getValues()
-    .filter(r=>r[0]).map(r=>({
+  return sh.getRange(2,1,sh.getLastRow()-1,N_COLS).getValues();
+}
+
+function mapRows_(vals) {
+  return vals.filter(r=>r[0]).map(r=>({
       id: String(r[0]),
       guestName: String(r[1]||''),
       gliderName: String(r[2]||''),
@@ -800,48 +810,167 @@ function readSheet() {
     }));
 }
 
+function readSheet() { return mapRows_(readRaw_()); }
+
+// normalize Updated At — Sheet อาจ parse string เป็น Date ตอนอ่านกลับ
+function normTs_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, TZ, 'yyyy-MM-dd HH:mm:ss');
+  return String(v || '');
+}
+
+// rev = ลายนิ้วมือของทั้ง Sheet (ข้อมูลจริงทุกแถว — ไม่ใช้ timestamp
+// เพราะละเอียดแค่วินาที แก้ 2 ครั้งในวินาทีเดียวกันจะจับไม่ได้)
+// ใช้ให้ pull ตอบ "unchanged" ได้โดยไม่ต้องส่งข้อมูลทั้งก้อนกลับไป
+function revOf_(vals) {
+  const sig = vals.filter(function(r){ return r[0]; })
+    .map(function(r){ return rowKey_(r); }).join('|');
+  return Utilities.base64WebSafeEncode(
+    Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, sig, Utilities.Charset.UTF_8));
+}
+
+// pull: ถ้า rev ของ client ตรงกับบน Sheet → ตอบสั้นๆ ว่าไม่เปลี่ยน
+function pullResult_(clientRev) {
+  const vals = readRaw_();
+  const rev  = revOf_(vals);
+  if (clientRev && clientRev === rev) return { unchanged:true, rev:rev };
+  return { bookings: mapRows_(vals), rev: rev };
+}
+
+// ลายนิ้วมือข้อมูล 10 คอลัมน์แรก (ไม่รวม Event ID / Updated At)
+// ใช้เทียบว่าแถวเปลี่ยนจริงไหม — ถ้าไม่เปลี่ยนจะไม่แตะ Calendar เลย
+function rowKey_(r) {
+  return [String(r[0]), String(r[1]||''), String(r[2]||''), String(r[3]||''),
+    String(r[4]||''), String(Number(r[5])||1), fmtD(r[6]), fmtD(r[7]),
+    String(r[8]||''), String(Number(r[9])||1)].join('\\u0001');
+}
+
+function bookingRow_(b, eid, ts) {
+  return [b.id, b.guestName||'', b.gliderName||'', b.phone||'',
+    b.roomType==='grand_suite'?'Grand Suite':'Standard',
+    Number(b.roomNumber)||1, b.checkIn, b.checkOut, b.notes||'',
+    Number(b.gliderCount)||1, eid, ts];
+}
+
+// สร้าง/อัปเดต Calendar event 1 รายการ — เรียกเฉพาะรายการที่ข้อมูลเปลี่ยนจริง
+function upsertEvent_(cal, b, eid) {
+  const gc = Number(b.gliderCount)||1;
+  const title = (b.gliderName?'🐿 '+b.gliderName:'🐿 '+b.guestName)+' ('+gc+' ตัว) · '+
+    (b.roomType==='grand_suite'?'Grand Suite':'STD-'+String(b.roomNumber).padStart(2,'0'));
+  const desc = ['เจ้าของ: '+b.guestName,
+    b.gliderName?'น้อง: '+b.gliderName:'',
+    'จำนวน: '+gc+' ตัว',
+    b.phone?'เบอร์: '+b.phone:'',
+    b.notes?'บันทึก: '+b.notes:''].filter(Boolean).join('\\n');
+  const s = new Date(b.checkIn+'T00:00:00+07:00');
+  const e = new Date(b.checkOut+'T00:00:00+07:00');
+  let ev = null;
+  if (eid) try { ev = cal.getEventById(eid); } catch(_) { ev = null; }
+  if (ev) { ev.setTitle(title); ev.setDescription(desc); ev.setAllDayDates(s,e); return { eid:eid, created:false }; }
+  ev = cal.createAllDayEvent(title, s, e, {description:desc});
+  return { eid: ev.getId(), created:true };
+}
+
 function syncAll(bookings) {
   // กันหลายเครื่อง/หลายคนเขียนชนกัน — ทำให้ข้อมูลทับกันหาย
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-  const sh = getSheet(), cal = getCal();
-  const evMap = {};
-  if (sh.getLastRow()>1)
-    sh.getRange(2,1,sh.getLastRow()-1,N_COLS).getValues()
-      .forEach(r=>{ if(r[0]) evMap[String(r[0])]=String(r[10]||''); });
+  const sh = getSheet();
+  const old = {};   // id → { eid, key, ts } ของข้อมูลเดิมบน Sheet
+  readRaw_().forEach(function(r){
+    if (r[0]) old[String(r[0])] = { eid:String(r[10]||''), key:rowKey_(r), ts:normTs_(r[11]) };
+  });
+
+  // เปิด Calendar แบบ lazy — ถ้าไม่มีรายการไหนเปลี่ยนเลย ไม่ต้องแตะ Calendar
+  let cal = null;
+  const calOf = function(){ return cal || (cal = getCal()); };
 
   const ids = new Set(bookings.map(b=>b.id));
-  let del=0,cre=0,upd=0;
-  Object.keys(evMap).forEach(id=>{
-    if(!ids.has(id)&&evMap[id]){
-      try{const e=cal.getEventById(evMap[id]);if(e){e.deleteEvent();del++;}}catch(_){}
+  let del=0,cre=0,upd=0,skip=0;
+  Object.keys(old).forEach(id=>{
+    if(!ids.has(id)&&old[id].eid){
+      try{const e=calOf().getEventById(old[id].eid);if(e){e.deleteEvent();del++;}}catch(_){}
     }
   });
   const now = Utilities.formatDate(new Date(),TZ,'yyyy-MM-dd HH:mm:ss');
   const rows = bookings.map(b=>{
-    const gc = Number(b.gliderCount)||1;
-    const title = (b.gliderName?'🐿 '+b.gliderName:'🐿 '+b.guestName)+' ('+gc+' ตัว) · '+
-      (b.roomType==='grand_suite'?'Grand Suite':'STD-'+String(b.roomNumber).padStart(2,'0'));
-    const desc = ['เจ้าของ: '+b.guestName,
-      b.gliderName?'น้อง: '+b.gliderName:'',
-      'จำนวน: '+gc+' ตัว',
-      b.phone?'เบอร์: '+b.phone:'',
-      b.notes?'บันทึก: '+b.notes:''].filter(Boolean).join('\\n');
-    const s = new Date(b.checkIn+'T00:00:00+07:00');
-    const e = new Date(b.checkOut+'T00:00:00+07:00');
-    let eid = evMap[b.id]||'', ev=null;
-    if(eid) try{ev=cal.getEventById(eid);}catch(_){ev=null;}
-    if(ev){ev.setTitle(title);ev.setDescription(desc);ev.setAllDayDates(s,e);upd++;}
-    else{ev=cal.createAllDayEvent(title,s,e,{description:desc});eid=ev.getId();cre++;}
-    return [b.id,b.guestName||'',b.gliderName||'',b.phone||'',
-      b.roomType==='grand_suite'?'Grand Suite':'Standard',
-      b.roomNumber,b.checkIn,b.checkOut,b.notes||'',gc,eid,now];
+    const prev = old[String(b.id)];
+    const row  = bookingRow_(b, prev?prev.eid:'', now);
+    // ★ ข้อมูลไม่เปลี่ยน + มี event แล้ว → ข้าม Calendar ทั้งหมด และคง Updated At เดิม
+    if (prev && prev.eid && prev.key === rowKey_(row)) {
+      row[11] = prev.ts; skip++; return row;
+    }
+    const r = upsertEvent_(calOf(), b, prev?prev.eid:'');
+    if (r.created) cre++; else upd++;
+    row[10] = r.eid;
+    return row;
   });
   if(sh.getLastRow()>1) sh.getRange(2,1,sh.getLastRow()-1,N_COLS).clearContent();
   if(rows.length) sh.getRange(2,1,rows.length,N_COLS).setValues(rows);
   SpreadsheetApp.flush();
-  return {created:cre,updated:upd,deleted:del,total:bookings.length};
+  return {created:cre,updated:upd,deleted:del,skipped:skip,total:rows.length,rev:revOf_(rows)};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ★ v12: delta sync — รับเฉพาะรายการที่เพิ่ม/แก้ (changed) และ id ที่ลบ (deleted)
+//   แตะเฉพาะแถว/event ที่เกี่ยวข้อง — รายการเก่าที่ผ่านไปแล้วไม่ถูกอ่านซ้ำ
+function syncDelta(changed, deletedIds) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh   = getSheet();
+    const vals = readRaw_();
+    const idx  = {};   // id → ตำแหน่งแถว (0-based ใน vals)
+    vals.forEach(function(r,i){ if(r[0]) idx[String(r[0])] = i; });
+
+    let cal = null;
+    const calOf = function(){ return cal || (cal = getCal()); };
+    let cre=0,upd=0,del=0,skip=0;
+    const now = Utilities.formatDate(new Date(),TZ,'yyyy-MM-dd HH:mm:ss');
+
+    // 1) อัปเดตรายการที่มีอยู่ / เก็บรายการใหม่ไว้ต่อท้าย (ทำก่อนลบ — เลขแถวยังไม่เลื่อน)
+    const appends = [];
+    (changed||[]).forEach(function(b){
+      if (!b || !b.id) return;
+      const i = idx[String(b.id)];
+      if (i === undefined) {
+        const r = upsertEvent_(calOf(), b, '');
+        appends.push(bookingRow_(b, r.eid, now)); cre++;
+        return;
+      }
+      const prev = vals[i];
+      const row  = bookingRow_(b, String(prev[10]||''), now);
+      if (rowKey_(prev) === rowKey_(row) && prev[10]) { skip++; return; }
+      const r = upsertEvent_(calOf(), b, String(prev[10]||''));
+      if (r.created) cre++; else upd++;
+      row[10] = r.eid;
+      sh.getRange(i+2,1,1,N_COLS).setValues([row]);
+      vals[i] = row;
+    });
+
+    // 2) ลบ — ไล่จากล่างขึ้นบน กันเลขแถวเลื่อน
+    (deletedIds||[])
+      .map(function(id){ return idx[String(id)]; })
+      .filter(function(i){ return i !== undefined; })
+      .sort(function(a,b){ return b-a; })
+      .forEach(function(i){
+        const eid = String(vals[i][10]||'');
+        if (eid) try{ const e=calOf().getEventById(eid); if(e) e.deleteEvent(); }catch(_){}
+        sh.deleteRow(i+2);
+        vals.splice(i,1);
+        del++;
+      });
+
+    // 3) เพิ่มรายการใหม่ต่อท้าย (เขียนครั้งเดียว)
+    if (appends.length) {
+      sh.getRange(sh.getLastRow()+1,1,appends.length,N_COLS).setValues(appends);
+      appends.forEach(function(r){ vals.push(r); });
+    }
+    SpreadsheetApp.flush();
+    const total = vals.filter(function(r){ return r[0]; }).length;
+    return {created:cre,updated:upd,deleted:del,skipped:skip,total:total,rev:revOf_(vals)};
   } finally {
     lock.releaseLock();
   }
@@ -1175,7 +1304,8 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_UKNfnaKzCkdz
 // ตัวอย่าง: const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/ABC123.../exec';
 // ══════════════════════════════════════════════════════
 
-const LS_B='ssc_b3',LS_U='ssc_u3',LS_T='ssc_t3',LS_EX='ssc_ex3';
+const LS_B='ssc_b3',LS_U='ssc_u3',LS_T='ssc_t3',LS_EX='ssc_ex3',
+      LS_FP='ssc_fp3',LS_REV='ssc_rev3',LS_D='ssc_d3';
 let S = {
   bookings:[], requests:[], tab:'today', selDate:todayKey(), calStart:todayKey(),
   search:'', filter:'all',
@@ -1183,8 +1313,14 @@ let S = {
   syncSt: APPS_SCRIPT_URL ? 'idle' : 'unconfigured',
   lastSync:0, syncErr:'',
   extraCages:0,
-  dirty:false        // มีการแก้ไขที่ยัง sync ขึ้น Sheet ไม่สำเร็จหรือยัง
+  dirty:false,       // มีการแก้ไขที่ยัง sync ขึ้น Sheet ไม่สำเร็จหรือยัง
+  pullRev:''         // rev ล่าสุดจาก Sheet — ใช้ให้ pull ตอบ "ไม่เปลี่ยน" ได้โดยไม่ส่งข้อมูลซ้ำ
 };
+// ★ delta sync: baseline = ลายนิ้วมือ (id → fingerprint) ของข้อมูลที่อยู่บน Sheet แล้ว
+//   ครั้งต่อไปส่งเฉพาะรายการที่ต่างจาก baseline — รายการที่ sync ผ่านไปแล้วไม่ส่งซ้ำ
+//   FP=null = ยังไม่เคยตั้ง baseline → ต้อง full sync ก่อน 1 ครั้ง
+let FP=null;
+let DELTA_OK=true; // false เมื่อ Apps Script เป็นเวอร์ชันเก่า (ไม่รู้จัก sync_delta) → ใช้ full sync
 try{
   const r=localStorage.getItem(LS_B);
   if(r){
@@ -1207,6 +1343,10 @@ try{
 }catch(e){}
 try{const ex=localStorage.getItem(LS_EX);if(ex)S.extraCages=parseInt(ex,10)||0;}catch(e){}
 try{const t=localStorage.getItem(LS_T);if(t)S.lastSync=parseInt(t,10);}catch(e){}
+try{const f=localStorage.getItem(LS_FP);if(f)FP=JSON.parse(f);}catch(e){}
+try{const rv=localStorage.getItem(LS_REV);if(rv)S.pullRev=rv;}catch(e){}
+// กู้สถานะ dirty ข้ามการปิด/เปิดหน้า — ถ้ามีของค้างจากรอบก่อน จะ push ก่อน pull เสมอ
+try{if(localStorage.getItem(LS_D)==='1')S.dirty=true;}catch(e){}
 
 function save(){try{localStorage.setItem(LS_B,JSON.stringify(S.bookings));}catch(e){}}
 // นับจำนวนน้องรวมจากการจองที่เข้าพักในวันที่กำหนด
@@ -1224,6 +1364,25 @@ function totalRooms(){return totalStd()+1;} // +1 grand suite
 // ============================
 let syncT=null;
 
+// ── delta sync helpers ──────────────────────────────
+// ลายนิ้วมือของ booking — เทียบกับ baseline เพื่อหารายการที่เปลี่ยนจริง
+const bfp = b => JSON.stringify([b.guestName||'',b.gliderName||'',b.phone||'',
+  b.roomType||'',Number(b.roomNumber)||1,b.checkIn||'',b.checkOut||'',
+  b.notes||'',parseInt(b.gliderCount)||1]);
+function saveFP(){try{if(FP)localStorage.setItem(LS_FP,JSON.stringify(FP));}catch(e){}}
+function saveRev(){try{localStorage.setItem(LS_REV,S.pullRev||'');}catch(e){}}
+function saveDirty(){try{localStorage.setItem(LS_D,S.dirty?'1':'0');}catch(e){}}
+// ตั้ง baseline = รายการที่ยืนยันแล้วว่าอยู่บน Sheet (จาก push สำเร็จ หรือ pull สำเร็จ)
+function setBaseline(list){const m={};(list||[]).forEach(b=>{m[b.id]=bfp(b);});FP=m;saveFP();}
+// หาส่วนต่างจาก baseline — คืน null ถ้ายังไม่มี baseline (ต้อง full sync ก่อน)
+function computeDelta(){
+  if(!FP) return null;
+  const changed=[],seen={};
+  S.bookings.forEach(b=>{seen[b.id]=1;if(FP[b.id]!==bfp(b))changed.push(b);});
+  const deleted=Object.keys(FP).filter(id=>!seen[id]);
+  return {changed,deleted};
+}
+
 // buildUrl — ใช้สำหรับ GET เท่านั้น (pull / ping / JSONP)
 function buildUrl(action, extraParams){
   let url = S.syncUrl + (S.syncUrl.includes('?')?'&':'?') + 'action='+action+'&_='+Date.now();
@@ -1232,15 +1391,20 @@ function buildUrl(action, extraParams){
 }
 
 // callAppsScript
-//   sync  → POST fetch  (ไม่มี URL limit, รองรับข้อมูลเยอะ)
+//   sync / sync_delta → POST fetch  (ไม่มี URL limit, รองรับข้อมูลเยอะ)
 //   pull/ping → GET + JSONP (รองรับ file:// ด้วย)
-function callAppsScript(action, bookings){
-  // POST สำหรับ sync เมื่ออยู่บน https://
-  if(action==='sync' && location.protocol !== 'file:'){
+function callAppsScript(action, bookings, extraParams){
+  // POST สำหรับ sync / sync_delta เมื่ออยู่บน https://
+  if((action==='sync'||action==='sync_delta') && location.protocol !== 'file:'){
+    const body = action==='sync'
+      ? { action:'sync', bookings: bookings||[] }
+      : { action:'sync_delta',
+          changed:(bookings&&bookings.changed)||[],
+          deleted:(bookings&&bookings.deleted)||[] };
     return fetch(S.syncUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },  // text/plain หลีกเลี่ยง preflight
-      body: JSON.stringify({ action:'sync', bookings: bookings||[] })
+      body: JSON.stringify(body)
     })
     .then(r => r.json())
     .then(data => {
@@ -1255,7 +1419,7 @@ function callAppsScript(action, bookings){
     if(!S.syncUrl) return rej(new Error('ยังไม่ได้ตั้งค่า URL'));
     const cbName = 'ssc_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
     // สำหรับ sync จาก file:// ยังคงใช้ GET (ข้อมูลน้อยกว่า limit เพราะใช้งานออฟไลน์)
-    let url = buildUrl(action);
+    let url = buildUrl(action, extraParams);
     if(action==='sync' && bookings){
       url += '&data=' + encodeURIComponent(JSON.stringify(bookings));
     }
@@ -1284,6 +1448,38 @@ function callAppsScript(action, bookings){
   });
 }
 
+// fullPush — ส่งทุกรายการ (แบบเดิม) แล้วตั้ง baseline ใหม่จาก snapshot ที่ส่งจริง
+async function fullPush(){
+  const snap = JSON.parse(JSON.stringify(S.bookings));
+  const d = await callAppsScript('sync', snap);
+  setBaseline(snap);
+  return d;
+}
+
+// pushOnce — พยายามส่งแบบ delta (เฉพาะรายการที่เปลี่ยน) ก่อน
+//   ★ ไม่มีอะไรเปลี่ยนจาก baseline → ไม่ยิง network เลย (เร็วสุด)
+//   ★ Apps Script เวอร์ชันเก่า (ไม่รู้จัก sync_delta) → fallback เป็น full sync อัตโนมัติ
+async function pushOnce(){
+  const canDelta = DELTA_OK && FP && location.protocol!=='file:';
+  if(!canDelta) return fullPush();
+  const delta = computeDelta();
+  if(!delta.changed.length && !delta.deleted.length) return {noop:true};
+  // snapshot สิ่งที่ส่งจริง — กันผู้ใช้แก้ไขเพิ่มระหว่างรอ response แล้ว baseline เพี้ยน
+  const sentChanged = JSON.parse(JSON.stringify(delta.changed));
+  const sentDeleted = delta.deleted.slice();
+  let d;
+  try{
+    d = await callAppsScript('sync_delta', {changed:sentChanged, deleted:sentDeleted});
+  }catch(err){
+    if(/Unknown action/i.test(err.message||'')){ DELTA_OK=false; return fullPush(); }
+    throw err;
+  }
+  sentChanged.forEach(b=>{FP[b.id]=bfp(b);});
+  sentDeleted.forEach(id=>{delete FP[id];});
+  saveFP();
+  return d;
+}
+
 // pushNow — ยิง sync ขึ้น Sheet พร้อม retry แบบ backoff
 //   คืน true เมื่อสำเร็จ (เคลียร์ dirty), false เมื่อพยายามครบแล้วยังพลาด
 async function pushNow(retries){
@@ -1291,10 +1487,20 @@ async function pushNow(retries){
   const max = (typeof retries==='number') ? retries : 3;
   for(let attempt=1; attempt<=max; attempt++){
     try{
-      await callAppsScript('sync', S.bookings);
+      const d = await pushOnce();
       const now=Date.now(); localStorage.setItem(LS_T,String(now));
-      S.syncSt='synced'; S.lastSync=now; S.syncErr=''; S.dirty=false;
+      S.syncSt='synced'; S.lastSync=now; S.syncErr=''; S.dirty=false; saveDirty();
       updateSyncBadge();
+      const mismatch = d && !d.noop && typeof d.total==='number' && d.total!==S.bookings.length;
+      if(mismatch){
+        // ยอดรวมบน Sheet ไม่ตรงกับเครื่องนี้ (เช่นเครื่องอื่นเพิ่ม/ลบพร้อมกัน)
+        // → ห้ามจำ rev นี้ (เป็น rev ของข้อมูลที่เรายังไม่มี) แล้วดึงจาก Sheet มารวม
+        //   (ของเครื่องนี้ push ขึ้นไปแล้ว ไม่มีอะไรหาย)
+        S.pullRev=''; saveRev();
+        setTimeout(()=>{ pullCloud(true); }, 100);
+      } else if(d && d.rev){
+        S.pullRev=d.rev; saveRev();
+      }
       return true;
     }catch(err){
       S.syncErr=err.message;
@@ -1311,7 +1517,7 @@ async function pushNow(retries){
 
 function autoSync(){
   if(!S.syncUrl)return;
-  S.dirty=true;                       // มีของค้างที่ต้อง push ก่อน pull เสมอ
+  S.dirty=true; saveDirty();          // มีของค้างที่ต้อง push ก่อน pull เสมอ
   if(syncT)clearTimeout(syncT);
   S.syncSt='syncing'; updateSyncBadge();
   syncT=setTimeout(()=>{ pushNow(3); },1500);
@@ -1327,14 +1533,18 @@ function updateSyncBadge(){
   txt.textContent=lbl;
 }
 
+// manualSync — กดเองจากหน้าจอ: ส่งทั้งหมด (full) เสมอ เพื่อรีเซ็ต baseline ให้ตรงกับ Sheet
 async function manualSync(){
   if(!S.syncUrl){openSettings();return;}
   S.syncSt='syncing'; render();
   try{
-    const d = await callAppsScript('sync', S.bookings);
+    const d = await fullPush();
     const now=Date.now(); localStorage.setItem(LS_T,String(now));
-    S.syncSt='synced'; S.lastSync=now; S.syncErr=''; S.dirty=false; render();
-    toast('✓ Sync สำเร็จ · อัปเดต '+((d.updated||0)+(d.created||0))+' รายการ','ok');
+    if(d && d.rev){ S.pullRev=d.rev; saveRev(); }
+    S.syncSt='synced'; S.lastSync=now; S.syncErr=''; S.dirty=false; saveDirty(); render();
+    const n=(d.updated||0)+(d.created||0);
+    toast('✓ Sync สำเร็จ · อัปเดต '+n+' รายการ'+
+      (d.skipped?' · ข้าม '+d.skipped+' รายการที่ไม่เปลี่ยน':''),'ok');
   }catch(err){
     S.syncSt='error'; S.syncErr=err.message; render();
     toast('✗ '+err.message,'err');
@@ -1361,7 +1571,17 @@ async function pullCloud(silent){
   S.syncSt='syncing'; updateSyncBadge();
   if(!silent) render();
   try{
-    const d=await callAppsScript('pull', null);
+    // silent pull ส่ง rev ไปด้วย — ถ้า Sheet ไม่เปลี่ยน server ตอบสั้นๆ ไม่ต้องส่งข้อมูลทั้งก้อน
+    // (กดดึงเองไม่ส่ง rev — ผู้ใช้ตั้งใจโหลดใหม่ทั้งหมด)
+    const revParam = (silent && S.pullRev) ? '&rev='+encodeURIComponent(S.pullRev) : '';
+    const d=await callAppsScript('pull', null, revParam);
+    if(d.unchanged){
+      // ข้อมูลบน Sheet เหมือนเดิม — ไม่ต้องแทนที่/วาดหน้าใหม่
+      const now=Date.now(); localStorage.setItem(LS_T,String(now));
+      S.syncSt='synced'; S.lastSync=now;
+      updateSyncBadge();
+      return;
+    }
     const rawIncoming = d.bookings||[];
     // ใช้ gliderCount จาก Sheet (Apps Script v5+); fallback = 1 เฉพาะกรณี undefined
     const incoming = rawIncoming.map(b => ({
@@ -1372,9 +1592,12 @@ async function pullCloud(silent){
     }));
     // กันเหนียวซ้ำ: ถ้า silent pull และ Sheet ว่างแต่เครื่องนี้มีข้อมูล → ไม่ทับ
     if(silent && S.bookings.length > 0 && incoming.length === 0){
-      // Sheet ว่าง แต่เครื่องนี้มีข้อมูล → ไม่ทับ
+      // Sheet ว่าง แต่เครื่องนี้มีข้อมูล → ไม่ทับ (และไม่แตะ baseline/rev)
     } else {
-      S.bookings=incoming; S.dirty=false; save();
+      S.bookings=incoming; S.dirty=false; saveDirty(); save();
+      // ข้อมูลในเครื่อง = ข้อมูลบน Sheet แล้ว → ตั้ง baseline + จำ rev ไว้ให้รอบหน้าเช็คไว
+      setBaseline(incoming);
+      if(d.rev){ S.pullRev=d.rev; saveRev(); }
     }
     const now=Date.now(); localStorage.setItem(LS_T,String(now));
     S.syncSt='synced'; S.lastSync=now;
@@ -2243,7 +2466,7 @@ function openSettings(){
           <li>ตั้งค่า: <b>Execute as: Me</b> | <b>Who has access: Anyone</b></li>
           <li>กด Deploy → อนุญาตสิทธิ์ Sheets + Calendar</li>
           <li>คัดลอก <b>Web app URL</b> มาวางในช่องด้านบน แล้วกด บันทึก</li>
-          <li style="color:#C46C7E;"><b>⚠ ถ้าเคย Deploy ไปแล้ว ต้องอัปเดตเวอร์ชัน</b> (Manage deployments → ✏️ Edit → New version → Deploy) เพื่ออัปเดตเป็น v11 — Bot เงียบกับลูกค้า + สรุปเช้า-เย็นเข้ากลุ่มร้าน</li>
+          <li style="color:#C46C7E;"><b>⚠ ถ้าเคย Deploy ไปแล้ว ต้องอัปเดตเวอร์ชัน</b> (Manage deployments → ✏️ Edit → New version → Deploy) เพื่ออัปเดตเป็น v12 — Sync เร็วขึ้นมาก (ส่งเฉพาะรายการที่เปลี่ยน ไม่อ่านรายการเดิมซ้ำ) — ระหว่างยังไม่อัปเดต ระบบจะใช้วิธีเดิมให้อัตโนมัติ</li>
         </ol></div>
         <div style="position:relative;">
           <div class="codebx">${codeHtml}</div>
@@ -2705,7 +2928,9 @@ function flushOnExit(){
         {type:'text/plain'}
       );
       const sent=navigator.sendBeacon(S.syncUrl, blob);
-      if(sent){ S.dirty=false; localStorage.setItem(LS_T,String(Date.now())); }
+      // ★ beacon เป็น fire-and-forget ยืนยันผลไม่ได้ — จงใจ "ไม่" อัปเดต baseline (FP)
+      //   ถ้าถึง Sheet จริง รอบหน้า delta จะเห็นว่าตรงกันแล้วและข้ามไปเอง
+      if(sent){ S.dirty=false; saveDirty(); localStorage.setItem(LS_T,String(Date.now())); }
     }catch(_){}
   }
 }
