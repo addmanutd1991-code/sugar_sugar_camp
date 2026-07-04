@@ -543,7 +543,7 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google Apps Script (v12-fastsync)
+ * Sugar Sugar Camp - Google t (v12-fastsync)
  *
  * ★ v12: Sync เร็วขึ้นมาก
  *   - ข้าม Calendar API สำหรับรายการที่ข้อมูลไม่เปลี่ยน (เดิมอ่าน/เขียนทุกรายการทุกครั้ง)
@@ -554,7 +554,7 @@ const AS_CODE = `/**
  * ★★★ Bot เงียบสนิท 100% — ไม่มีข้อความอัตโนมัติถึงลูกค้าทุกกรณี ★★★
  *   - ไม่มีโค้ดตอบกลับ (reply) เหลืออยู่เลย — ใครทักมา Bot ไม่ตอบเด็ดขาด
  *   - ไม่มีการลงทะเบียนผู้รับอัตโนมัติ — ตั้งผู้รับได้ทางเดียวคือเจ้าของร้าน
- *     กดรันฟังก์ชันใน Apps Script เอง (ดู "วิธีตั้งผู้รับ" ด้านล่าง)
+ *     กดรันฟังก์ชันใน t เอง (ดู "วิธีตั้งผู้รับ" ด้านล่าง)
  *   - ใช้ชื่อ property ใหม่ (SSC_SUMMARY_TARGET / SSC_BOOKING_TARGET)
  *     ค่าเก่า LINE_TARGET_ID / LINE_GROUP_ID ที่อาจถูกลูกค้าทับไว้ = ถูกเลิกใช้ทันที
  *   - ไม่มี broadcast — ส่งแบบเจาะจงผู้รับ (push) เท่านั้น
@@ -563,7 +563,7 @@ const AS_CODE = `/**
  *   - ตั้งกลุ่มร้านอย่างเดียว → ทั้ง "สรุปเช้า 06:00 / เย็น 18:00" และ
  *     "แจ้งคำขอจองใหม่" ส่งเข้ากลุ่มเดียวกันทั้งหมด
  *
- * ── วิธีตั้งผู้รับ (ทำใน Apps Script Editor เท่านั้น) ──
+ * ── วิธีตั้งผู้รับ (ทำใน t Editor เท่านั้น) ──
  *  ✔ แนะนำ: เชิญ Bot เข้ากลุ่มร้าน → ส่งข้อความในกลุ่ม 1 ข้อความ
  *    → รัน setBookingTargetFromLastSeenGroup ทันที = จบ ทุกอย่างเข้ากลุ่ม
  *  (ทางเลือก) อยากให้สรุปประจำวันเข้าแชทส่วนตัวแทน:
@@ -1300,7 +1300,7 @@ const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 // ตั้งค่า Apps Script URL ตรงนี้ — ใช้ได้ทุกเครื่องทันที
 // วาง URL ของคุณระหว่าง '' ด้านล่าง แล้วบันทึกไฟล์
 // ══════════════════════════════════════════════════════
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby06K1hF8oSqR-4szp5-w2URUdWgTYnBO_XP4rOHA4LydnaM4yPI8_7kRDmTWq06Wb6/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_JrJsIqSjiRxtdD2B_2va4qdmO9uFX_vxP75SDXpIYotQiRPVrvIbzcoXS6-FFqBb/exec';
 // ตัวอย่าง: const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/ABC123.../exec';
 // ══════════════════════════════════════════════════════
 
