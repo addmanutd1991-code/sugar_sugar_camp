@@ -824,7 +824,7 @@ function normTs_(v) {
 function revOf_(vals) {
   const sig = vals.filter(function(r){ return r[0]; })
     .map(function(r){ return rowKey_(r); }).join('|');
-  return Utilities.base64WebSafeEncode(
+  return Utilities.base64EncodeWebSafe(
     Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, sig, Utilities.Charset.UTF_8));
 }
 
