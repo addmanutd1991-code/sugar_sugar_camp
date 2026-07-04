@@ -221,7 +221,7 @@ function resolveApiUrl(){
 }
 const APPS_SCRIPT_URL = resolveApiUrl();
 
-const CAPACITY = 24; // 23 Standard + 1 Grand Suite (โดยประมาณ — ทางร้านยืนยันอีกครั้ง)
+const CAPACITY = 26; // 25 Standard + 1 Grand Suite (โดยประมาณ — ทางร้านยืนยันอีกครั้ง)
 const pad = n => String(n).padStart(2,'0');
 const todayKey = () => { const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
 const parseD = s => new Date(s+'T00:00:00');

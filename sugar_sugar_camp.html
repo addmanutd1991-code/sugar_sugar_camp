@@ -1215,7 +1215,8 @@ function countGlidersOnDate(dateStr){
     .reduce((sum,b) => sum + (parseInt(b.gliderCount)||1), 0);
 }
 function saveExtra(){try{localStorage.setItem(LS_EX,String(S.extraCages));}catch(e){}}
-function totalStd(){return 23+S.extraCages;}
+const MAIN_CAGES=25; // จำนวนกรงหลัก Standard
+function totalStd(){return MAIN_CAGES+S.extraCages;}
 function totalRooms(){return totalStd()+1;} // +1 grand suite
 
 // ============================
@@ -1611,58 +1612,20 @@ function render(){
     <div class="blist">${S.requests.map(rqCard).join('')}</div>
   </div>`:''}
 
-  ${(()=>{
-    const today=todayKey();
-    const tomorrow=addDays(today,1);
-    const ls=buildLocalLineSummary(today);
-    const lsEve=buildLocalLineSummary(tomorrow);
-    return `<div class="line-banner">
-      <div class="lb-left">
-        <div class="lb-title">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.02 2 11c0 2.89 1.4 5.48 3.6 7.23L5 22l3.97-1.99C10.01 20.64 11 21 12 21c5.52 0 10-4.02 10-9S17.52 2 12 2z"/></svg>
-          แจ้งเตือน LINE · 2 รอบต่อวัน
-        </div>
-        <div class="lb-stats" style="margin-top:6px;">
-          <div class="lb-stat" title="วันนี้">🌅 <span style="font-size:10px;opacity:.8;">วันนี้</span></div>
-          <div class="lb-stat">🚪 <span>${ls.ci.length} เข้า</span></div>
-          <div class="lb-stat">👋 <span>${ls.co.length} ออก</span></div>
-          <div class="lb-stat">🐿 <span>${ls.gliders} ตัว</span></div>
-        </div>
-        <div class="lb-stats">
-          <div class="lb-stat" title="พรุ่งนี้">🌆 <span style="font-size:10px;opacity:.8;">พรุ่งนี้</span></div>
-          <div class="lb-stat">🚪 <span>${lsEve.ci.length} เข้า</span></div>
-          <div class="lb-stat">👋 <span>${lsEve.co.length} ออก</span></div>
-        </div>
-      </div>
-      <div class="lb-actions">
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
-          <div style="display:flex;gap:6px;">
-            <button class="btn-line ghost" style="font-size:11.5px;padding:7px 12px;" onclick="showLinePreview('morning')">👁 เช้า</button>
-            <button class="btn-line solid" id="line-send-btn" style="font-size:12px;padding:7px 14px;" onclick="sendLineNow()">🌅 ส่งเช้า 06:00</button>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn-line ghost" style="font-size:11.5px;padding:7px 12px;" onclick="showLinePreview('evening')">👁 เย็น</button>
-            <button class="btn-line solid" id="line-eve-btn" style="font-size:12px;padding:7px 14px;" onclick="sendLineEvening()">🌆 ส่งเย็น 18:00</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  })()}
-
   <div class="cage-bar">
     <div class="cage-info">
       <div>
         <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--cm);font-weight:600;margin-bottom:2px;">กรง Standard ทั้งหมด</div>
         <div style="display:flex;align-items:baseline;gap:6px;">
           <span style="font-family:'Fraunces',serif;font-size:32px;font-weight:400;color:var(--cocoa);">${totalStd()}</span>
-          <span style="font-size:12px;color:var(--cm);">กรง (หลัก 23 + สำรอง ${S.extraCages})</span>
+          <span style="font-size:12px;color:var(--cm);">กรง (หลัก ${MAIN_CAGES} + สำรอง ${S.extraCages})</span>
         </div>
       </div>
       <div class="cage-dots" title="กรงทั้งหมด">
         ${(()=>{
           const total=Math.min(totalStd(),40);
           let dots='';
-          for(let i=0;i<total;i++) dots+=`<span class="cage-dot ${i<23?'main':'extra'}" title="${i<23?'STD-'+pad(i+1):'สำรอง-'+pad(i+1)}"></span>`;
+          for(let i=0;i<total;i++) dots+=`<span class="cage-dot ${i<MAIN_CAGES?'main':'extra'}" title="${i<MAIN_CAGES?'STD-'+pad(i+1):'สำรอง-'+pad(i+1)}"></span>`;
           if(totalStd()>40) dots+=`<span style="font-size:11px;color:var(--cm);align-self:center;margin-left:2px;">+${totalStd()-40}</span>`;
           return dots;
         })()}
@@ -1703,6 +1666,44 @@ function render(){
   ${S.tab==='today'?renderToday():''}
   ${S.tab==='calendar'?renderCalendar():''}
   ${S.tab==='bookings'?renderBookings():''}
+
+  ${(()=>{
+    const today=todayKey();
+    const tomorrow=addDays(today,1);
+    const ls=buildLocalLineSummary(today);
+    const lsEve=buildLocalLineSummary(tomorrow);
+    return `<div class="line-banner">
+      <div class="lb-left">
+        <div class="lb-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.02 2 11c0 2.89 1.4 5.48 3.6 7.23L5 22l3.97-1.99C10.01 20.64 11 21 12 21c5.52 0 10-4.02 10-9S17.52 2 12 2z"/></svg>
+          แจ้งเตือน LINE · 2 รอบต่อวัน
+        </div>
+        <div class="lb-stats" style="margin-top:6px;">
+          <div class="lb-stat" title="วันนี้">🌅 <span style="font-size:10px;opacity:.8;">วันนี้</span></div>
+          <div class="lb-stat">🚪 <span>${ls.ci.length} เข้า</span></div>
+          <div class="lb-stat">👋 <span>${ls.co.length} ออก</span></div>
+          <div class="lb-stat">🐿 <span>${ls.gliders} ตัว</span></div>
+        </div>
+        <div class="lb-stats">
+          <div class="lb-stat" title="พรุ่งนี้">🌆 <span style="font-size:10px;opacity:.8;">พรุ่งนี้</span></div>
+          <div class="lb-stat">🚪 <span>${lsEve.ci.length} เข้า</span></div>
+          <div class="lb-stat">👋 <span>${lsEve.co.length} ออก</span></div>
+        </div>
+      </div>
+      <div class="lb-actions">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <div style="display:flex;gap:6px;">
+            <button class="btn-line ghost" style="font-size:11.5px;padding:7px 12px;" onclick="showLinePreview('morning')">👁 เช้า</button>
+            <button class="btn-line solid" id="line-send-btn" style="font-size:12px;padding:7px 14px;" onclick="sendLineNow()">🌅 ส่งเช้า 06:00</button>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-line ghost" style="font-size:11.5px;padding:7px 12px;" onclick="showLinePreview('evening')">👁 เย็น</button>
+            <button class="btn-line solid" id="line-eve-btn" style="font-size:12px;padding:7px 14px;" onclick="sendLineEvening()">🌆 ส่งเย็น 18:00</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  })()}
   `;
 }
 
