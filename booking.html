@@ -163,7 +163,9 @@ textarea.fi{resize:vertical;min-height:64px;}
 
     <div class="note-box">
       <b>📌 หมายเหตุ:</b> การส่งแบบฟอร์มนี้เป็น "คำขอจอง" เท่านั้น ยังไม่ใช่การยืนยันการจอง<br/>
-      ทางร้านจะตรวจสอบกรงว่างและติดต่อกลับทางเบอร์โทร/LINE เพื่อยืนยันอีกครั้งค่ะ 💕
+      ทางร้านจะตรวจสอบกรงว่างและติดต่อกลับทางเบอร์โทร/LINE เพื่อยืนยันอีกครั้งค่ะ 💕<br/>
+      <b>🏠 กรงสำรอง:</b> ช่วงที่กรงหลักเต็ม ทางร้านอาจจัดน้องเข้าพัก<b>กรงสำรอง</b>
+      ซึ่ง<b>ไม่ใช่กรง Stainless และไม่มีกล้องไว้ดูน้องชูก้า</b> — ทางร้านจะแจ้งให้ทราบก่อนยืนยันการจองค่ะ
     </div>
   </div>
 
@@ -221,7 +223,7 @@ function resolveApiUrl(){
 }
 const APPS_SCRIPT_URL = resolveApiUrl();
 
-const CAPACITY = 26; // 25 Standard + 1 Grand Suite (โดยประมาณ — ทางร้านยืนยันอีกครั้ง)
+const CAPACITY = 61; // 25 Standard + 35 กรงสำรอง + 1 Grand Suite (โดยประมาณ — ทางร้านยืนยันอีกครั้ง)
 const pad = n => String(n).padStart(2,'0');
 const todayKey = () => { const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
 const parseD = s => new Date(s+'T00:00:00');
