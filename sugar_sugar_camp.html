@@ -211,6 +211,19 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
 .slip-btn.dl:hover{background:var(--cocoa);}
 .slip-btn.cl{background:var(--cd);color:var(--cocoa);}
 .slip-btn.cl:hover{background:var(--cl);}
+/* Save-image overlay: แสดงรูปจริงให้แตะค้างเพื่อบันทึกลง Photos บนมือถือ */
+.img-save-overlay{position:fixed;inset:0;background:rgba(42,24,16,.82);backdrop-filter:blur(14px);
+  z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:16px;animation:fi .15s ease;}
+.img-save-hint{color:#fff;font-size:14px;font-weight:600;text-align:center;line-height:1.6;
+  margin-bottom:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);
+  border-radius:14px;padding:10px 18px;max-width:420px;}
+.img-save-hint .sub{display:block;font-size:11.5px;font-weight:400;opacity:.75;margin-top:2px;}
+.img-save-scroll{max-width:440px;width:100%;flex:0 1 auto;min-height:0;overflow-y:auto;
+  border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.img-save-scroll img{display:block;width:100%;height:auto;border-radius:16px;
+  -webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto;}
+.img-save-actions{display:flex;gap:10px;margin-top:14px;justify-content:center;flex-wrap:wrap;}
 #slip-card{
   background:#FDF9F2;
   border-radius:20px;
@@ -2892,10 +2905,55 @@ function showSlip(id){
       <button class="slip-btn cl" onclick="document.getElementById('slip-overlay').remove()">✕ ปิด</button>
     </div>
     <div style="text-align:center;font-size:11.5px;color:rgba(255,255,255,.6);margin-top:8px;">
-      กด "บันทึกรูป" เพื่อดาวน์โหลด แล้วส่งให้ลูกค้าทาง LINE ได้เลย
+      กด "บันทึกรูป" — บนมือถือจะแสดงรูปให้แตะค้างเพื่อบันทึกลง Photos ได้เลย
     </div>
   </div>`;
   document.body.appendChild(ol);
+  ol.addEventListener('click',e=>{if(e.target===ol)ol.remove();});
+}
+
+// มือถือ (จอสัมผัส): a.download บน Safari iPhone ไม่ลง Photos
+// เลยแสดงรูปที่สร้างเสร็จเป็น <img> ให้แตะค้าง → "เพิ่มลงในรูปภาพ" แทน
+function isTouchDevice(){
+  return window.matchMedia&&window.matchMedia('(pointer:coarse)').matches;
+}
+function saveCanvasImage(canvas,filename){
+  const dataUrl=canvas.toDataURL('image/png');
+  if(isTouchDevice()){
+    showSaveImageOverlay(dataUrl,filename);
+  }else{
+    const a=document.createElement('a');
+    a.download=filename;
+    a.href=dataUrl;
+    a.click();
+    toast('✓ บันทึกรูปสำเร็จ — ส่งให้ลูกค้าได้เลยค่ะ','ok');
+  }
+}
+function showSaveImageOverlay(dataUrl,filename){
+  const old=document.getElementById('img-save-overlay');
+  if(old)old.remove();
+  const ol=document.createElement('div');
+  ol.className='img-save-overlay';
+  ol.id='img-save-overlay';
+  ol.innerHTML=`
+    <div class="img-save-hint">👆 แตะค้างที่รูปด้านล่าง แล้วเลือก "เพิ่มลงในรูปภาพ"
+      <span class="sub">รูปจะถูกบันทึกลง Photos ของ iPhone ทันที — ส่งต่อทาง LINE ได้เลย</span>
+    </div>
+    <div class="img-save-scroll">
+      <img src="${dataUrl}" alt="${filename}"/>
+    </div>
+    <div class="img-save-actions">
+      <button class="slip-btn dl" id="img-save-dl">⬇ ดาวน์โหลดเป็นไฟล์</button>
+      <button class="slip-btn cl" id="img-save-close">✕ ปิด</button>
+    </div>`;
+  document.body.appendChild(ol);
+  document.getElementById('img-save-dl').onclick=()=>{
+    const a=document.createElement('a');
+    a.download=filename;
+    a.href=dataUrl;
+    a.click();
+  };
+  document.getElementById('img-save-close').onclick=()=>ol.remove();
   ol.addEventListener('click',e=>{if(e.target===ol)ol.remove();});
 }
 
@@ -2915,12 +2973,8 @@ function downloadSlip(id,name){
         if(el) el.style.fontFamily="'Sarabun',sans-serif";
       }
     }).then(canvas=>{
-      const a=document.createElement('a');
-      a.download='SSC-ยืนยันการจอง-'+name.replace(/ /g,'_')+'.png';
-      a.href=canvas.toDataURL('image/png');
-      a.click();
+      saveCanvasImage(canvas,'SSC-ยืนยันการจอง-'+name.replace(/ /g,'_')+'.png');
       if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
-      toast('✓ บันทึกรูปสำเร็จ — ส่งให้ลูกค้าได้เลยค่ะ','ok');
     }).catch(()=>{
       if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
       toast('⚠ ไม่สามารถบันทึกได้ — ลอง screenshot แทนค่ะ','err');
@@ -3197,7 +3251,7 @@ function showCheckoutReceipt(id){
       <button class="co-ra-btn ghost" onclick="document.getElementById('co-receipt-overlay').remove()">✕ ปิด</button>
     </div>
     <div style="text-align:center;font-size:11.5px;color:rgba(255,255,255,.6);margin-top:8px;">
-      กด "บันทึกรูป" เพื่อดาวน์โหลด แล้วส่งให้ลูกค้าทาง LINE ได้เลย
+      กด "บันทึกรูป" — บนมือถือจะแสดงรูปให้แตะค้างเพื่อบันทึกลง Photos ได้เลย
     </div>
   </div>`;
   document.body.appendChild(ol);
@@ -3213,12 +3267,8 @@ function downloadCheckoutReceipt(id,name){
     window.html2canvas(card,{
       scale:3,useCORS:true,backgroundColor:'#FDF9F2',logging:false
     }).then(canvas=>{
-      const a=document.createElement('a');
-      a.download='SSC-ใบเสร็จ-'+name.replace(/ /g,'_')+'.png';
-      a.href=canvas.toDataURL('image/png');
-      a.click();
+      saveCanvasImage(canvas,'SSC-ใบเสร็จ-'+name.replace(/ /g,'_')+'.png');
       if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
-      toast('✓ บันทึกรูปสำเร็จ — ส่งให้ลูกค้าได้เลยค่ะ','ok');
     }).catch(()=>{
       if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
       toast('⚠ ไม่สามารถบันทึกได้ — ลอง screenshot แทนค่ะ','err');
