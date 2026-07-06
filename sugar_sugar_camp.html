@@ -432,27 +432,27 @@ details.sc>div{padding:0 18px 18px;}
 .co-receipt-wrap{max-width:480px;width:100%;max-height:90vh;overflow-y:auto;}
 .co-receipt-card{background:#FDF9F2;border-radius:20px;overflow:hidden;font-family:'Sarabun',sans-serif;
   box-shadow:0 20px 60px rgba(0,0,0,.35);}
-.co-rc-top{background:linear-gradient(135deg,var(--pd) 0%,#9B4D5F 100%);padding:24px 28px 20px;
+.co-rc-top{background:linear-gradient(135deg,var(--pd) 0%,#9B4D5F 100%);padding:14px 20px 12px;
   color:#fff;text-align:center;position:relative;}
 .co-rc-top::before{content:'';position:absolute;inset:0;
   background:linear-gradient(90deg,var(--pd),var(--coral),#9B4D5F,var(--pd));
   background-size:200%;animation:shimmer 4s linear infinite;}
 @keyframes shimmer{0%{background-position:0%}100%{background-position:200%}}
-.co-rc-top .rt-brand{font-family:'Fraunces',serif;font-style:italic;font-size:26px;font-weight:400;
+.co-rc-top .rt-brand{font-family:'Fraunces',serif;font-style:italic;font-size:21px;font-weight:400;
   position:relative;z-index:1;}
 .co-rc-top .rt-sub{font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:.8;
   margin-top:2px;position:relative;z-index:1;}
 .co-rc-top .rt-icon{font-size:40px;margin:12px 0 6px;display:block;position:relative;z-index:1;}
-.co-rc-top .rt-logo{width:88px;height:88px;border-radius:50%;display:block;margin:12px auto 8px;
-  border:3px solid rgba(255,255,255,.85);box-shadow:0 4px 12px rgba(0,0,0,.15);position:relative;z-index:1;}
+.co-rc-top .rt-logo{width:50px;height:50px;border-radius:50%;display:block;margin:6px auto 4px;
+  border:2px solid rgba(255,255,255,.85);box-shadow:0 4px 12px rgba(0,0,0,.15);position:relative;z-index:1;}
 .co-rc-top .rt-title{font-size:13px;font-weight:600;letter-spacing:.06em;opacity:.95;
   position:relative;z-index:1;}
-.co-rc-body{padding:22px 28px;}
+.co-rc-body{padding:14px 20px;}
 .co-rc-ref{text-align:center;background:rgba(196,108,126,.1);border-radius:10px;
-  padding:9px;margin-bottom:16px;font-size:11px;letter-spacing:.14em;
+  padding:6px;margin-bottom:10px;font-size:11px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--pd);font-weight:600;}
 .co-rc-row{display:flex;justify-content:space-between;align-items:baseline;
-  padding:8px 0;border-bottom:1px dashed rgba(74,51,38,.1);gap:12px;font-size:13px;}
+  padding:4px 0;border-bottom:1px dashed rgba(74,51,38,.1);gap:12px;font-size:12.5px;}
 .co-rc-row:last-of-type{border-bottom:none;}
 .co-rc-lbl{color:var(--cm);font-weight:500;flex-shrink:0;}
 .co-rc-val{color:var(--cocoa);font-weight:600;text-align:right;}
@@ -460,32 +460,33 @@ details.sc>div{padding:0 18px 18px;}
 .co-rc-val.disc{color:var(--coral);}
 .co-rc-val.ext{color:#4F6938;}
 .co-rc-total{background:linear-gradient(135deg,var(--cocoa),var(--cm));border-radius:12px;
-  padding:14px 18px;display:flex;justify-content:space-between;align-items:center;
-  margin:14px 0;color:#fff;}
+  padding:10px 14px;display:flex;justify-content:space-between;align-items:center;
+  margin:10px 0;color:#fff;}
 .co-rc-total-lbl{font-size:12px;opacity:.85;}
-.co-rc-total-amt{font-family:'Fraunces',serif;font-size:24px;font-style:italic;}
-.co-rc-payment{background:#fff;border-radius:12px;padding:14px 16px;
-  border:1.5px solid var(--ln);margin:10px 0;}
+.co-rc-total-amt{font-family:'Fraunces',serif;font-size:21px;font-style:italic;}
+.co-rc-payment{background:#fff;border-radius:12px;padding:10px 12px;
+  border:1.5px solid var(--ln);margin:8px 0;}
 .co-rc-payment-title{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--pd);margin-bottom:10px;text-align:center;}
-.co-rc-payment-body{display:flex;align-items:center;gap:12px;}
-.co-rc-qr{width:72px;height:72px;border-radius:10px;border:2px solid var(--ln);}
+  color:var(--pd);margin-bottom:8px;text-align:center;}
+.co-rc-payment-body{display:flex;align-items:center;justify-content:center;gap:14px;}
+.co-rc-qr{width:106px;height:106px;border-radius:10px;border:2px solid var(--ln);
+  object-fit:contain;background:#fff;flex-shrink:0;}
 .co-rc-bank{font-size:12px;color:var(--cocoa);line-height:1.7;}
 .co-rc-bank .bank-badge{display:inline-block;background:#1BA345;color:#fff;
   border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700;margin-right:6px;}
 .co-rc-bank .bank-acct{font-family:'Fraunces',serif;font-size:18px;font-weight:400;
   color:var(--cocoa);display:block;margin-top:2px;}
 .co-rc-footer{background:linear-gradient(135deg,var(--gs),var(--phs));
-  padding:18px 24px;text-align:center;}
+  padding:10px 16px;text-align:center;}
 .co-rc-footer .rf-paws{font-size:20px;letter-spacing:6px;}
-.co-rc-footer .rf-thanks{font-family:'Fraunces',serif;font-size:16px;font-weight:400;
-  color:var(--cocoa);margin:8px 0 4px;}
-.co-rc-footer .rf-sub{font-size:11.5px;color:var(--cm);line-height:1.6;}
+.co-rc-footer .rf-thanks{font-family:'Fraunces',serif;font-size:14px;font-weight:400;
+  color:var(--cocoa);margin:0 0 2px;}
+.co-rc-footer .rf-sub{font-size:11px;color:var(--cm);line-height:1.5;}
 .co-rc-footer .rf-hearts{font-size:16px;letter-spacing:4px;margin-top:8px;}
 .co-rc-stamp{display:inline-flex;align-items:center;justify-content:center;
-  width:56px;height:56px;border-radius:50%;border:2.5px solid #4F6938;color:#4F6938;
-  font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
-  line-height:1.2;text-align:center;position:absolute;right:22px;bottom:14px;opacity:.85;}
+  width:46px;height:46px;border-radius:50%;border:2.5px solid #4F6938;color:#4F6938;
+  font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  line-height:1.2;text-align:center;position:absolute;right:16px;bottom:10px;opacity:.85;}
 .co-receipt-actions{display:flex;gap:10px;margin-top:14px;justify-content:center;}
 .co-ra-btn{font-family:'Sarabun',sans-serif;font-size:13px;font-weight:500;padding:11px 22px;
   border-radius:999px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
@@ -3206,7 +3207,7 @@ function showCheckoutReceipt(id){
   <div class="co-receipt-wrap">
     <div class="co-receipt-card" id="co-rc-card">
       <div class="co-rc-top" style="position:relative;">
-        <div class="co-rc-top rt-brand">Sugar Sugar Camp</div>
+        <div class="rt-brand">Sugar Sugar Camp</div>
         <div class="rt-sub">ที่พักชูการ์ไกลเดอร์</div>
         <img class="rt-logo" src="assets/icon-192.png" alt="Sugar Sugar Camp"/>
         <div class="rt-title">ใบเสร็จรับเงิน</div>
@@ -3218,10 +3219,8 @@ function showCheckoutReceipt(id){
         ${b.gliderName?`<div class="co-rc-row"><span class="co-rc-lbl">🐿 น้อง</span><span class="co-rc-val">${esc(b.gliderName)} (${gliders} ตัว)</span></div>`:`<div class="co-rc-row"><span class="co-rc-lbl">🐿 จำนวน</span><span class="co-rc-val">${gliders} ตัว</span></div>`}
         ${b.phone?`<div class="co-rc-row"><span class="co-rc-lbl">📞 โทร</span><span class="co-rc-val">${esc(b.phone)}</span></div>`:''}
         <div class="co-rc-row"><span class="co-rc-lbl">🏠 ห้อง</span><span class="co-rc-val">${roomLabel}</span></div>
-        <div class="co-rc-row"><span class="co-rc-lbl">📅 เช็คอิน</span><span class="co-rc-val">${formatDateTH(b.checkIn)}</span></div>
-        <div class="co-rc-row"><span class="co-rc-lbl">📅 เช็คเอาท์</span><span class="co-rc-val">${formatDateTH(b.checkOut)}</span></div>
-        <div class="co-rc-row"><span class="co-rc-lbl">🌙 จำนวนคืน</span><span class="co-rc-val">${nights} คืน</span></div>
-        <div style="margin:12px 0 4px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cm);">รายละเอียดค่าใช้จ่าย</div>
+        <div class="co-rc-row"><span class="co-rc-lbl">📅 เข้าพัก</span><span class="co-rc-val">${formatDateTH(b.checkIn)} → ${formatDateTH(b.checkOut)} · ${nights} คืน</span></div>
+        <div style="margin:8px 0 2px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cm);">รายละเอียดค่าใช้จ่าย</div>
         ${breakdownRows}
         ${notes?`<div class="co-rc-row" style="margin-top:6px;font-size:12px;"><span class="co-rc-lbl">📝 หมายเหตุ</span><span class="co-rc-val" style="font-weight:400;">${esc(notes)}</span></div>`:''}
         <div class="co-rc-total">
@@ -3231,19 +3230,19 @@ function showCheckoutReceipt(id){
         <div class="co-rc-payment">
           <div class="co-rc-payment-title">💳 ช่องทางการชำระเงิน</div>
           <div class="co-rc-payment-body">
+            <img class="co-rc-qr" src="QR%20Code.jpg" alt="QR โอนเงินเข้าบัญชี"/>
             <div class="co-rc-bank">
               <span><span class="bank-badge">KBANK</span>ธนาคารกสิกรไทย</span>
               <span class="bank-acct">026-2-46597-9</span>
               <span style="font-size:11px;color:var(--cm);">สมทวี จันทร์พร้อม</span>
+              <span style="font-size:10.5px;color:var(--pd);display:block;margin-top:2px;">📱 สแกน QR ด้วยแอปธนาคารได้เลย</span>
             </div>
           </div>
         </div>
       </div>
       <div class="co-rc-footer">
-        <div class="rf-paws">🐾 🌸 🐾</div>
-        <div class="rf-thanks">ขอบคุณที่ไว้ใจ Sugar Sugar Camp</div>
-        <div class="rf-sub">น้อง Sugar Glider ของคุณได้รับการดูแลด้วยความรักตลอดการพัก 🌿💕<br>เราพร้อมต้อนรับคุณและน้องๆ อีกครั้งเสมอ!</div>
-        <div class="rf-hearts">💖 💛 💜 💚 🧡</div>
+        <div class="rf-thanks">ขอบคุณที่ไว้ใจ Sugar Sugar Camp 🐾</div>
+        <div class="rf-sub">น้องๆ ได้รับการดูแลด้วยความรักตลอดการพัก — แล้วพบกันใหม่นะคะ 🌿💕</div>
       </div>
     </div>
     <div class="co-receipt-actions">
