@@ -4,6 +4,12 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Sugar Sugar Camp 🐿</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png"/>
+<link rel="manifest" href="manifest.webmanifest"/>
+<meta name="apple-mobile-web-app-title" content="Sugar Camp"/>
+<meta name="theme-color" content="#FAF3E9"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -27,6 +33,7 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
 .brand{font-family:'Fraunces',serif;font-size:clamp(36px,7vw,70px);line-height:.92;letter-spacing:-.025em;font-weight:400;}
 .brand em{color:var(--pd);font-style:italic;}
 .brand .star{color:var(--gold);font-size:.55em;vertical-align:top;margin-left:4px;}
+.logo-img{width:clamp(160px,24vw,220px);height:auto;display:block;margin:-10px 0 -8px -12px;}
 .tagline{font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:var(--cm);margin-top:10px;}
 .hrow{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:18px;margin-bottom:28px;}
 .hright{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
@@ -219,6 +226,8 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
 .slip-top .s-brand{font-family:'Fraunces',serif;font-style:italic;font-size:26px;font-weight:400;letter-spacing:-.02em;}
 .slip-top .s-tag{font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.8;margin-top:2px;}
 .slip-top .s-icon{font-size:44px;margin:14px 0 6px;display:block;}
+.slip-top .s-logo{width:94px;height:94px;border-radius:50%;display:block;margin:12px auto 8px;
+  border:3px solid rgba(255,255,255,.85);box-shadow:0 4px 12px rgba(0,0,0,.15);}
 .slip-top .s-title{font-size:15px;font-weight:600;letter-spacing:.05em;opacity:.95;}
 .slip-body{padding:22px 28px;}
 .slip-ref{
@@ -421,6 +430,8 @@ details.sc>div{padding:0 18px 18px;}
 .co-rc-top .rt-sub{font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:.8;
   margin-top:2px;position:relative;z-index:1;}
 .co-rc-top .rt-icon{font-size:40px;margin:12px 0 6px;display:block;position:relative;z-index:1;}
+.co-rc-top .rt-logo{width:88px;height:88px;border-radius:50%;display:block;margin:12px auto 8px;
+  border:3px solid rgba(255,255,255,.85);box-shadow:0 4px 12px rgba(0,0,0,.15);position:relative;z-index:1;}
 .co-rc-top .rt-title{font-size:13px;font-weight:600;letter-spacing:.06em;opacity:.95;
   position:relative;z-index:1;}
 .co-rc-body{padding:22px 28px;}
@@ -1779,7 +1790,7 @@ function render(){
   app.innerHTML=`
   <div class="hrow">
     <div>
-      <div class="brand"><em>Sugar Sugar</em><span class="star">✦</span><br/><em>Camp</em></div>
+      <img class="logo-img" src="assets/logo.png" alt="Sugar Sugar Camp — Sugar glider care"/>
       <div class="tagline">— ที่พักสำหรับชูการ์ไกลเดอร์ตัวโปรดของคุณ —</div>
     </div>
     <div class="hright">
@@ -2826,7 +2837,7 @@ function showSlip(id){
       <div class="slip-top">
         <div class="s-brand">Sugar Sugar Camp</div>
         <div class="s-tag">ที่พักชูการ์ไกลเดอร์</div>
-        <span class="s-icon">🐿</span>
+        <img class="s-logo" src="assets/icon-192.png" alt="Sugar Sugar Camp"/>
         <div class="s-title">ใบยืนยันการจองที่พัก</div>
       </div>
       <div class="slip-body">
@@ -3143,7 +3154,7 @@ function showCheckoutReceipt(id){
       <div class="co-rc-top" style="position:relative;">
         <div class="co-rc-top rt-brand">Sugar Sugar Camp</div>
         <div class="rt-sub">ที่พักชูการ์ไกลเดอร์</div>
-        <span class="rt-icon">🐿</span>
+        <img class="rt-logo" src="assets/icon-192.png" alt="Sugar Sugar Camp"/>
         <div class="rt-title">ใบเสร็จรับเงิน</div>
         <div class="co-rc-stamp">เสร็จ<br>สิ้น</div>
       </div>
