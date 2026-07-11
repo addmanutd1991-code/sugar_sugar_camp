@@ -503,6 +503,43 @@ details.sc>div{padding:0 18px 18px;}
 }
 
 /* ══════════════════════════════════
+   รวมบิลหลายกรง (MULTI-CAGE CHECKOUT)
+══════════════════════════════════ */
+.co-merge-list{display:flex;flex-direction:column;gap:6px;margin-bottom:6px;}
+.co-merge-item{display:flex;align-items:center;gap:10px;background:var(--cream);
+  border:1.5px solid var(--ln);border-radius:12px;padding:9px 12px;cursor:pointer;transition:all .15s;}
+.co-merge-item:hover{border-color:var(--pd);}
+.co-merge-item.sel{background:var(--ps);border-color:var(--pd);}
+.co-merge-item input{accent-color:var(--pd);width:16px;height:16px;flex-shrink:0;cursor:pointer;}
+.co-merge-info{flex:1;min-width:0;}
+.co-merge-name{font-size:12.5px;font-weight:600;color:var(--cocoa);}
+.co-merge-sub{font-size:11px;color:var(--cm);}
+.co-merge-amt{font-size:12px;font-weight:600;color:var(--pd);flex-shrink:0;}
+.co-merge-tag{font-size:9.5px;background:var(--gs);color:#856B2A;padding:1px 7px;
+  border-radius:999px;font-weight:600;margin-left:5px;vertical-align:1px;white-space:nowrap;}
+
+/* ══════════════════════════════════
+   SUGAR SUGAR SPA (คิดเงินสปา)
+══════════════════════════════════ */
+.spa-svc{display:flex;align-items:center;gap:12px;background:var(--cream);border:1px solid var(--ln);
+  border-radius:16px;padding:14px 16px;margin-bottom:10px;}
+.spa-ico{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;background:linear-gradient(135deg,var(--gs),var(--phs));}
+.spa-info{flex:1;min-width:0;}
+.spa-info h4{font-size:14px;font-weight:600;color:var(--cocoa);}
+.spa-info .spa-price{font-size:12px;color:var(--pd);font-weight:500;margin-top:1px;}
+.spa-ctrl{display:flex;align-items:center;gap:11px;flex-shrink:0;}
+.spa-cbtn{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:18px;
+  display:flex;align-items:center;justify-content:center;transition:transform .1s;font-family:inherit;}
+.spa-cbtn:active{transform:scale(.88);}
+.spa-cbtn.minus{background:var(--cd);color:var(--cm);}
+.spa-cbtn.plus{background:var(--pd);color:#fff;}
+.spa-qty{font-family:'Fraunces',serif;font-size:22px;min-width:28px;text-align:center;color:var(--cocoa);}
+.co-rc-top.spa{background:linear-gradient(135deg,var(--gold) 0%,#A07E2D 100%);}
+.co-rc-top.spa::before{background:linear-gradient(90deg,var(--gold),var(--peach),#A07E2D,var(--gold));
+  background-size:200%;}
+
+/* ══════════════════════════════════
    RETURNING CUSTOMER AUTOCOMPLETE
 ══════════════════════════════════ */
 .cust-suggest{position:absolute;top:100%;left:0;right:0;z-index:30;
@@ -1872,6 +1909,7 @@ function render(){
     </div>
     <div class="bgroup">
       ${S.syncUrl?`<button class="btn btn-s btn-sm" onclick="manualSync()" ${S.syncSt==='syncing'?'disabled':''}>🔄 Sync</button>`:''}
+      <button class="btn btn-s" onclick="openSpaCalc()">🛁 คิดเงินสปา</button>
       <button class="btn btn-p" onclick="openForm()">＋ เพิ่มการจอง</button>
     </div>
   </div>
@@ -3042,9 +3080,9 @@ const PRICE_PER_GLIDER_NIGHT = 90;
 
 function fmtTHB(n){return Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
-function genReceiptNo(){
+function genReceiptNo(prefix){
   const d=new Date();
-  return 'SSC-'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+Math.floor(Math.random()*9000+1000);
+  return (prefix||'SSC')+'-'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+Math.floor(Math.random()*9000+1000);
 }
 
 function formatDateTH(s){
@@ -3057,6 +3095,7 @@ function formatDateTH(s){
 // ─── STATE สำหรับ checkout ───────────────────────────
 let COState = {
   bookingId: '',
+  mergeIds: [],   // กรงอื่นๆ ที่รวมบิลเดียวกัน (ครอบครัวเดียวกันพักหลายกรง)
   extras: [],
   discPct: 0,
   discBaht: 0,
@@ -3064,12 +3103,27 @@ let COState = {
   notes: ''
 };
 
+function coRoomLabel(b){
+  if(b.roomType==='grand_suite') return '👑 Grand Suite';
+  return isBackup(b.roomNumber)?'Standard สำรอง #'+pad(Number(b.roomNumber)-MAIN_CAGES):'Standard #'+pad(b.roomNumber);
+}
+
+// การจองทั้งหมดในบิลนี้ — กรงหลัก + กรงที่เลือกรวมบิล
+function coSelectedBookings(){
+  const ids=[COState.bookingId,...(COState.mergeIds||[])];
+  return ids.map(i=>S.bookings.find(x=>x.id===i)).filter(Boolean);
+}
+
 function calcCheckout(){
-  const b = S.bookings.find(x=>x.id===COState.bookingId);
-  if(!b) return {sub:0,disc:0,discB:0,del:0,extT:0,total:0,nights:0};
-  const nights = nts(b.checkIn, b.checkOut);
-  const gliders = parseInt(b.gliderCount)||1;
-  const sub = gliders * PRICE_PER_GLIDER_NIGHT * nights;
+  const list = coSelectedBookings();
+  if(!list.length) return {sub:0,disc:0,discPct:0,discB:0,del:0,extT:0,total:0,nights:0,gliders:0,extras:[],rooms:[]};
+  const rooms = list.map(b=>{
+    const nights = nts(b.checkIn, b.checkOut);
+    const gliders = parseInt(b.gliderCount)||1;
+    return {b, nights, gliders, amt: gliders * PRICE_PER_GLIDER_NIGHT * nights};
+  });
+  const sub = rooms.reduce((s,r)=>s+r.amt,0);
+  const gliders = rooms.reduce((s,r)=>s+r.gliders,0);
   const dp = parseFloat(document.getElementById('co-disc-pct')?.value)||0;
   const db = parseFloat(document.getElementById('co-disc-baht')?.value)||0;
   const del = parseFloat(document.getElementById('co-delivery')?.value)||0;
@@ -3077,7 +3131,7 @@ function calcCheckout(){
   const damt = sub * dp / 100;
   const extT = extras.reduce((s,e)=>s+e.amt,0);
   const total = sub - damt - db + del + extT;
-  return {sub,disc:damt,discPct:dp,discB:db,del,extT,total,nights,gliders,extras};
+  return {sub,disc:damt,discPct:dp,discB:db,del,extT,total,nights:rooms[0].nights,gliders,extras,rooms};
 }
 
 function getCoExtras(){
@@ -3091,11 +3145,18 @@ function getCoExtras(){
 }
 
 function coUpdatePreview(){
-  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras}=calcCheckout();
+  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras,rooms}=calcCheckout();
   const b=S.bookings.find(x=>x.id===COState.bookingId);
   if(!b)return;
   let html='';
-  html+=`<div class="co-prev-row"><span>ค่าพักรวม ${gliders} ตัว × ${nights} คืน × ฿${PRICE_PER_GLIDER_NIGHT}</span><span>฿${fmtTHB(sub)}</span></div>`;
+  if(rooms.length>1){
+    rooms.forEach(r=>{
+      html+=`<div class="co-prev-row"><span>🏠 ${coRoomLabel(r.b)} · ${r.gliders} ตัว × ${r.nights} คืน</span><span>฿${fmtTHB(r.amt)}</span></div>`;
+    });
+    html+=`<div class="co-prev-row" style="font-weight:600;color:var(--cocoa);"><span>ค่าพักรวม ${rooms.length} กรง (${gliders} ตัว)</span><span>฿${fmtTHB(sub)}</span></div>`;
+  }else{
+    html+=`<div class="co-prev-row"><span>ค่าพักรวม ${gliders} ตัว × ${nights} คืน × ฿${PRICE_PER_GLIDER_NIGHT}</span><span>฿${fmtTHB(sub)}</span></div>`;
+  }
   if(discPct>0) html+=`<div class="co-prev-row disc"><span>ส่วนลด ${discPct}%</span><span>-฿${fmtTHB(disc)}</span></div>`;
   if(discB>0) html+=`<div class="co-prev-row disc"><span>ส่วนลด (฿)</span><span>-฿${fmtTHB(discB)}</span></div>`;
   if(del>0) html+=`<div class="co-prev-row"><span>ค่าบริการรับ-ส่ง</span><span>+฿${fmtTHB(del)}</span></div>`;
@@ -3118,15 +3179,60 @@ function addCoExtra(){
   list.appendChild(div);
 }
 
+function coToggleMerge(id,checked){
+  COState.mergeIds=COState.mergeIds||[];
+  if(checked){ if(!COState.mergeIds.includes(id)) COState.mergeIds.push(id); }
+  else COState.mergeIds=COState.mergeIds.filter(x=>x!==id);
+  const row=document.getElementById('co-merge-'+id);
+  if(row) row.classList.toggle('sel',checked);
+  coUpdateBase();
+  coUpdatePreview();
+}
+
+function coUpdateBase(){
+  const {sub,gliders,rooms}=calcCheckout();
+  const lbl=document.getElementById('co-base-lbl');
+  const amt=document.getElementById('co-base-amt');
+  if(!lbl||!amt||!rooms.length)return;
+  if(rooms.length>1){
+    lbl.textContent='💰 ค่าพักรวม '+rooms.length+' กรง ('+gliders+' ตัว × ฿'+PRICE_PER_GLIDER_NIGHT+'/คืน)';
+  }else{
+    lbl.textContent='💰 ค่าพักเริ่มต้น ('+rooms[0].gliders+' ตัว × '+rooms[0].nights+' คืน × ฿'+PRICE_PER_GLIDER_NIGHT+')';
+  }
+  amt.textContent='฿'+fmtTHB(sub);
+}
+
 function openCheckout(id){
   const b=S.bookings.find(x=>x.id===id);
   if(!b)return;
   COState.bookingId=id;
+  COState.mergeIds=[];
   const nights=nts(b.checkIn,b.checkOut);
   const gliders=parseInt(b.gliderCount)||1;
   const sub=gliders*PRICE_PER_GLIDER_NIGHT*nights;
-  const isS=b.roomType==='grand_suite';
-  const roomLabel=isS?'👑 Grand Suite':(isBackup(b.roomNumber)?'Standard สำรอง #'+pad(Number(b.roomNumber)-MAIN_CAGES):'Standard #'+pad(b.roomNumber));
+  const roomLabel=coRoomLabel(b);
+
+  // กรงอื่นที่เช็คเอาท์ได้ (เข้าพักอยู่/ผ่านไปแล้ว) — เจ้าของเดียวกันขึ้นก่อน
+  const sameFam=x=>(b.phone&&x.phone&&x.phone.trim()===b.phone.trim())||
+    (x.guestName&&x.guestName.trim()===b.guestName.trim());
+  const candidates=S.bookings.filter(x=>x.id!==id&&bSt(x)!=='upcoming')
+    .sort((a,c)=>(sameFam(c)?1:0)-(sameFam(a)?1:0)||(a.checkIn<c.checkIn?-1:1));
+  const mergeSec=candidates.length?`
+      <div class="co-sec-title">🔗 รวมบิลหลายกรง</div>
+      <div class="fhelp" style="margin:-4px 0 10px;">ถ้าน้องครอบครัวเดียวกันพักแยกหลายกรง ติ๊กเลือกกรงเพิ่มด้านล่าง เพื่อออกใบเสร็จรวมใบเดียวได้เลยค่ะ</div>
+      <div class="co-merge-list">
+        ${candidates.map(x=>{
+          const n=nts(x.checkIn,x.checkOut), g=parseInt(x.gliderCount)||1, amt=g*PRICE_PER_GLIDER_NIGHT*n;
+          return `<label class="co-merge-item" id="co-merge-${x.id}">
+            <input type="checkbox" onchange="coToggleMerge('${x.id}',this.checked)">
+            <div class="co-merge-info">
+              <div class="co-merge-name">${coRoomLabel(x)} · ${esc(x.guestName)}${sameFam(x)?'<span class="co-merge-tag">เจ้าของเดียวกัน</span>':''}</div>
+              <div class="co-merge-sub">${x.gliderName?'น้อง '+esc(x.gliderName)+' · ':''}${g} ตัว × ${n} คืน · ${formatDateTH(x.checkIn)} → ${formatDateTH(x.checkOut)}</div>
+            </div>
+            <div class="co-merge-amt">฿${fmtTHB(amt)}</div>
+          </label>`;
+        }).join('')}
+      </div>`:'';
 
   showModal(`<div class="co-modal" onclick="event.stopPropagation()">
     <button class="mclose" style="position:absolute;top:14px;right:14px;z-index:10;background:rgba(255,255,255,.25);color:#fff;" onclick="closeModal()">✕</button>
@@ -3145,9 +3251,10 @@ function openCheckout(id){
         <div class="co-icard"><div class="cil">น้องชูการ์</div><div class="civ big">${gliders} ตัว</div></div>
       </div>
       <div class="co-icard" style="margin-bottom:16px;background:linear-gradient(135deg,var(--gs),var(--phs));border-color:var(--gold);">
-        <div class="cil">💰 ค่าพักเริ่มต้น (${gliders} ตัว × ${nights} คืน × ฿${PRICE_PER_GLIDER_NIGHT})</div>
-        <div class="civ big" style="font-family:'Fraunces',serif;font-size:22px;margin-top:4px;">฿${fmtTHB(sub)}</div>
+        <div class="cil" id="co-base-lbl">💰 ค่าพักเริ่มต้น (${gliders} ตัว × ${nights} คืน × ฿${PRICE_PER_GLIDER_NIGHT})</div>
+        <div class="civ big" id="co-base-amt" style="font-family:'Fraunces',serif;font-size:22px;margin-top:4px;">฿${fmtTHB(sub)}</div>
       </div>
+      ${mergeSec}
 
       <div class="co-sec-title">💝 ส่วนลด & บริการเสริม</div>
       <div class="co-row2">
@@ -3183,17 +3290,33 @@ function openCheckout(id){
 function showCheckoutReceipt(id){
   const b=S.bookings.find(x=>x.id===id);
   if(!b)return;
-  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras}=calcCheckout();
+  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras,rooms}=calcCheckout();
   const notes=(document.getElementById('co-notes')?.value||'').trim();
-  const isS=b.roomType==='grand_suite';
-  const roomLabel=isS?'👑 Grand Suite':(isBackup(b.roomNumber)?'Standard สำรอง #'+pad(Number(b.roomNumber)-MAIN_CAGES):'Standard #'+pad(b.roomNumber));
+  const roomLabel=coRoomLabel(b);
   const rno=genReceiptNo();
   const now=new Date();
   const issueDate=formatDateTH(fmtD(now));
+  const multi=rooms.length>1;
+  const gliderNames=[...new Set(rooms.map(r=>(r.b.gliderName||'').trim()).filter(Boolean))].join(', ');
+
+  // ข้อมูลกรง/วันที่เข้าพัก — แยกรายกรงเมื่อรวมบิลหลายกรง
+  let stayRows='';
+  if(multi){
+    stayRows+=`<div style="margin:8px 0 2px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cm);">กรงที่เข้าพัก (${rooms.length} กรง)</div>`;
+    rooms.forEach(r=>{
+      stayRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏠 ${coRoomLabel(r.b)}</span><span class="co-rc-val">${r.gliders} ตัว × ${r.nights} คืน · ฿${fmtTHB(r.amt)}</span></div>`;
+    });
+    const minCi=rooms.reduce((m,r)=>r.b.checkIn<m?r.b.checkIn:m,rooms[0].b.checkIn);
+    const maxCo=rooms.reduce((m,r)=>r.b.checkOut>m?r.b.checkOut:m,rooms[0].b.checkOut);
+    stayRows+=`<div class="co-rc-row"><span class="co-rc-lbl">📅 เข้าพัก</span><span class="co-rc-val">${formatDateTH(minCi)} → ${formatDateTH(maxCo)}</span></div>`;
+  }else{
+    stayRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏠 ห้อง</span><span class="co-rc-val">${roomLabel}</span></div>`;
+    stayRows+=`<div class="co-rc-row"><span class="co-rc-lbl">📅 เข้าพัก</span><span class="co-rc-val">${formatDateTH(b.checkIn)} → ${formatDateTH(b.checkOut)} · ${nights} คืน</span></div>`;
+  }
 
   // build receipt HTML
   let breakdownRows='';
-  breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏠 ค่าพักรวม</span><span class="co-rc-val">฿${fmtTHB(sub)}</span></div>`;
+  breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏠 ค่าพักรวม${multi?' '+rooms.length+' กรง':''}</span><span class="co-rc-val">฿${fmtTHB(sub)}</span></div>`;
   if(discPct>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏷 ส่วนลด ${discPct}%</span><span class="co-rc-val disc">-฿${fmtTHB(disc)}</span></div>`;
   if(discB>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏷 ส่วนลด (฿)</span><span class="co-rc-val disc">-฿${fmtTHB(discB)}</span></div>`;
   if(del>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🚗 ค่ารับ-ส่ง</span><span class="co-rc-val">+฿${fmtTHB(del)}</span></div>`;
@@ -3216,10 +3339,9 @@ function showCheckoutReceipt(id){
       <div class="co-rc-body">
         <div class="co-rc-ref">เลขที่ ${rno} &nbsp;|&nbsp; ออก: ${issueDate}</div>
         <div class="co-rc-row"><span class="co-rc-lbl">👤 เจ้าของ</span><span class="co-rc-val big">${esc(b.guestName)}</span></div>
-        ${b.gliderName?`<div class="co-rc-row"><span class="co-rc-lbl">🐿 น้อง</span><span class="co-rc-val">${esc(b.gliderName)} (${gliders} ตัว)</span></div>`:`<div class="co-rc-row"><span class="co-rc-lbl">🐿 จำนวน</span><span class="co-rc-val">${gliders} ตัว</span></div>`}
+        ${gliderNames?`<div class="co-rc-row"><span class="co-rc-lbl">🐿 น้อง</span><span class="co-rc-val">${esc(gliderNames)} (${gliders} ตัว)</span></div>`:`<div class="co-rc-row"><span class="co-rc-lbl">🐿 จำนวน</span><span class="co-rc-val">${gliders} ตัว</span></div>`}
         ${b.phone?`<div class="co-rc-row"><span class="co-rc-lbl">📞 โทร</span><span class="co-rc-val">${esc(b.phone)}</span></div>`:''}
-        <div class="co-rc-row"><span class="co-rc-lbl">🏠 ห้อง</span><span class="co-rc-val">${roomLabel}</span></div>
-        <div class="co-rc-row"><span class="co-rc-lbl">📅 เข้าพัก</span><span class="co-rc-val">${formatDateTH(b.checkIn)} → ${formatDateTH(b.checkOut)} · ${nights} คืน</span></div>
+        ${stayRows}
         <div style="margin:8px 0 2px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cm);">รายละเอียดค่าใช้จ่าย</div>
         ${breakdownRows}
         ${notes?`<div class="co-rc-row" style="margin-top:6px;font-size:12px;"><span class="co-rc-lbl">📝 หมายเหตุ</span><span class="co-rc-val" style="font-weight:400;">${esc(notes)}</span></div>`:''}
@@ -3276,6 +3398,170 @@ function downloadCheckoutReceipt(id,name){
     const s=document.createElement('script');
     s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
     s.onload=()=>downloadCheckoutReceipt(id,name);
+    s.onerror=()=>{
+      if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
+      toast('⚠ โหลด library ไม่ได้ — ลอง screenshot แทนค่ะ','err');
+    };
+    document.head.appendChild(s);
+  }
+}
+
+// ══════════════════════════════════════════
+// SUGAR SUGAR SPA — คิดเงินค่าสปา & ตัดเล็บ
+// ══════════════════════════════════════════
+const SPA_SERVICES=[
+  {key:'nail',icon:'💅',label:'ตัดเล็บ',price:20},
+  {key:'spa', icon:'🛁',label:'ตัดเล็บ + ทำสปา',price:70}
+];
+let SPA_COUNTS={nail:0,spa:0};
+
+function spaCalc(){
+  const items=SPA_SERVICES.map(s=>({...s,qty:SPA_COUNTS[s.key]||0,amt:(SPA_COUNTS[s.key]||0)*s.price}));
+  return {items,total:items.reduce((t,i)=>t+i.amt,0),count:items.reduce((t,i)=>t+i.qty,0)};
+}
+
+function openSpaCalc(){
+  SPA_COUNTS={nail:0,spa:0};
+  showModal(`<div class="co-modal" onclick="event.stopPropagation()">
+    <button class="mclose" style="position:absolute;top:14px;right:14px;z-index:10;background:rgba(255,255,255,.25);color:#fff;" onclick="closeModal()">✕</button>
+    <div class="co-header" style="background:linear-gradient(135deg,var(--gold) 0%,#A07E2D 100%);">
+      <div class="ch-icon">🛁</div>
+      <h2>Sugar Sugar Spa</h2>
+      <div class="ch-sub">✦ ตัดเล็บ &amp; ทำสปา สำหรับน้องน่ารัก ✦</div>
+    </div>
+    <div class="co-body">
+      <div class="co-fg"><label class="co-label">ชื่อลูกค้า (ไม่บังคับ)</label>
+        <input id="spa-guest" type="text" class="co-input" placeholder="เช่น คุณสมหญิง"></div>
+      <div class="co-sec-title">💅 เลือกบริการ</div>
+      ${SPA_SERVICES.map(s=>`
+      <div class="spa-svc">
+        <div class="spa-ico">${s.icon}</div>
+        <div class="spa-info"><h4>${s.label}</h4><div class="spa-price">${s.price} บาท / ตัว</div></div>
+        <div class="spa-ctrl">
+          <button class="spa-cbtn minus" onclick="spaUpdate('${s.key}',-1)">−</button>
+          <span class="spa-qty" id="spa-qty-${s.key}">0</span>
+          <button class="spa-cbtn plus" onclick="spaUpdate('${s.key}',1)">＋</button>
+        </div>
+      </div>`).join('')}
+      <div class="co-preview">
+        <div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--cm);margin-bottom:10px;">สรุปค่าบริการ</div>
+        <div id="spa-preview-rows"></div>
+      </div>
+      <div class="co-actions">
+        <button class="btn btn-g" onclick="closeModal()">ยกเลิก</button>
+        <button class="btn btn-p" style="flex:2;" onclick="showSpaReceipt()">🧾 ออกใบเสร็จ</button>
+      </div>
+    </div>
+  </div>`);
+  spaUpdatePreview();
+}
+
+function spaUpdate(k,d){
+  SPA_COUNTS[k]=Math.max(0,(SPA_COUNTS[k]||0)+d);
+  const el=document.getElementById('spa-qty-'+k);
+  if(el)el.textContent=SPA_COUNTS[k];
+  spaUpdatePreview();
+}
+
+function spaUpdatePreview(){
+  const {items,total,count}=spaCalc();
+  let html='';
+  items.forEach(i=>{
+    html+=`<div class="co-prev-row"><span>${i.icon} ${i.label} (${i.qty} ตัว × ฿${i.price})</span><span>฿${fmtTHB(i.amt)}</span></div>`;
+  });
+  html+=`<div class="co-prev-row" style="border-top:1.5px solid rgba(74,51,38,.2);margin-top:6px;padding-top:8px;font-weight:700;font-size:15px;color:var(--cocoa);">
+    <span>✨ ยอดรวมทั้งหมด${count?' ('+count+' ตัว)':''}</span><span style="font-family:'Fraunces',serif;font-size:18px;">฿${fmtTHB(total)}</span>
+  </div>`;
+  const el=document.getElementById('spa-preview-rows');
+  if(el) el.innerHTML=html;
+}
+
+function showSpaReceipt(){
+  const {items,total,count}=spaCalc();
+  if(!count){toast('กรุณาเลือกบริการก่อนนะคะ 🐾','err');return;}
+  const guest=(document.getElementById('spa-guest')?.value||'').trim();
+  const rno=genReceiptNo('SPA');
+  const issueDate=formatDateTH(fmtD(new Date()));
+
+  let svcRows='';
+  items.forEach(i=>{
+    if(i.qty>0) svcRows+=`<div class="co-rc-row">
+      <span class="co-rc-lbl">${i.icon} ${i.label} <span style="font-weight:400;">(฿${i.price}/ตัว)</span></span>
+      <span class="co-rc-val">${i.qty} ตัว · ฿${fmtTHB(i.amt)}</span></div>`;
+  });
+
+  closeModal();
+  const ol=document.createElement('div');
+  ol.className='co-receipt-overlay';
+  ol.id='spa-receipt-overlay';
+  ol.innerHTML=`
+  <div class="co-receipt-wrap">
+    <div class="co-receipt-card" id="spa-rc-card">
+      <div class="co-rc-top spa" style="position:relative;">
+        <div class="rt-brand">Sugar Sugar Spa</div>
+        <div class="rt-sub">ตัดเล็บ &amp; ทำสปา</div>
+        <img class="rt-logo" src="assets/icon-192.png" alt="Sugar Sugar Spa"/>
+        <div class="rt-title">ใบเสร็จรับเงิน</div>
+        <div class="co-rc-stamp">เสร็จ<br>สิ้น</div>
+      </div>
+      <div class="co-rc-body">
+        <div class="co-rc-ref" style="background:rgba(201,162,78,.14);color:#856B2A;">เลขที่ ${rno} &nbsp;|&nbsp; ออก: ${issueDate}</div>
+        ${guest?`<div class="co-rc-row"><span class="co-rc-lbl">👤 ลูกค้า</span><span class="co-rc-val big">${esc(guest)}</span></div>`:''}
+        <div style="margin:8px 0 2px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cm);">รายการบริการ</div>
+        ${svcRows}
+        <div class="co-rc-total">
+          <span class="co-rc-total-lbl">ยอดชำระทั้งหมด</span>
+          <span class="co-rc-total-amt">฿ ${fmtTHB(total)}</span>
+        </div>
+        <div class="co-rc-payment">
+          <div class="co-rc-payment-title">💳 ช่องทางการชำระเงิน</div>
+          <div class="co-rc-payment-body">
+            <img class="co-rc-qr" src="QR%20Code.jpg" alt="QR โอนเงินเข้าบัญชี"/>
+            <div class="co-rc-bank">
+              <span><span class="bank-badge">KBANK</span>ธนาคารกสิกรไทย</span>
+              <span class="bank-acct">026-2-46597-9</span>
+              <span style="font-size:11px;color:var(--cm);">สมทวี จันทร์พร้อม</span>
+              <span style="font-size:10.5px;color:var(--pd);display:block;margin-top:2px;">📱 สแกน QR ด้วยแอปธนาคารได้เลย</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="co-rc-footer">
+        <div class="rf-thanks">น้องทั้งหมด ${count} ตัว · ขอบคุณที่ใช้บริการค่ะ 🐾</div>
+        <div class="rf-sub">🌸 แล้วพาน้องมาสวยหล่อกันใหม่นะคะ 🌸</div>
+      </div>
+    </div>
+    <div class="co-receipt-actions">
+      <button class="co-ra-btn primary" onclick="downloadSpaReceipt('${esc(guest)}')">⬇ บันทึกรูป</button>
+      <button class="co-ra-btn ghost" onclick="document.getElementById('spa-receipt-overlay').remove()">✕ ปิด</button>
+    </div>
+    <div style="text-align:center;font-size:11.5px;color:rgba(255,255,255,.6);margin-top:8px;">
+      กด "บันทึกรูป" — บนมือถือจะแสดงรูปให้แตะค้างเพื่อบันทึกลง Photos ได้เลย
+    </div>
+  </div>`;
+  document.body.appendChild(ol);
+  ol.addEventListener('click',e=>{if(e.target===ol)ol.remove();});
+}
+
+function downloadSpaReceipt(name){
+  const card=document.getElementById('spa-rc-card');
+  if(!card)return;
+  const btn=document.querySelector('#spa-receipt-overlay .co-ra-btn.primary');
+  if(btn){btn.textContent='⏳ กำลังสร้างรูป…';btn.disabled=true;}
+  if(window.html2canvas){
+    window.html2canvas(card,{
+      scale:3,useCORS:true,backgroundColor:'#FDF9F2',logging:false
+    }).then(canvas=>{
+      saveCanvasImage(canvas,'SPA-ใบเสร็จ-'+(name?name.replace(/ /g,'_'):todayKey())+'.png');
+      if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
+    }).catch(()=>{
+      if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
+      toast('⚠ ไม่สามารถบันทึกได้ — ลอง screenshot แทนค่ะ','err');
+    });
+  } else {
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload=()=>downloadSpaReceipt(name);
     s.onerror=()=>{
       if(btn){btn.textContent='⬇ บันทึกรูป';btn.disabled=false;}
       toast('⚠ โหลด library ไม่ได้ — ลอง screenshot แทนค่ะ','err');
