@@ -3185,6 +3185,12 @@ function coToggleMerge(id,checked){
   else COState.mergeIds=COState.mergeIds.filter(x=>x!==id);
   const row=document.getElementById('co-merge-'+id);
   if(row) row.classList.toggle('sel',checked);
+  const cnt=document.getElementById('co-merge-count');
+  if(cnt){
+    const n=COState.mergeIds.length;
+    cnt.style.display=n?'':'none';
+    cnt.textContent=n?'รวมแล้ว +'+n+' กรง':'';
+  }
   coUpdateBase();
   coUpdatePreview();
 }
@@ -3218,8 +3224,10 @@ function openCheckout(id){
   const candidates=S.bookings.filter(x=>x.id!==id&&bSt(x)!=='upcoming')
     .sort((a,c)=>(sameFam(c)?1:0)-(sameFam(a)?1:0)||(a.checkIn<c.checkIn?-1:1));
   const mergeSec=candidates.length?`
-      <div class="co-sec-title">🔗 รวมบิลหลายกรง</div>
-      <div class="fhelp" style="margin:-4px 0 10px;">ถ้าน้องครอบครัวเดียวกันพักแยกหลายกรง ติ๊กเลือกกรงเพิ่มด้านล่าง เพื่อออกใบเสร็จรวมใบเดียวได้เลยค่ะ</div>
+      <details class="sc" style="margin:0 0 16px;">
+        <summary><span>🔗 รวมบิลหลายกรง <span id="co-merge-count" class="co-merge-tag" style="display:none;"></span></span></summary>
+        <div>
+      <div class="fhelp" style="margin:0 0 10px;">ถ้าน้องครอบครัวเดียวกันพักแยกหลายกรง ติ๊กเลือกกรงเพิ่มด้านล่าง เพื่อออกใบเสร็จรวมใบเดียวได้เลยค่ะ</div>
       <div class="co-merge-list">
         ${candidates.map(x=>{
           const n=nts(x.checkIn,x.checkOut), g=parseInt(x.gliderCount)||1, amt=g*PRICE_PER_GLIDER_NIGHT*n;
@@ -3232,7 +3240,9 @@ function openCheckout(id){
             <div class="co-merge-amt">฿${fmtTHB(amt)}</div>
           </label>`;
         }).join('')}
-      </div>`:'';
+      </div>
+        </div>
+      </details>`:'';
 
   showModal(`<div class="co-modal" onclick="event.stopPropagation()">
     <button class="mclose" style="position:absolute;top:14px;right:14px;z-index:10;background:rgba(255,255,255,.25);color:#fff;" onclick="closeModal()">✕</button>
