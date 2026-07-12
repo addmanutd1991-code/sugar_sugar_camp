@@ -320,6 +320,9 @@ textarea.fi{resize:vertical;min-height:72px;}
 .spick{display:flex;align-items:center;gap:12px;padding:14px 18px;
   background:linear-gradient(135deg,var(--gs),var(--phs));border:1px solid var(--gold);border-radius:14px;}
 .spick.na{background:var(--cs);border-color:var(--coral);opacity:.7;}
+button.spick{cursor:pointer;font-family:inherit;color:var(--cocoa);width:100%;transition:all .15s;}
+button.spick:disabled{cursor:not-allowed;}
+.spick.sel{outline:2.5px solid var(--gold);outline-offset:1px;box-shadow:0 4px 14px rgba(201,162,78,.35);}
 .nights{font-size:12px;color:var(--cm);background:var(--cd);padding:8px 14px;border-radius:999px;
   display:inline-flex;align-items:center;gap:5px;margin:-2px 0 12px;}
 .errbx{background:var(--cs);color:#8a3d2a;border:1px solid var(--coral);border-radius:12px;
@@ -911,7 +914,7 @@ function bookingRow_(b, eid, ts) {
 function upsertEvent_(cal, b, eid) {
   const gc = Number(b.gliderCount)||1;
   const title = (b.gliderName?'🐿 '+b.gliderName:'🐿 '+b.guestName)+' ('+gc+' ตัว) · '+
-    (b.roomType==='grand_suite'?'Grand Suite':'STD-'+String(b.roomNumber).padStart(2,'0'));
+    (b.roomType==='grand_suite'?'Grand Suite #'+(Number(b.roomNumber)||1):'STD-'+String(b.roomNumber).padStart(2,'0'));
   const desc = ['เจ้าของ: '+b.guestName,
     b.gliderName?'น้อง: '+b.gliderName:'',
     'จำนวน: '+gc+' ตัว',
@@ -1072,7 +1075,7 @@ function thDateShort_(dateStr) {
 function nameOf_(b) {
   return (b.gliderName || b.guestName || 'ไม่ระบุ') +
     ' (' + (Number(b.gliderCount)||1) + ' ตัว · ' +
-    (b.roomType==='grand_suite' ? 'Grand Suite' : 'STD-' + String(b.roomNumber).padStart(2,'0')) + ')';
+    (b.roomType==='grand_suite' ? 'Grand Suite #' + (Number(b.roomNumber)||1) : 'STD-' + String(b.roomNumber).padStart(2,'0')) + ')';
 }
 
 // ── สรุปข้อมูลตามวันที่ ─────────────────────────────────────
@@ -1411,10 +1414,12 @@ function countGlidersOnDate(dateStr){
 }
 const MAIN_CAGES=25;   // จำนวนกรงหลัก Standard (กรง Stainless + มีกล้องดูน้อง)
 const BACKUP_CAGES=35; // จำนวนกรงสำรอง — ไม่ใช่กรง Stainless และไม่มีกล้องไว้ดูน้อง
+const GS_CAGES=2;      // จำนวนกรง Grand Suite
 function totalStd(){return MAIN_CAGES+BACKUP_CAGES;}
-function totalRooms(){return totalStd()+1;} // +1 grand suite
+function totalRooms(){return totalStd()+GS_CAGES;}
 function isBackup(rn){return Number(rn)>MAIN_CAGES;}
 function stdLabel(rn){rn=Number(rn)||1;return rn<=MAIN_CAGES?'STD-'+pad(rn):'สำรอง-'+pad(rn-MAIN_CAGES);}
+function gsLabel(rn){return 'Grand Suite #'+(Number(rn)||1);}
 const BACKUP_NOTE='ไม่ใช่กรง Stainless และไม่มีกล้องไว้ดูน้องชูก้า';
 
 // ============================
@@ -2006,7 +2011,7 @@ function renderToday(){
       <div class="li">👑 Grand Suite</div>
       <div class="li" style="margin-left:auto;font-style:italic;font-size:11.5px;">แตะห้อง · ดูรายละเอียด / จอง</div>
     </div>
-    <div style="margin-bottom:12px;">${roomCell('grand_suite',1,true)}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px;">${Array.from({length:GS_CAGES},(_,i)=>roomCell('grand_suite',i+1,true)).join('')}</div>
     <div class="rgrid">${rooms}</div>
     ${backupSec}
     ${backupToggle}
@@ -2020,8 +2025,8 @@ function roomCell(rt,rn,isSuite){
   const oc=!!b;
   const bk=!isSuite&&isBackup(rn);
   const cls='rc '+(oc?'oc':'av')+(isSuite?' suite':'')+(bk?' backup':'');
-  const num=isSuite?'GS':(bk?pad(rn-MAIN_CAGES):pad(rn));
-  const lbl=isSuite?'GRAND SUITE':(bk?'สำรอง':'STD-'+pad(rn));
+  const num=isSuite?'GS'+rn:(bk?pad(rn-MAIN_CAGES):pad(rn));
+  const lbl=isSuite?'GRAND SUITE #'+rn:(bk?'สำรอง':'STD-'+pad(rn));
   const cnt=b?(parseInt(b.gliderCount)||1):0;
   const nameDisp=b?(b.gliderName||b.guestName):'';
   const bot=oc?`<div class="rname">${esc(nameDisp)}</div><div class="rstat" style="font-size:10px;opacity:.8;">🐿 ${cnt} ตัว</div>`:`<div class="rstat">ว่าง</div>`;
@@ -2045,7 +2050,7 @@ function renderCalendar(){
   const DAYS=14;
   const dates=[]; for(let i=0;i<DAYS;i++) dates.push(addDays(S.calStart,i));
   const today=todayKey();
-  const allRooms=[{type:'grand_suite',num:1,label:'Grand Suite',isSuite:true}];
+  const allRooms=Array.from({length:GS_CAGES},(_,i)=>({type:'grand_suite',num:i+1,label:gsLabel(i+1),isSuite:true}));
   for(let i=0;i<MAIN_CAGES;i++) allRooms.push({type:'standard',num:i+1,label:'STD-'+pad(i+1),isSuite:false});
   // กรงสำรอง: โชว์เฉพาะแถวที่มีการจองคาบเกี่ยวช่วงวันที่แสดง — กด "ดูกรงทั้งหมด" เพื่อกางครบ
   const rangeEnd=addDays(dates[DAYS-1],1);
@@ -2128,7 +2133,7 @@ function renderBookings(){
     const st=bSt(b), nights=nts(b.checkIn,b.checkOut), isS=b.roomType==='grand_suite';
     return `<div class="bc ${st}">
       <div class="badge ${isS?'suite':''}">
-        ${isS?`<span style="font-size:20px;">👑</span><div class="bt">SUITE</div>`
+        ${isS?`<span style="font-size:20px;">👑</span><div class="bt">SUITE ${Number(b.roomNumber)||1}</div>`
           :isBackup(b.roomNumber)?`<div class="bn">${pad(Number(b.roomNumber)-MAIN_CAGES)}</div><div class="bt">สำรอง</div>`
           :`<div class="bn">${pad(b.roomNumber)}</div><div class="bt">STD</div>`}
       </div>
@@ -2258,7 +2263,7 @@ function applyCust(i){
 
 function openForm(pre={}){
   FS={roomType:pre.roomType||'standard',roomNumber:pre.roomNumber||null,editId:''};
-  if(FS.roomType==='grand_suite') FS.roomNumber=1;
+  if(FS.roomType==='grand_suite'&&!FS.roomNumber) FS.roomNumber=1;
   const ci=pre.checkIn||S.selDate, co=pre.checkOut||addDays(ci,1);
   drawForm({guestName:'',gliderName:'',gliderCount:1,phone:'',notes:'',checkIn:ci,checkOut:co},false);
 }
@@ -2281,7 +2286,18 @@ function drawForm(v,isEdit){
     brng+=`<button type="button" class="rnb backup ${FS.roomNumber===n&&FS.roomType==='standard'?'sel':''}" id="rnb-${n}"
       ${!av?'disabled':''} onclick="selRoom(${n})">${pad(n-MAIN_CAGES)}</button>`;
   }
-  const gsAvail=isAvail(S.bookings,'grand_suite',1,ci,co,FS.editId||null);
+  let gsBtns='';
+  for(let n=1;n<=GS_CAGES;n++){
+    const av=isAvail(S.bookings,'grand_suite',n,ci,co,FS.editId||null);
+    const sel=FS.roomType==='grand_suite'&&FS.roomNumber===n;
+    gsBtns+=`<button type="button" class="spick ${av?'':'na'}${sel?' sel':''}" id="gs-${n}"
+      ${av?'':'disabled'} onclick="selSuite(${n})">
+      <span style="font-size:22px;">👑</span>
+      <div style="text-align:left;"><div style="font-weight:600;">${gsLabel(n)}</div>
+        <div class="gs-status" style="font-size:12px;color:var(--cm);">${av?'ห้องว่างพร้อมรองรับ':'มีการจองในช่วงนี้แล้ว'}</div>
+      </div>
+    </button>`;
+  }
   showModal(`<div class="modal" onclick="event.stopPropagation()">
     <button class="mclose" onclick="closeModal()">✕</button>
     <h2>${isEdit?'แก้ไขการจอง':'เพิ่มการจองใหม่'}</h2>
@@ -2334,13 +2350,8 @@ function drawForm(v,isEdit){
       </div>
     </div>
     <div class="fg" id="gs-sec" style="${FS.roomType==='grand_suite'?'':'display:none'}">
-      <label class="fl">Grand Suite</label>
-      <div class="spick ${gsAvail?'':'na'}">
-        <span style="font-size:22px;">👑</span>
-        <div><div style="font-weight:600;">Grand Suite #1</div>
-          <div style="font-size:12px;color:var(--cm);">${gsAvail?'ห้องว่างพร้อมรองรับ':'มีการจองในช่วงนี้แล้ว'}</div>
-        </div>
-      </div>
+      <label class="fl">เลือกกรง Grand Suite</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">${gsBtns}</div>
     </div>
     <div class="fg"><label class="fl">บันทึกเพิ่มเติม</label>
       <textarea id="fn" class="fi" placeholder="อาหาร, นิสัย, ของใช้…">${esc(v.notes)}</textarea></div>
@@ -2365,13 +2376,28 @@ function changeCount(delta){
 
 function switchRT(rt){
   FS.roomType=rt;
-  FS.roomNumber=rt==='grand_suite'?1:null;
+  if(rt==='grand_suite'){
+    // เลือกกรง Suite แรกที่ว่างให้อัตโนมัติ
+    const ci=document.getElementById('fci')?.value, co=document.getElementById('fco')?.value;
+    FS.roomNumber=null;
+    for(let n=1;n<=GS_CAGES;n++){
+      if(isAvail(S.bookings,'grand_suite',n,ci,co,FS.editId||null)){FS.roomNumber=n;break;}
+    }
+  }else FS.roomNumber=null;
   document.getElementById('rt-s').className='rtbtn '+(rt==='standard'?'act':'');
   document.getElementById('rt-g').className='rtbtn '+(rt==='grand_suite'?'act':'');
   document.getElementById('rns').style.display=rt==='standard'?'':'none';
   document.getElementById('gs-sec').style.display=rt==='grand_suite'?'':'none';
   refreshAvail();
   updateBackupNote();
+}
+
+function selSuite(n){
+  FS.roomNumber=n;
+  for(let i=1;i<=GS_CAGES;i++){
+    const el=document.getElementById('gs-'+i);
+    if(el) el.classList.toggle('sel',i===n&&!el.disabled);
+  }
 }
 
 function selRoom(n){
@@ -2408,13 +2434,15 @@ function refreshAvail(){
     btn.disabled=!av;
     if(!av&&FS.roomNumber===n){FS.roomNumber=null;btn.classList.remove('sel');updateBackupNote();}
   }
-  const gs=document.getElementById('gs-sec');
-  if(gs){
-    const av=isAvail(S.bookings,'grand_suite',1,ci,co,FS.editId||null);
-    const sp=gs.querySelector('.spick');
-    if(sp){ sp.className='spick '+(av?'':'na');
-      const dv=sp.querySelector('div>div:last-child');
-      if(dv)dv.textContent=av?'ห้องว่างพร้อมรองรับ':'มีการจองในช่วงนี้แล้ว'; }
+  for(let n=1;n<=GS_CAGES;n++){
+    const btn=document.getElementById('gs-'+n); if(!btn)continue;
+    const av=isAvail(S.bookings,'grand_suite',n,ci,co,FS.editId||null);
+    btn.disabled=!av;
+    btn.classList.toggle('na',!av);
+    if(!av&&FS.roomType==='grand_suite'&&FS.roomNumber===n) FS.roomNumber=null;
+    btn.classList.toggle('sel',FS.roomType==='grand_suite'&&FS.roomNumber===n);
+    const dv=btn.querySelector('.gs-status');
+    if(dv)dv.textContent=av?'ห้องว่างพร้อมรองรับ':'มีการจองในช่วงนี้แล้ว';
   }
 }
 
@@ -2451,7 +2479,7 @@ function showDetail(b,rt,rn){
     <button class="mclose" onclick="closeModal()">✕</button>
     <div class="dh">
       ${isS?'<span style="font-size:28px;">👑</span>':''}
-      <div class="drn">${isS?'Grand Suite':stdLabel(rn)}</div>
+      <div class="drn">${isS?gsLabel(rn):stdLabel(rn)}</div>
     </div>
     ${!isS&&isBackup(rn)?`<div class="warnbx" style="margin-top:12px;">📌 <b>กรงสำรอง</b> — ${BACKUP_NOTE}ค่ะ</div>`:''}
     <h2 style="margin-top:14px;">${esc(b.guestName)}</h2>
@@ -2704,7 +2732,7 @@ function saveSettings(){
 function localNameOf(b){
   return (b.gliderName||b.guestName||'ไม่ระบุ')+
     ' ('+(Number(b.gliderCount)||1)+' ตัว · '+
-    (b.roomType==='grand_suite'?'Grand Suite':stdLabel(b.roomNumber))+')';
+    (b.roomType==='grand_suite'?gsLabel(b.roomNumber):stdLabel(b.roomNumber))+')';
 }
 function localThDate(dateStr){
   const dt=parseD(dateStr);
@@ -2875,7 +2903,7 @@ function showSlip(id){
   const st=bSt(b);
   const stLabel={'upcoming':'ยืนยันแล้ว','active':'เข้าพักอยู่','past':'เสร็จสิ้น'}[st];
   const stColor={'upcoming':'#6B8A57','active':'#6B8A57','past':'#735847'}[st];
-  const roomLabel=isS?'👑 Grand Suite':(isBackup(b.roomNumber)?'Standard สำรอง #'+pad(Number(b.roomNumber)-MAIN_CAGES):'Standard #'+pad(b.roomNumber));
+  const roomLabel=coRoomLabel(b);
   const now=new Date();
   const issueDate=now.getDate()+' '+TH_M_FULL[now.getMonth()]+' '+(now.getFullYear()+543);
   const qr=genQRDataUrl(ref+b.guestName);
@@ -3104,7 +3132,7 @@ let COState = {
 };
 
 function coRoomLabel(b){
-  if(b.roomType==='grand_suite') return '👑 Grand Suite';
+  if(b.roomType==='grand_suite') return '👑 '+gsLabel(b.roomNumber);
   return isBackup(b.roomNumber)?'Standard สำรอง #'+pad(Number(b.roomNumber)-MAIN_CAGES):'Standard #'+pad(b.roomNumber);
 }
 
