@@ -602,7 +602,11 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google t (v14-spa)
+ * Sugar Sugar Camp - Google Apps Script (v15-spa)
+ *
+ * ★ v15: ยกเลิกคิวสปาที่อนุมัติแล้วได้ (สถานะ "cancelled")
+ *   - กดปุ่ม ✕ ในรายการ "คิวสปาที่อนุมัติแล้ว" บน Dashboard
+ *   - สลอตของคิวที่ยกเลิกกลับมาว่างให้ลูกค้าจองใหม่อัตโนมัติ
  *
  * ★ v14: ตารางเปิดรับสปาเป็น "วันจริงในปฏิทิน" ตั้งทีละสัปดาห์
  *   - Sheet "SpaSchedule" เก็บ key "dates" = { "yyyy-MM-dd": ["18:00",...] }
@@ -625,7 +629,7 @@ const AS_CODE = `/**
  * ★★★ Bot เงียบสนิท 100% — ไม่มีข้อความอัตโนมัติถึงลูกค้าทุกกรณี ★★★
  *   - ไม่มีโค้ดตอบกลับ (reply) เหลืออยู่เลย — ใครทักมา Bot ไม่ตอบเด็ดขาด
  *   - ไม่มีการลงทะเบียนผู้รับอัตโนมัติ — ตั้งผู้รับได้ทางเดียวคือเจ้าของร้าน
- *     กดรันฟังก์ชันใน t เอง (ดู "วิธีตั้งผู้รับ" ด้านล่าง)
+ *     กดรันฟังก์ชันใน Apps Script เอง (ดู "วิธีตั้งผู้รับ" ด้านล่าง)
  *   - ใช้ชื่อ property ใหม่ (SSC_SUMMARY_TARGET / SSC_BOOKING_TARGET)
  *     ค่าเก่า LINE_TARGET_ID / LINE_GROUP_ID ที่อาจถูกลูกค้าทับไว้ = ถูกเลิกใช้ทันที
  *   - ไม่มี broadcast — ส่งแบบเจาะจงผู้รับ (push) เท่านั้น
@@ -634,7 +638,7 @@ const AS_CODE = `/**
  *   - ตั้งกลุ่มร้านอย่างเดียว → ทั้ง "สรุปเช้า 06:00 / เย็น 18:00" และ
  *     "แจ้งคำขอจองใหม่" ส่งเข้ากลุ่มเดียวกันทั้งหมด
  *
- * ── วิธีตั้งผู้รับ (ทำใน t Editor เท่านั้น) ──
+ * ── วิธีตั้งผู้รับ (ทำใน Apps Script Editor เท่านั้น) ──
  *  ✔ แนะนำ: เชิญ Bot เข้ากลุ่มร้าน → ส่งข้อความในกลุ่ม 1 ข้อความ
  *    → รัน setBookingTargetFromLastSeenGroup ทันที = จบ ทุกอย่างเข้ากลุ่ม
  *  (ทางเลือก) อยากให้สรุปประจำวันเข้าแชทส่วนตัวแทน:
@@ -716,7 +720,7 @@ function doGet(e) {
     } else if (act === 'spa_schedule_set' && p.data) {
       result = { ok:true, schedule: setSpaSchedule(JSON.parse(decodeURIComponent(p.data))) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v14-spa', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v15-spa', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -762,7 +766,7 @@ function doPost(e) {
 // ─── LINE Webhook handler ───────────────────────────────────
 // ★★★ Bot เงียบสนิท: ไม่ตอบกลับใครทั้งสิ้น ไม่มีข้อความอัตโนมัติทุกกรณี ★★★
 // หน้าที่เดียวคือ "จด ID ล่าสุดที่เห็น" ไว้เงียบๆ เพื่อให้เจ้าของร้าน
-// กดรันฟังก์ชันตั้งผู้รับใน t เอง (ไม่มีการตั้งผู้รับอัตโนมัติ)
+// กดรันฟังก์ชันตั้งผู้รับใน Apps Script เอง (ไม่มีการตั้งผู้รับอัตโนมัติ)
 function handleLineWebhook(body) {
   const props = PropertiesService.getScriptProperties();
   (body.events || []).forEach(function(ev) {
@@ -779,7 +783,7 @@ function handleLineWebhook(body) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ══ วิธีตั้งผู้รับ — เจ้าของร้านรันเองใน t Editor เท่านั้น ══
+// ══ วิธีตั้งผู้รับ — เจ้าของร้านรันเองใน Apps Script Editor เท่านั้น ══
 //
 //  💡 ง่ายสุด (ทุกอย่างเข้ากลุ่มเดียว): ตั้งแค่กลุ่ม (ข้อ B) พอ
 //     → ทั้ง "สรุปเช้า-เย็น" และ "แจ้งคำขอจองใหม่" จะเข้ากลุ่มร้านทั้งหมด
@@ -1527,7 +1531,8 @@ function addSpaRequest(q) {
 }
 
 function updateSpaStatus(id, status) {
-  if (['approved','rejected','pending'].indexOf(String(status)) < 0)
+  // cancelled = คิวที่อนุมัติแล้วแต่ลูกค้ายกเลิกภายหลัง — สลอตกลับมาว่างอัตโนมัติ
+  if (['approved','rejected','pending','cancelled'].indexOf(String(status)) < 0)
     throw new Error('สถานะไม่ถูกต้อง: ' + status);
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -2064,7 +2069,7 @@ async function fetchSpaRequests(silent){
     if(changed) render();
     if(!silent) toast('✓ อัปเดตคิวสปาแล้ว · รออนุมัติ '+reqs.length+' รายการ','ok');
   }catch(err){
-    if(!silent) toast('✗ โหลดคิวสปาไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v14)','err');
+    if(!silent) toast('✗ โหลดคิวสปาไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v15)','err');
   }
 }
 
@@ -2097,7 +2102,7 @@ function spaRqCard(q){
   </div>`;
 }
 
-// รายการคิวที่อนุมัติแล้ว (วันนี้เป็นต้นไป) — ตารางงานของร้าน
+// รายการคิวที่อนุมัติแล้ว (วันนี้เป็นต้นไป) — ตารางงานของร้าน + ปุ่มยกเลิกคิว
 function spaApprovedList(){
   if(!S.spaApproved.length) return '';
   return `<div class="bdivider">📋 คิวสปาที่อนุมัติแล้ว (${S.spaApproved.length})</div>
@@ -2109,9 +2114,39 @@ function spaApprovedList(){
           <span>${svc.icon} ${svc.label}</span>
           <span>${esc(q.guestName)}${q.gliderName?' · น้อง '+esc(q.gliderName):''} (${q.gliderCount||1} ตัว)</span>
           ${q.phone?`<span style="color:var(--cm);">📞 ${esc(q.phone)}</span>`:''}
+          <button class="ib danger" style="margin-left:auto;flex-shrink:0;" onclick="cancelSpaBooking('${q.id}')" title="ยกเลิกคิวนี้ — สลอตจะเปิดให้จองใหม่">✕</button>
         </div>`;
       }).join('')}
     </div>`;
+}
+
+// ยกเลิกคิวที่อนุมัติแล้ว (ลูกค้ายกเลิกภายหลัง) — บันทึกสถานะ cancelled ใน Sheet
+function cancelSpaBooking(id){
+  const q=S.spaApproved.find(x=>x.id===id); if(!q)return;
+  const svc=spaSvcOf(q.service);
+  showModal(`<div class="modal" style="max-width:420px;" onclick="event.stopPropagation()">
+    <h2 style="font-size:22px;">ยกเลิกคิวสปา</h2>
+    <p style="color:var(--cm);margin:12px 0 8px;">ยกเลิกคิวของ <b>${esc(q.guestName)}</b><br/>
+    ${svc.icon} ${svc.label} · ${q.gliderCount||1} ตัว<br/>
+    📅 ${thD(q.date,true)} · 🕐 ${esc(q.time)} น.?</p>
+    <p style="color:var(--cm);font-size:12px;margin-bottom:20px;">สลอตนี้จะกลับมาว่างให้ลูกค้าอื่นจองได้อีกครั้ง — อย่าลืมติดต่อแจ้งลูกค้าด้วยนะคะ${q.phone?' (📞 '+esc(q.phone)+')':''}</p>
+    <div class="factions">
+      <button class="btn btn-g" onclick="closeModal()">ไม่ยกเลิก</button>
+      <button class="btn btn-d" onclick="doCancelSpa('${id}')">✕ ยืนยันยกเลิกคิว</button>
+    </div>
+  </div>`);
+}
+async function doCancelSpa(id){
+  closeModal();
+  S.spaApproved=S.spaApproved.filter(r=>r.id!==id);
+  render();
+  try{
+    await callApi('update_spa',{id:id,status:'cancelled'});
+    toast('✓ ยกเลิกคิวแล้ว — สลอตเปิดให้จองใหม่ได้','ok');
+  }catch(err){
+    toast('✗ ยกเลิกไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v15)','err');
+    fetchSpaRequests(true);
+  }
 }
 
 // อนุมัติคิวสปา — ไม่ต้องเลือกกรง ยืนยันแล้วบันทึกสถานะบน Sheet ได้เลย
@@ -2207,7 +2242,7 @@ async function openSpaSchedule(){
     drawSpaSchedule();
   }catch(err){
     closeModal();
-    toast('✗ โหลดการตั้งค่าไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v14)','err');
+    toast('✗ โหลดการตั้งค่าไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v15)','err');
   }
 }
 
