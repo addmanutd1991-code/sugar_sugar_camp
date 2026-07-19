@@ -602,7 +602,12 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google Apps Script (v13-spa)
+ * Sugar Sugar Camp - Google Apps Script (v14-spa)
+ *
+ * ★ v14: ตารางเปิดรับสปาเป็น "วันจริงในปฏิทิน" ตั้งทีละสัปดาห์
+ *   - Sheet "SpaSchedule" เก็บ key "dates" = { "yyyy-MM-dd": ["18:00",...] }
+ *   - วันไหนทางร้านไม่ได้ตั้ง = ปิดรับ ไม่เปิดคิว (ไม่มีตารางวนซ้ำอัตโนมัติ)
+ *   - เลิกใช้ weekly / closed_dates / open_overrides จาก v13
  *
  * ★ v13: ระบบจองคิวสปา (spa.html)
  *   - Sheet "SpaSchedule" เก็บตารางเปิดรับ (วัน/ช่วงเวลา) — ตั้งค่าจาก Dashboard
@@ -711,7 +716,7 @@ function doGet(e) {
     } else if (act === 'spa_schedule_set' && p.data) {
       result = { ok:true, schedule: setSpaSchedule(JSON.parse(decodeURIComponent(p.data))) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v13-spa', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v14-spa', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -1388,26 +1393,20 @@ function getSpaSchedSheet() {
     sh.getRange(1,1,1,2).setValues([['Key','Value']])
       .setFontWeight('bold').setBackground('#2A1810').setFontColor('#FAF3E9');
     sh.setFrozenRows(1);
-    sh.getRange(2,1,3,2).setValues([
-      ['weekly','{}'], ['closed_dates','[]'], ['open_overrides','{}']
-    ]);
+    sh.getRange(2,1,1,2).setValues([['dates','{}']]);
   }
   return sh;
 }
 
-// การตั้งค่า: weekly = { "0"-"6" (อาทิตย์=0) : ["10:00","11:00",...] }
-//   closedDates = ["2026-08-12",...] · openOverrides = { "2026-08-01": ["13:00",...] }
+// ★ v14: การตั้งค่าเป็นวันจริงในปฏิทิน — dates = { "yyyy-MM-dd": ["18:00","19:00",...] }
+//   วันไหนไม่มีใน dates = ปิดรับ ไม่เปิดคิว (ทางร้านต้องมาตั้งเอง ไม่มีตารางวนซ้ำ)
 function getSpaSchedule() {
   const sh = getSpaSchedSheet();
-  const out = { weekly:{}, closedDates:[], openOverrides:{} };
+  const out = { dates:{} };
   if (sh.getLastRow() < 2) return out;
   sh.getRange(2,1,sh.getLastRow()-1,2).getValues().forEach(function(r){
-    const k = String(r[0]||''), v = String(r[1]||'');
-    try {
-      if (k === 'weekly')         out.weekly        = JSON.parse(v||'{}') || {};
-      if (k === 'closed_dates')   out.closedDates   = JSON.parse(v||'[]') || [];
-      if (k === 'open_overrides') out.openOverrides = JSON.parse(v||'{}') || {};
-    } catch(_) {}
+    if (String(r[0]||'') !== 'dates') return;
+    try { out.dates = JSON.parse(String(r[1]||'{}')) || {}; } catch(_) {}
   });
   return out;
 }
@@ -1417,13 +1416,16 @@ function setSpaSchedule(cfg) {
   lock.waitLock(20000);
   try {
     const sh = getSpaSchedSheet();
-    const rows = [
-      ['weekly',         JSON.stringify((cfg && cfg.weekly)        || {})],
-      ['closed_dates',   JSON.stringify((cfg && cfg.closedDates)   || [])],
-      ['open_overrides', JSON.stringify((cfg && cfg.openOverrides) || {})]
-    ];
+    // ตัดวันที่ผ่านมาแล้วทิ้ง (เก็บตั้งแต่เมื่อวาน) — กันข้อมูลสะสมบวม
+    const cutoff = addDay_(dateStr_(new Date()), -1);
+    const src = (cfg && cfg.dates) || {};
+    const dates = {};
+    Object.keys(src).forEach(function(d){
+      if (d >= cutoff && Array.isArray(src[d]) && src[d].length) dates[d] = src[d].map(String);
+    });
+    // เขียนทับทั้งหมดเหลือ key เดียว (ล้าง key เก่าจาก v13 ไปด้วย)
     if (sh.getLastRow() > 1) sh.getRange(2,1,sh.getLastRow()-1,2).clearContent();
-    sh.getRange(2,1,rows.length,2).setValues(rows);
+    sh.getRange(2,1,1,2).setValues([['dates', JSON.stringify(dates)]]);
     SpreadsheetApp.flush();
     return getSpaSchedule();
   } finally {
@@ -1433,10 +1435,7 @@ function setSpaSchedule(cfg) {
 
 // สลอตที่เปิดรับของวันนั้น (ยังไม่หักคิวที่จองแล้ว)
 function spaSlotsForDate_(dateStr, sched) {
-  if ((sched.closedDates || []).indexOf(dateStr) >= 0) return [];
-  if (sched.openOverrides && sched.openOverrides[dateStr]) return sched.openOverrides[dateStr];
-  const dow = new Date(dateStr + 'T00:00:00+07:00').getDay(); // อาทิตย์=0
-  return (sched.weekly && sched.weekly[String(dow)]) || [];
+  return (sched.dates && sched.dates[dateStr]) || [];
 }
 
 // Sheet อาจ parse "10:00" เป็นเวลา — แปลงกลับเป็น HH:mm เสมอ
@@ -2065,7 +2064,7 @@ async function fetchSpaRequests(silent){
     if(changed) render();
     if(!silent) toast('✓ อัปเดตคิวสปาแล้ว · รออนุมัติ '+reqs.length+' รายการ','ok');
   }catch(err){
-    if(!silent) toast('✗ โหลดคิวสปาไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v13)','err');
+    if(!silent) toast('✗ โหลดคิวสปาไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v14)','err');
   }
 }
 
@@ -2174,53 +2173,65 @@ async function doRejectSpa(id){
 }
 
 // ============================
-// SPA SCHEDULE — ตั้งเวลาเปิดรับจองสปา (บันทึกลง Sheet "SpaSchedule")
+// SPA SCHEDULE — ตั้งเวลาเปิดรับจองสปาเป็น "วันจริงในปฏิทิน" ทีละสัปดาห์
+// (บันทึกลง Sheet "SpaSchedule" key "dates" — วันไหนไม่ตั้ง = ปิดรับ)
 // ============================
-let SPA_SCHED={weekly:{},closedDates:[],openOverrides:{},_ui:null};
-const SPA_DAY_NAMES=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสฯ','ศุกร์','เสาร์'];
+let SPA_SCHED={dates:{}};
+let SPA_WEEK_START='';   // วันจันทร์ของสัปดาห์ที่กำลังแสดงใน modal
 
-// ['10:00','11:00',...] ↔ ช่วงชั่วโมง {on,start,end} (end = ชั่วโมงปิด)
+// วันจันทร์ของสัปดาห์ที่วันนั้นอยู่
+function mondayOf(dateStr){
+  const shift=(parseD(dateStr).getDay()+6)%7; // จันทร์=0
+  return addDays(dateStr,-shift);
+}
+// ['18:00','19:00',...] ↔ ช่วงชั่วโมง {on,start,end} (end = ชั่วโมงปิด)
 function slotsToRange(slots){
-  if(!slots||!slots.length) return {on:false,start:10,end:17};
+  if(!slots||!slots.length) return {on:false,start:18,end:22};
   const hs=slots.map(t=>parseInt(t,10)).filter(h=>!isNaN(h)).sort((a,b)=>a-b);
-  if(!hs.length) return {on:false,start:10,end:17};
+  if(!hs.length) return {on:false,start:18,end:22};
   return {on:true,start:hs[0],end:hs[hs.length-1]+1};
 }
 function rangeToSlots(start,end){ const a=[];for(let h=start;h<end;h++)a.push(pad(h)+':00');return a; }
 
 async function openSpaSchedule(){
   if(!S.syncUrl){openSettings();return;}
-  showModal(`<div class="modal" style="max-width:540px;" onclick="event.stopPropagation()">
+  showModal(`<div class="modal" style="max-width:560px;" onclick="event.stopPropagation()">
     <button class="mclose" onclick="closeModal()">✕</button>
     <h2 style="font-size:22px;">⏰ ตั้งเวลารับจองสปา</h2>
-    <p class="msub">⏳ กำลังโหลดการตั้งค่าจาก Google Sheets…</p>
+    <p class="msub">⏳ กำลังโหลดตารางจาก Google Sheets…</p>
   </div>`);
   try{
     const d=await callApi('spa_schedule_get');
-    const sc=d.schedule||{};
-    SPA_SCHED={weekly:sc.weekly||{},closedDates:sc.closedDates||[],openOverrides:sc.openOverrides||{},_ui:null};
+    SPA_SCHED={dates:(d.schedule&&d.schedule.dates)||{}};
+    SPA_WEEK_START=mondayOf(todayKey());
     drawSpaSchedule();
   }catch(err){
     closeModal();
-    toast('✗ โหลดการตั้งค่าไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v13)','err');
+    toast('✗ โหลดการตั้งค่าไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v14)','err');
   }
 }
 
-function spaUiState(){
-  if(SPA_SCHED._ui) return SPA_SCHED._ui;
-  const u={};
-  for(let d=0;d<7;d++) u[d]=slotsToRange(SPA_SCHED.weekly[String(d)]);
-  SPA_SCHED._ui=u; return u;
-}
-// เก็บค่าที่ผู้ใช้เลือกในฟอร์มไว้ก่อน redraw (ตอนเพิ่ม/ลบวันหยุด ฯลฯ)
+// อ่านค่าจากฟอร์มสัปดาห์ที่แสดงอยู่ ลง SPA_SCHED.dates (เรียกก่อนสลับสัปดาห์/บันทึก)
 function captureSpaUi(){
-  const u=spaUiState();
-  for(let d=0;d<7;d++){
-    const on=document.getElementById('sp-on-'+d); if(!on)continue;
-    u[d]={on:on.checked,
-      start:parseInt(document.getElementById('sp-st-'+d).value,10),
-      end:parseInt(document.getElementById('sp-en-'+d).value,10)};
+  for(let i=0;i<7;i++){
+    const on=document.getElementById('sp-on-'+i);
+    if(!on) return;                    // modal ยังไม่ได้วาดตาราง
+    const date=on.dataset.date;
+    if(on.disabled) continue;          // วันที่ผ่านมาแล้ว — ไม่แตะของเดิม
+    if(!on.checked){ delete SPA_SCHED.dates[date]; continue; }
+    const st=parseInt(document.getElementById('sp-st-'+i).value,10);
+    let en=parseInt(document.getElementById('sp-en-'+i).value,10);
+    if(en<=st) en=st+1;                // อย่างน้อย 1 สลอต
+    SPA_SCHED.dates[date]=rangeToSlots(st,en);
   }
+}
+
+function spaWeekNav(delta){
+  captureSpaUi();
+  const next=addDays(SPA_WEEK_START,7*delta);
+  if(next<mondayOf(todayKey())) return;   // ไม่ย้อนก่อนสัปดาห์ปัจจุบัน
+  SPA_WEEK_START=next;
+  drawSpaSchedule();
 }
 
 function spaHourOpts(sel,from,to){
@@ -2228,46 +2239,52 @@ function spaHourOpts(sel,from,to){
 }
 
 function drawSpaSchedule(){
-  const u=spaUiState();
-  const rows=[0,1,2,3,4,5,6].map(d=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--ln);">
-      <label style="display:flex;align-items:center;gap:8px;width:104px;cursor:pointer;font-size:13.5px;flex-shrink:0;">
-        <input type="checkbox" id="sp-on-${d}" ${u[d].on?'checked':''} style="width:16px;height:16px;accent-color:var(--pd);">
-        ${SPA_DAY_NAMES[d]}
+  const today=todayKey();
+  const wk=SPA_WEEK_START;
+  const canPrev=wk>mondayOf(today);
+  const rows=[0,1,2,3,4,5,6].map(i=>{
+    const date=addDays(wk,i);
+    const r=slotsToRange(SPA_SCHED.dates[date]);
+    const past=date<today;
+    const isToday=date===today;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--ln);${past?'opacity:.4;':''}">
+      <label style="display:flex;align-items:center;gap:8px;width:132px;cursor:pointer;font-size:13.5px;flex-shrink:0;">
+        <input type="checkbox" id="sp-on-${i}" data-date="${date}" ${r.on?'checked':''} ${past?'disabled':''} style="width:16px;height:16px;accent-color:var(--pd);">
+        <span>${TH_D[parseD(date).getDay()]} ${thD(date,true)}${isToday?' <b style="color:var(--pd);">· วันนี้</b>':''}</span>
       </label>
-      <select id="sp-st-${d}" class="fi" style="width:auto;padding:7px 10px;">${spaHourOpts(u[d].start,7,21)}</select>
+      <select id="sp-st-${i}" class="fi" ${past?'disabled':''} style="width:auto;padding:7px 10px;">${spaHourOpts(r.start,7,21)}</select>
       <span style="color:var(--cm);font-size:12px;">ถึง</span>
-      <select id="sp-en-${d}" class="fi" style="width:auto;padding:7px 10px;">${spaHourOpts(u[d].end,8,22)}</select>
-    </div>`).join('');
-  const closedChips=SPA_SCHED.closedDates.slice().sort().map(dt=>
-    `<span class="chip" style="background:var(--cs);">🚫 ${thD(dt,true)}
-      <a style="cursor:pointer;font-weight:700;margin-left:4px;" onclick="removeSpaClosed('${dt}')">✕</a></span>`).join('')
-    ||'<span style="font-size:12px;color:var(--cm);">— ไม่มี —</span>';
-  const ovChips=Object.keys(SPA_SCHED.openOverrides).sort().map(dt=>{
-    const r=slotsToRange(SPA_SCHED.openOverrides[dt]);
-    return `<span class="chip" style="background:var(--ss);">✨ ${thD(dt,true)} · ${pad(r.start)}:00–${pad(r.end)}:00
-      <a style="cursor:pointer;font-weight:700;margin-left:4px;" onclick="removeSpaOverride('${dt}')">✕</a></span>`;
-  }).join('')||'<span style="font-size:12px;color:var(--cm);">— ไม่มี —</span>';
-  showModal(`<div class="modal" style="max-width:540px;" onclick="event.stopPropagation()">
+      <select id="sp-en-${i}" class="fi" ${past?'disabled':''} style="width:auto;padding:7px 10px;">${spaHourOpts(r.end,8,22)}</select>
+    </div>`;
+  }).join('');
+  showModal(`<div class="modal" style="max-width:560px;" onclick="event.stopPropagation()">
     <button class="mclose" onclick="closeModal()">✕</button>
     <h2 style="font-size:22px;">⏰ ตั้งเวลารับจองสปา</h2>
-    <p class="msub">ติ๊กวันที่เปิดรับและเลือกช่วงเวลา — ระบบแบ่งเป็นสลอตละ 1 ชม. (1 คิวต่อสลอต) บันทึกลง Google Sheets ให้หน้าจองลูกค้าอัตโนมัติ</p>
-    <div class="fg"><label class="fl">ตารางประจำสัปดาห์</label>${rows}</div>
-    <div class="fg"><label class="fl">🚫 วันหยุดพิเศษ (งดรับจอง)</label>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">${closedChips}</div>
+    <p class="msub">ตั้งเวลาเปิดรับตามวันจริงทีละสัปดาห์ — สลอตละ 1 ชม. (1 คิว/สลอต)<br/>
+    <b style="color:var(--cocoa);">วันไหนไม่ติ๊ก = ปิดรับ ไม่เปิดคิว</b> — ตั้งหลายสัปดาห์ได้ แล้วกดบันทึกครั้งเดียว</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
+      <button class="btn btn-o btn-sm" onclick="spaWeekNav(-1)" ${canPrev?'':'disabled'}>◀ ก่อนหน้า</button>
+      <b style="font-size:14px;">${thD(wk,true)} – ${thD(addDays(wk,6),true)}</b>
+      <button class="btn btn-o btn-sm" onclick="spaWeekNav(1)">ถัดไป ▶</button>
+    </div>
+    <div class="fg"><label class="fl">⚡ ตั้งเร็วทั้งสัปดาห์นี้</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <input type="date" id="sp-cd" class="fi" style="width:auto;" min="${todayKey()}">
-        <button class="btn btn-o btn-sm" onclick="addSpaClosed()">＋ เพิ่มวันหยุด</button>
-      </div></div>
-    <div class="fg"><label class="fl">✨ วันเปิดพิเศษ / เวลาพิเศษเฉพาะวัน (ทับตารางประจำ)</label>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">${ovChips}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <input type="date" id="sp-ov-date" class="fi" style="width:auto;" min="${todayKey()}">
-        <select id="sp-ov-st" class="fi" style="width:auto;padding:7px 10px;">${spaHourOpts(10,7,21)}</select>
+        <select id="sp-qk-days" class="fi" style="width:auto;padding:7px 10px;">
+          <option value="mf">จ.–ศ.</option>
+          <option value="ss">ส.–อา.</option>
+          <option value="all">ทุกวัน</option>
+        </select>
+        <select id="sp-qk-st" class="fi" style="width:auto;padding:7px 10px;">${spaHourOpts(18,7,21)}</select>
         <span style="color:var(--cm);font-size:12px;">ถึง</span>
-        <select id="sp-ov-en" class="fi" style="width:auto;padding:7px 10px;">${spaHourOpts(17,8,22)}</select>
-        <button class="btn btn-o btn-sm" onclick="addSpaOverride()">＋ เพิ่ม</button>
-      </div></div>
+        <select id="sp-qk-en" class="fi" style="width:auto;padding:7px 10px;">${spaHourOpts(22,8,22)}</select>
+        <button class="btn btn-o btn-sm" onclick="applySpaQuick()">✓ ใช้</button>
+        <button class="btn btn-o btn-sm" onclick="closeSpaWeek()">🚫 ปิดทั้งสัปดาห์</button>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">วันในสัปดาห์นี้</label>${rows}</div>
+    <div style="font-size:11.5px;color:var(--cm);margin-bottom:14px;line-height:1.6;background:var(--cream);border-radius:10px;padding:9px 13px;">
+      💡 หน้าจองลูกค้าแสดงเฉพาะวันที่เปิดรับล่วงหน้า 30 วัน — สัปดาห์ไหนยังไม่ได้ตั้ง ลูกค้าจะจองไม่ได้จนกว่าทางร้านจะมาตั้งเวลาค่ะ
+    </div>
     <div class="factions">
       <button class="btn btn-g" onclick="closeModal()">ยกเลิก</button>
       <button class="btn btn-p" id="sp-save" onclick="saveSpaSchedule()">💾 บันทึกตาราง</button>
@@ -2275,47 +2292,44 @@ function drawSpaSchedule(){
   </div>`);
 }
 
-function addSpaClosed(){
-  const v=document.getElementById('sp-cd')?.value; if(!v)return;
-  captureSpaUi();
-  if(SPA_SCHED.closedDates.indexOf(v)<0) SPA_SCHED.closedDates.push(v);
-  drawSpaSchedule();
-}
-function removeSpaClosed(dt){
-  captureSpaUi();
-  SPA_SCHED.closedDates=SPA_SCHED.closedDates.filter(d=>d!==dt);
-  drawSpaSchedule();
-}
-function addSpaOverride(){
-  const v=document.getElementById('sp-ov-date')?.value; if(!v)return;
-  const st=parseInt(document.getElementById('sp-ov-st')?.value,10);
-  const en=parseInt(document.getElementById('sp-ov-en')?.value,10);
+// ตั้งเวลาให้กลุ่มวันของสัปดาห์ที่แสดงในคลิกเดียว (จ.–ศ. / ส.–อา. / ทุกวัน)
+function applySpaQuick(){
+  const g=document.getElementById('sp-qk-days').value;
+  const st=parseInt(document.getElementById('sp-qk-st').value,10);
+  const en=parseInt(document.getElementById('sp-qk-en').value,10);
   if(en<=st){toast('⚠ เวลาปิดต้องอยู่หลังเวลาเปิด','err');return;}
-  captureSpaUi();
-  SPA_SCHED.openOverrides[v]=rangeToSlots(st,en);
-  drawSpaSchedule();
+  const idx=g==='mf'?[0,1,2,3,4]:g==='ss'?[5,6]:[0,1,2,3,4,5,6];
+  idx.forEach(i=>{
+    const on=document.getElementById('sp-on-'+i);
+    if(!on||on.disabled) return;
+    on.checked=true;
+    document.getElementById('sp-st-'+i).value=String(st);
+    document.getElementById('sp-en-'+i).value=String(en);
+  });
 }
-function removeSpaOverride(dt){
-  captureSpaUi();
-  delete SPA_SCHED.openOverrides[dt];
-  drawSpaSchedule();
+
+function closeSpaWeek(){
+  for(let i=0;i<7;i++){
+    const on=document.getElementById('sp-on-'+i);
+    if(on&&!on.disabled) on.checked=false;
+  }
 }
 
 async function saveSpaSchedule(){
-  captureSpaUi();
-  const u=SPA_SCHED._ui, weekly={};
-  for(let d=0;d<7;d++){
-    if(!u[d].on) continue;
-    if(u[d].end<=u[d].start){toast('⚠ วัน'+SPA_DAY_NAMES[d]+': เวลาปิดต้องอยู่หลังเวลาเปิด','err');return;}
-    weekly[String(d)]=rangeToSlots(u[d].start,u[d].end);
+  // ตรวจช่วงเวลาของสัปดาห์ที่แสดงก่อนเก็บค่า
+  for(let i=0;i<7;i++){
+    const on=document.getElementById('sp-on-'+i);
+    if(!on||on.disabled||!on.checked) continue;
+    const st=parseInt(document.getElementById('sp-st-'+i).value,10);
+    const en=parseInt(document.getElementById('sp-en-'+i).value,10);
+    if(en<=st){toast('⚠ '+TH_D[parseD(on.dataset.date).getDay()]+' '+thD(on.dataset.date,true)+': เวลาปิดต้องอยู่หลังเวลาเปิด','err');return;}
   }
-  const cfg={weekly:weekly,closedDates:SPA_SCHED.closedDates,openOverrides:SPA_SCHED.openOverrides};
+  captureSpaUi();
   const btn=document.getElementById('sp-save');
   if(btn){btn.disabled=true;btn.textContent='⏳ กำลังบันทึก…';}
   try{
     // encode สองชั้นตามแบบ request_booking — ฝั่ง Apps Script decodeURIComponent อีกรอบ
-    await callApi('spa_schedule_set',{data:encodeURIComponent(JSON.stringify(cfg))});
-    SPA_SCHED={...cfg,_ui:null};
+    await callApi('spa_schedule_set',{data:encodeURIComponent(JSON.stringify({dates:SPA_SCHED.dates}))});
     closeModal();
     toast('✓ บันทึกตารางเปิดรับสปาลง Google Sheets แล้ว','ok');
   }catch(err){
