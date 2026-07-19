@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>จองคิวสปา · Sugar Sugar Camp 💅</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png"/>
+<meta name="apple-mobile-web-app-title" content="จองคิวสปา"/>
+<meta name="theme-color" content="#FAF3E9"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#FAF3E9;--cl:#FDF9F2;--cd:#F2E5D2;
+  --cocoa:#2A1810;--cm:#735847;
+  --ps:#F8DBE2;--pd:#C46C7E;
+  --peach:#F0B080;--phs:#FBE3CD;
+  --sage:#9DB089;--ss:#DDE6CE;
+  --coral:#DD8470;--cs:#F5D5C9;
+  --gold:#C9A24E;--gs:#EFE0B6;
+  --ln:rgba(74,51,38,.13);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream);
+  background-image:radial-gradient(circle at 0% 0%,rgba(232,154,171,.18),transparent 45%),
+    radial-gradient(circle at 100% 0%,rgba(240,176,128,.15),transparent 45%),
+    radial-gradient(circle at 50% 100%,rgba(157,176,137,.10),transparent 55%);
+  min-height:100vh;font-size:14px;line-height:1.6;}
+.wrap{padding:28px 18px 70px;max-width:560px;margin:0 auto;}
+.logo-img{display:block;margin:0 auto;width:min(240px,62vw);height:auto;}
+.tagline{font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:var(--cm);
+  margin-top:8px;text-align:center;margin-bottom:24px;}
+
+.steps-bar{display:flex;justify-content:center;gap:6px;margin-bottom:22px;flex-wrap:wrap;}
+.step{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--cm);
+  background:var(--cl);border:1px solid var(--ln);border-radius:999px;padding:6px 12px;}
+.step b{color:var(--pd);font-weight:700;}
+
+.card{background:var(--cl);border:1px solid var(--ln);border-radius:24px;padding:26px 24px;
+  box-shadow:0 10px 30px rgba(42,24,16,.06);}
+.card h2{font-family:'Fraunces',serif;font-style:italic;font-size:24px;font-weight:400;margin-bottom:4px;}
+.card .msub{color:var(--cm);font-size:13px;margin-bottom:18px;}
+
+.fg{margin-bottom:14px;}
+.frow2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--cm);margin-bottom:6px;}
+.fi{width:100%;padding:11px 14px;border:1px solid var(--ln);border-radius:12px;
+  background:var(--cream);font-family:inherit;font-size:14px;color:var(--cocoa);outline:none;transition:all .15s;}
+.fi:focus{border-color:var(--pd);background:#fff;box-shadow:0 0 0 3px rgba(196,108,126,.1);}
+textarea.fi{resize:vertical;min-height:64px;}
+
+.counter{display:flex;align-items:center;gap:0;border:1px solid var(--ln);border-radius:12px;
+  overflow:hidden;background:var(--cream);}
+.counter button{width:42px;height:44px;border:none;background:transparent;font-size:20px;
+  cursor:pointer;font-family:inherit;color:var(--cocoa);}
+.counter .num{flex:1;text-align:center;font-family:'Fraunces',serif;font-size:24px;color:var(--cocoa);}
+
+/* ── บริการ ── */
+.svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.svc{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 10px;
+  border:1.5px solid var(--ln);border-radius:16px;background:var(--cream);cursor:pointer;
+  font-family:inherit;transition:all .15s;text-align:center;}
+.svc .si{font-size:28px;}
+.svc .sn{font-weight:600;font-size:13.5px;color:var(--cocoa);}
+.svc .sp{font-size:12px;color:var(--cm);}
+.svc.sel{border-color:var(--pd);background:#fff;box-shadow:0 0 0 3px rgba(196,108,126,.12);}
+.svc.sel .sn{color:var(--pd);}
+
+/* ── เลือกวัน ── */
+.dayrow{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;-webkit-overflow-scrolling:touch;}
+.dayb{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:64px;
+  padding:9px 8px;border:1.5px solid var(--ln);border-radius:14px;background:var(--cream);
+  cursor:pointer;font-family:inherit;transition:all .15s;flex-shrink:0;}
+.dayb .dw{font-size:10.5px;color:var(--cm);}
+.dayb .dd{font-family:'Fraunces',serif;font-size:20px;line-height:1.1;color:var(--cocoa);}
+.dayb .dm{font-size:10.5px;color:var(--cm);}
+.dayb .df{font-size:9.5px;margin-top:3px;padding:1px 7px;border-radius:999px;
+  background:var(--ss);color:#3F5828;}
+.dayb .df.full{background:var(--cs);color:#8a3d2a;}
+.dayb.sel{border-color:var(--pd);background:#fff;box-shadow:0 0 0 3px rgba(196,108,126,.12);}
+.dayb.sel .dd{color:var(--pd);}
+
+/* ── สลอตเวลา ── */
+.slotgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px;margin-top:4px;}
+.slotb{padding:10px 6px;border:1.5px solid var(--ln);border-radius:12px;background:var(--cream);
+  cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--cocoa);
+  transition:all .15s;text-align:center;}
+.slotb small{display:block;font-size:10px;font-weight:400;color:var(--cm);}
+.slotb.sel{border-color:var(--pd);background:var(--pd);color:#fff;}
+.slotb.sel small{color:rgba(255,255,255,.85);}
+.slotb:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through;}
+.loading{text-align:center;color:var(--cm);font-size:13px;padding:18px 0;}
+.slot-note{font-size:12px;color:var(--cm);margin-top:8px;}
+
+.picked{font-size:12.5px;color:var(--cm);background:var(--cd);padding:9px 14px;border-radius:999px;
+  display:none;align-items:center;gap:6px;margin:10px 0 4px;justify-content:center;text-align:center;}
+.price-box{font-size:12.5px;border-radius:12px;padding:10px 14px;margin:10px 0 14px;
+  background:var(--ss);color:#3F5828;border:1px solid var(--sage);display:none;line-height:1.6;}
+
+.errbx{background:var(--cs);color:#8a3d2a;border:1px solid var(--coral);border-radius:12px;
+  padding:11px 14px;font-size:13px;margin-bottom:12px;}
+
+.btn-submit{width:100%;font-family:inherit;font-size:15px;font-weight:600;padding:14px 20px;
+  border-radius:999px;border:none;cursor:pointer;background:var(--pd);color:#fff;
+  transition:all .2s;margin-top:6px;}
+.btn-submit:hover{background:var(--cocoa);}
+.btn-submit:disabled{opacity:.55;cursor:not-allowed;}
+.btn-retry{font-family:inherit;font-size:13px;font-weight:500;padding:9px 20px;border-radius:999px;
+  border:1px solid var(--ln);background:var(--cream);color:var(--cm);cursor:pointer;margin-top:8px;}
+.btn-retry:hover{background:var(--cd);color:var(--cocoa);}
+
+.note-box{background:var(--cream);border:1px dashed var(--ln);border-radius:14px;
+  padding:13px 16px;font-size:12px;color:var(--cm);line-height:1.7;margin-top:16px;}
+.note-box b{color:var(--cocoa);}
+
+/* success view */
+.success{display:none;text-align:center;}
+.success .big{font-size:56px;margin-bottom:8px;}
+.success h2{font-family:'Fraunces',serif;font-style:italic;font-size:26px;font-weight:400;margin-bottom:6px;}
+.success .ref{display:inline-block;background:rgba(196,108,126,.1);color:var(--pd);
+  border-radius:10px;padding:8px 16px;font-size:12px;letter-spacing:.14em;
+  text-transform:uppercase;font-weight:600;margin:8px 0 16px;}
+.sum{background:var(--cream);border:1px solid var(--ln);border-radius:14px;padding:4px 16px;
+  margin:10px 0 16px;text-align:left;}
+.sum .dr{display:flex;justify-content:space-between;align-items:center;padding:10px 0;
+  border-bottom:1px dashed var(--ln);gap:12px;}
+.sum .dr:last-child{border-bottom:none;}
+.sum .dlb{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--cm);font-weight:600;flex-shrink:0;}
+.sum .dv{font-size:13.5px;font-weight:600;text-align:right;}
+.success .waiting{background:var(--gs);border:1px solid var(--gold);color:#856B2A;
+  border-radius:14px;padding:13px 16px;font-size:13px;line-height:1.7;margin-bottom:16px;}
+.contact-box{background:#fff;border:1.5px solid var(--ln);border-radius:16px;
+  padding:16px;margin-bottom:16px;}
+.contact-box .cb-title{font-weight:700;font-size:13.5px;color:var(--cocoa);margin-bottom:2px;}
+.contact-box .cb-sub{font-size:12px;color:var(--cm);margin-bottom:12px;}
+.cb-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+.cb-btn{display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:13.5px;
+  font-weight:600;padding:11px 18px;border-radius:999px;text-decoration:none;
+  transition:all .18s;white-space:nowrap;}
+.cb-btn.line{background:#06C755;color:#fff;box-shadow:0 3px 10px rgba(6,199,85,.3);}
+.cb-btn.line:hover{background:#04A847;}
+.cb-btn.tel{background:var(--cream);color:var(--cocoa);border:1.5px solid var(--ln);}
+.cb-btn.tel:hover{background:var(--cd);}
+.btn-again{font-family:inherit;font-size:13px;font-weight:500;padding:10px 22px;border-radius:999px;
+  border:1px solid var(--ln);background:var(--cream);color:var(--cm);cursor:pointer;}
+.btn-again:hover{background:var(--cd);color:var(--cocoa);}
+
+.foot{text-align:center;font-size:11.5px;color:var(--cm);margin-top:20px;font-style:italic;}
+@media(max-width:480px){ .frow2{grid-template-columns:1fr;} .card{padding:20px 16px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <img class="logo-img" src="assets/logo.png" alt="Sugar Sugar Camp — Sugar glider care"/>
+  <div class="tagline">— แบบฟอร์มจองคิวตัดเล็บ &amp; ทำสปาสำหรับน้องชูการ์ไกลเดอร์ —</div>
+
+  <div class="steps-bar">
+    <div class="step"><b>1</b> เลือกวัน-เวลา</div>
+    <div class="step"><b>2</b> ทางร้านตรวจสอบ</div>
+    <div class="step"><b>3</b> ยืนยันคิว ✓</div>
+  </div>
+
+  <div class="card" id="formCard">
+    <h2>จองคิวสปา 💅</h2>
+    <div class="msub">เลือกบริการ วัน และช่วงเวลา (สลอตละ 1 ชั่วโมง) — ทางร้านจะติดต่อกลับเพื่อยืนยันคิวค่ะ 🐿</div>
+    <div id="ferr"></div>
+
+    <div class="fg"><label class="fl">เลือกบริการ *</label>
+      <div class="svc-grid">
+        <button type="button" class="svc sel" id="svc-nail" onclick="selService('nail')">
+          <span class="si">💅</span><span class="sn">ตัดเล็บ</span><span class="sp">20 บาท / ตัว</span>
+        </button>
+        <button type="button" class="svc" id="svc-spa" onclick="selService('spa')">
+          <span class="si">🛁</span><span class="sn">ตัดเล็บ + ทำสปา</span><span class="sp">70 บาท / ตัว</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="fg"><label class="fl">จำนวนน้อง 🐿 *</label>
+      <div class="counter">
+        <button type="button" onclick="changeCount(-1)" id="cntMinus" style="opacity:.3;">−</button>
+        <div class="num" id="cntNum">1</div>
+        <button type="button" onclick="changeCount(1)">＋</button>
+      </div>
+    </div>
+
+    <div class="fg"><label class="fl">เลือกวันและเวลา *</label>
+      <div id="slotArea"><div class="loading">⏳ กำลังโหลดตารางคิวจากทางร้าน…</div></div>
+    </div>
+    <div class="picked" id="picked"></div>
+    <div class="price-box" id="priceBox"></div>
+
+    <div class="frow2">
+      <div class="fg"><label class="fl">ชื่อเจ้าของ *</label>
+        <input id="fName" class="fi" placeholder="เช่น คุณสมหญิง" /></div>
+      <div class="fg"><label class="fl">เบอร์โทร *</label>
+        <input id="fPhone" class="fi" inputmode="tel" placeholder="08X-XXX-XXXX" /></div>
+    </div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">LINE ID</label>
+        <input id="fLine" class="fi" placeholder="(ถ้ามี)" /></div>
+      <div class="fg"><label class="fl">ชื่อน้องชูการ์ฯ</label>
+        <input id="fGlider" class="fi" placeholder="เช่น โมจิ, ลาเต้…" /></div>
+    </div>
+    <div class="fg"><label class="fl">หมายเหตุถึงทางร้าน</label>
+      <textarea id="fNote" class="fi" placeholder="นิสัยน้อง, สิ่งที่ต้องระวัง, มารับ-ส่งเอง…"></textarea></div>
+
+    <button class="btn-submit" id="btnSubmit" onclick="submitRequest()">💅 ส่งคำขอจองคิว</button>
+
+    <div class="note-box">
+      <b>📌 หมายเหตุ:</b> การส่งแบบฟอร์มนี้เป็น "คำขอจองคิว" เท่านั้น ยังไม่ใช่การยืนยันคิว<br/>
+      ทางร้านจะตรวจสอบและติดต่อกลับทางเบอร์โทร/LINE เพื่อยืนยันอีกครั้งค่ะ 💕<br/>
+      <b>💰 ค่าบริการ:</b> ตัดเล็บ 20 บาท/ตัว · ตัดเล็บ+ทำสปา 70 บาท/ตัว — ชำระที่ร้านค่ะ
+    </div>
+  </div>
+
+  <div class="card success" id="successCard">
+    <div class="big">💌</div>
+    <h2>ส่งคำขอจองคิวเรียบร้อย!</h2>
+    <div class="ref" id="refNo">อ้างอิง —</div>
+    <div class="sum" id="sumRows"></div>
+    <div class="waiting">
+      ⏳ คำขอของคุณถูกส่งถึงทางร้านแล้ว<br/>
+      ทางร้านจะตรวจสอบและ<b>ติดต่อกลับเพื่อยืนยันคิว</b>ทางเบอร์โทรหรือ LINE ที่ให้ไว้ค่ะ
+    </div>
+    <div class="contact-box">
+      <div class="cb-title">📎 สอบถามเพิ่มเติม / แจ้งเปลี่ยนเวลา</div>
+      <div class="cb-sub">แคปหน้าจอนี้แล้วส่งให้ทางร้าน หรือติดต่อได้ที่</div>
+      <div class="cb-btns">
+        <a class="cb-btn line" href="https://line.me/R/ti/p/@sugarsugarcamp" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.02 2 11c0 2.89 1.4 5.48 3.6 7.23L5 22l3.97-1.99C10.01 20.64 11 21 12 21c5.52 0 10-4.02 10-9S17.52 2 12 2z"/></svg>
+          LINE @sugarsugarcamp
+        </a>
+        <a class="cb-btn tel" href="tel:0979946355">📞 097-994-6355</a>
+      </div>
+    </div>
+    <button class="btn-again" onclick="resetForm()">← จองคิวเพิ่มอีกรายการ</button>
+  </div>
+
+  <div class="foot">Sugar Sugar Spa · ตัดเล็บ &amp; ทำสปาสำหรับชูการ์ไกลเดอร์ตัวโปรดของคุณ 🌸</div>
+</div>
+
+<script>
+'use strict';
+// ══════════════════════════════════════════════════════
+// Apps Script URL — ต้องเป็นตัวเดียวกับหน้า Dashboard
+// (ลิงก์ที่คัดลอกจาก Dashboard จะแนบ ?api=... มาให้เอง
+//  และจะถูกใช้ก่อนค่าที่ฝังไว้ด้านล่างเสมอ)
+// ══════════════════════════════════════════════════════
+const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_JrJsIqSjiRxtdD2B_2va4qdmO9uFX_vxP75SDXpIYotQiRPVrvIbzcoXS6-FFqBb/exec';
+const API_LS_KEY = 'ssc_booking_api_url';
+function resolveApiUrl(){
+  // 1) ?api=... จากลิงก์ที่ Dashboard สร้างให้ (จำลง localStorage ไว้ด้วย)
+  try {
+    const p = new URLSearchParams(location.search).get('api');
+    if (p && /^https:\/\/script\.google\.com\/macros\//.test(p)) {
+      try { localStorage.setItem(API_LS_KEY, p); } catch(_) {}
+      return p;
+    }
+  } catch(_) {}
+  // 2) ค่าที่เคยจำไว้ในเครื่องนี้
+  try {
+    const s = localStorage.getItem(API_LS_KEY);
+    if (s && /^https:\/\/script\.google\.com\/macros\//.test(s)) return s;
+  } catch(_) {}
+  // 3) ค่าที่ฝังไว้ในไฟล์
+  return DEFAULT_APPS_SCRIPT_URL;
+}
+const APPS_SCRIPT_URL = resolveApiUrl();
+
+const SPA_SERVICES = {
+  nail: { icon:'💅', label:'ตัดเล็บ', price:20 },
+  spa:  { icon:'🛁', label:'ตัดเล็บ + ทำสปา', price:70 }
+};
+
+const pad = n => String(n).padStart(2,'0');
+const todayKey = () => { const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+const parseD = s => new Date(s+'T00:00:00');
+const TH_MS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const TH_D = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+const thD = s => { const d=parseD(s); return d.getDate()+' '+TH_MS[d.getMonth()]+' '+String(d.getFullYear()+543).slice(2); };
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// เวลาสิ้นสุดสลอต (สลอตละ 1 ชม.) — '10:00' → '11:00'
+const endOf = t => { const h=parseInt(t,10); const mm=(t.split(':')[1]||'00'); return pad((h+1)%24)+':'+mm; };
+
+// ── state ──
+let SERVICE = 'nail';
+let COUNT = 1;
+let DAYS = [];        // [{date, slots:[{time, free}]}] จากทางร้าน
+let selDate = '';
+let selTime = '';
+
+function selService(k){
+  SERVICE = k;
+  document.getElementById('svc-nail').classList.toggle('sel', k==='nail');
+  document.getElementById('svc-spa').classList.toggle('sel', k==='spa');
+  updatePicked();
+}
+
+function changeCount(d){
+  COUNT = Math.min(20, Math.max(1, COUNT + d));
+  document.getElementById('cntNum').textContent = COUNT;
+  document.getElementById('cntMinus').style.opacity = COUNT<=1 ? '.3' : '1';
+  updatePicked();
+}
+
+// ── JSONP (ใช้ตอนเปิดจาก file:// และโหลดตารางคิว) ──
+function jsonp(action, params){
+  return new Promise((res, rej) => {
+    const cb = 'ssc_spa_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    let url = APPS_SCRIPT_URL + (APPS_SCRIPT_URL.includes('?')?'&':'?') + 'action=' + action + '&_=' + Date.now();
+    if (params) Object.keys(params).forEach(k => { url += '&' + k + '=' + encodeURIComponent(params[k]); });
+    url += '&callback=' + cb;
+    const s = document.createElement('script');
+    const t = setTimeout(() => { cleanup(); rej(new Error('หมดเวลา — เชื่อมต่อไม่ได้')); }, 20000);
+    function cleanup(){ try{delete window[cb];}catch(_){} try{s.remove();}catch(_){} clearTimeout(t); }
+    window[cb] = d => { cleanup(); (d && d.ok) ? res(d) : rej(new Error((d && d.error) || 'ล้มเหลว')); };
+    s.onerror = () => { cleanup(); rej(new Error('เชื่อมต่อระบบร้านไม่ได้')); };
+    s.src = url; document.head.appendChild(s);
+  });
+}
+
+// ── โหลดตารางวัน/สลอตที่เปิดรับจากทางร้าน ──
+async function loadSlots(){
+  const box = document.getElementById('slotArea');
+  box.innerHTML = '<div class="loading">⏳ กำลังโหลดตารางคิวจากทางร้าน…</div>';
+  try {
+    const d = await jsonp('spa_availability');
+    const today = todayKey();
+    const now = new Date();
+    const curTime = pad(now.getHours())+':'+pad(now.getMinutes());
+    // ตัดสลอตของวันนี้ที่เลยเวลาเริ่มไปแล้ว
+    DAYS = (d.days||[]).map(day => ({
+      date: day.date,
+      slots: (day.slots||[]).filter(s => day.date > today || s.time > curTime)
+    })).filter(day => day.slots.length);
+    if (!DAYS.length) {
+      box.innerHTML = `<div class="loading">😴 ขณะนี้ยังไม่เปิดรับจองคิวสปา<br/>
+        <span style="font-size:12px;">ติดต่อสอบถามทางร้านได้ที่ LINE @sugarsugarcamp หรือโทร 097-994-6355 ค่ะ</span>
+        <br/><button class="btn-retry" onclick="loadSlots()">🔄 โหลดใหม่</button></div>`;
+      return;
+    }
+    if (!DAYS.some(day => day.date === selDate)) { selDate = DAYS[0].date; selTime = ''; }
+    renderDays();
+  } catch(e) {
+    box.innerHTML = `<div class="loading">⚠ โหลดตารางคิวไม่สำเร็จ (${esc(e.message)})<br/>
+      <button class="btn-retry" onclick="loadSlots()">🔄 ลองอีกครั้ง</button></div>`;
+  }
+}
+
+function renderDays(){
+  const box = document.getElementById('slotArea');
+  box.innerHTML = `
+    <div class="dayrow">${DAYS.map(day => {
+      const d = parseD(day.date);
+      const free = day.slots.filter(s => s.free).length;
+      return `<button type="button" class="dayb ${day.date===selDate?'sel':''}" onclick="selDay('${day.date}')">
+        <span class="dw">${TH_D[d.getDay()]}</span>
+        <span class="dd">${d.getDate()}</span>
+        <span class="dm">${TH_MS[d.getMonth()]}</span>
+        <span class="df ${free?'':'full'}">${free?'ว่าง '+free:'เต็ม'}</span>
+      </button>`;
+    }).join('')}</div>
+    <div class="slotgrid" id="slotgrid"></div>
+    <div class="slot-note">🕐 สลอตละ 1 ชั่วโมง · รับ 1 คิวต่อสลอต — สลอตสีจางคือมีคิวแล้วค่ะ</div>`;
+  renderSlots();
+}
+
+function selDay(date){
+  selDate = date; selTime = '';
+  document.querySelectorAll('.dayb').forEach(b => b.classList.remove('sel'));
+  renderDays();
+  updatePicked();
+}
+
+function renderSlots(){
+  const grid = document.getElementById('slotgrid');
+  const day = DAYS.find(d => d.date === selDate);
+  if (!grid || !day) return;
+  grid.innerHTML = day.slots.map(s =>
+    `<button type="button" class="slotb ${s.time===selTime?'sel':''}" ${s.free?'':'disabled'}
+      onclick="selSlot('${s.time}')">${s.time}–${endOf(s.time)}<small>${s.free?'ว่าง':'มีคิวแล้ว'}</small></button>`
+  ).join('');
+}
+
+function selSlot(time){
+  selTime = time;
+  renderSlots();
+  updatePicked();
+}
+
+function updatePicked(){
+  const pEl = document.getElementById('picked');
+  const prEl = document.getElementById('priceBox');
+  if (!selDate || !selTime) { pEl.style.display='none'; prEl.style.display='none'; return; }
+  const svc = SPA_SERVICES[SERVICE];
+  pEl.style.display = 'flex';
+  pEl.textContent = '🗓 ' + thD(selDate) + ' · ' + selTime + '–' + endOf(selTime) + ' น.';
+  prEl.style.display = 'block';
+  prEl.innerHTML = svc.icon + ' ' + svc.label + ' × ' + COUNT + ' ตัว — ค่าบริการประมาณ <b>' +
+    (svc.price*COUNT) + ' บาท</b> (ชำระที่ร้านค่ะ)';
+}
+
+// ── submit ──
+function showErr(t){
+  document.getElementById('ferr').innerHTML = t ? '<div class="errbx">⚠ '+esc(t)+'</div>' : '';
+  if (t) window.scrollTo({top:0, behavior:'smooth'});
+}
+async function submitRequest(){
+  showErr('');
+  const q = {
+    guestName:  document.getElementById('fName').value.trim(),
+    phone:      document.getElementById('fPhone').value.trim(),
+    line:       document.getElementById('fLine').value.trim(),
+    gliderName: document.getElementById('fGlider').value.trim(),
+    gliderCount: COUNT,
+    service: SERVICE,
+    date: selDate,
+    time: selTime,
+    notes: document.getElementById('fNote').value.trim()
+  };
+  if (!q.date || !q.time) return showErr('กรุณาเลือกวันและช่วงเวลาที่ต้องการจอง');
+  if (!q.guestName) return showErr('กรุณาใส่ชื่อเจ้าของ');
+  if (!q.phone)     return showErr('กรุณาใส่เบอร์โทร เพื่อให้ทางร้านติดต่อยืนยันได้');
+
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true; btn.textContent = '⏳ กำลังส่งคำขอ…';
+  try {
+    let d;
+    if (location.protocol !== 'file:') {
+      const r = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },   // text/plain หลีกเลี่ยง CORS preflight
+        body: JSON.stringify({ action: 'request_spa', request: q })
+      });
+      d = await r.json();
+      if (!d || !d.ok) throw new Error((d && d.error) || 'ส่งไม่สำเร็จ');
+    } else {
+      d = await jsonp('request_spa', { data: encodeURIComponent(JSON.stringify(q)) });
+    }
+    showSuccess(q, d.id || '');
+  } catch(err) {
+    btn.disabled = false; btn.textContent = '💅 ส่งคำขอจองคิว';
+    // สลอตเพิ่งถูกจองตัดหน้า / ร้านปิดรับ — โหลดตารางใหม่ให้เลือกอีกครั้ง
+    if (/เลือกเวลาใหม่|มีผู้จอง|ไม่เปิดรับ/.test(err.message||'')) {
+      selTime = '';
+      loadSlots();
+      updatePicked();
+      return showErr(err.message);
+    }
+    showErr('ส่งคำขอไม่สำเร็จ: ' + err.message + ' — ลองอีกครั้ง หรือติดต่อทางร้านโดยตรงค่ะ');
+  }
+}
+
+function showSuccess(q, id){
+  document.getElementById('formCard').style.display = 'none';
+  const sc = document.getElementById('successCard');
+  sc.style.display = 'block';
+  const svc = SPA_SERVICES[q.service] || SPA_SERVICES.nail;
+  document.getElementById('refNo').textContent = 'เลขอ้างอิง ' + (id || '-');
+  document.getElementById('sumRows').innerHTML = `
+    <div class="dr"><span class="dlb">ชื่อเจ้าของ</span><span class="dv">${esc(q.guestName)}</span></div>
+    ${q.gliderName?`<div class="dr"><span class="dlb">น้องชูการ์</span><span class="dv">${esc(q.gliderName)}</span></div>`:''}
+    <div class="dr"><span class="dlb">บริการ</span><span class="dv">${svc.icon} ${svc.label}</span></div>
+    <div class="dr"><span class="dlb">จำนวน</span><span class="dv">${q.gliderCount} ตัว</span></div>
+    <div class="dr"><span class="dlb">วันที่</span><span class="dv">${thD(q.date)}</span></div>
+    <div class="dr"><span class="dlb">เวลา</span><span class="dv">${q.time}–${endOf(q.time)} น.</span></div>
+    <div class="dr"><span class="dlb">ค่าบริการประมาณ</span><span class="dv">฿${svc.price*q.gliderCount} (ชำระที่ร้าน)</span></div>`;
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function resetForm(){
+  document.getElementById('successCard').style.display = 'none';
+  document.getElementById('formCard').style.display = 'block';
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = false; btn.textContent = '💅 ส่งคำขอจองคิว';
+  document.getElementById('fNote').value = '';
+  selTime = '';
+  loadSlots();
+  updatePicked();
+}
+
+loadSlots();
+</script>
+</body>
+</html>
