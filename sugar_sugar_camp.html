@@ -603,7 +603,11 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google Apps Script (v15-spa)
+ * Sugar Sugar Camp - Google Apps Script (v16-spa)
+ *
+ * ★ v16: ปิดคิวสปาเมื่อทำเสร็จได้ (สถานะ "done")
+ *   - กดปุ่ม ✅ ในรายการ "คิวสปาที่อนุมัติแล้ว" เมื่อให้บริการเสร็จ
+ *   - คิวหายจากรายการบน Dashboard แต่แถวยังอยู่ในชีตเป็นประวัติ
  *
  * ★ v15: ยกเลิกคิวสปาที่อนุมัติแล้วได้ (สถานะ "cancelled")
  *   - กดปุ่ม ✕ ในรายการ "คิวสปาที่อนุมัติแล้ว" บน Dashboard
@@ -721,7 +725,7 @@ function doGet(e) {
     } else if (act === 'spa_schedule_set' && p.data) {
       result = { ok:true, schedule: setSpaSchedule(JSON.parse(decodeURIComponent(p.data))) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v15-spa', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v16-spa', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -1532,8 +1536,8 @@ function addSpaRequest(q) {
 }
 
 function updateSpaStatus(id, status) {
-  // cancelled = คิวที่อนุมัติแล้วแต่ลูกค้ายกเลิกภายหลัง — สลอตกลับมาว่างอัตโนมัติ
-  if (['approved','rejected','pending','cancelled'].indexOf(String(status)) < 0)
+  // cancelled = ลูกค้ายกเลิกภายหลัง (สลอตกลับมาว่าง) · done = ให้บริการเสร็จสิ้น
+  if (['approved','rejected','pending','cancelled','done'].indexOf(String(status)) < 0)
     throw new Error('สถานะไม่ถูกต้อง: ' + status);
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -2116,6 +2120,8 @@ function spaApprovedList(){
           <span>${esc(q.guestName)}${q.gliderName?' · น้อง '+esc(q.gliderName):''} (${q.gliderCount||1} ตัว)</span>
           ${q.phone?`<span style="color:var(--cm);">📞 ${esc(q.phone)}</span>`:''}
           <button class="ib" style="margin-left:auto;flex-shrink:0;" onclick="showSpaSlip('${q.id}')" title="ออกใบยืนยันคิว — บันทึกรูปส่งให้ลูกค้า">🧾</button>
+          <button class="ib" style="flex-shrink:0;" onclick="spaCalcForQueue('${q.id}')" title="คิดเงินคิวนี้ — เปิดเครื่องคิดเงินพร้อมข้อมูลคิว">💰</button>
+          <button class="ib confirm" style="flex-shrink:0;" onclick="completeSpaBooking('${q.id}')" title="สปาเสร็จสิ้น — ปิดคิวนี้ออกจากรายการ">✓</button>
           <button class="ib danger" style="flex-shrink:0;" onclick="cancelSpaBooking('${q.id}')" title="ยกเลิกคิวนี้ — สลอตจะเปิดให้จองใหม่">✕</button>
         </div>`;
       }).join('')}
@@ -2147,6 +2153,43 @@ async function doCancelSpa(id){
     toast('✓ ยกเลิกคิวแล้ว — สลอตเปิดให้จองใหม่ได้','ok');
   }catch(err){
     toast('✗ ยกเลิกไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v15)','err');
+    fetchSpaRequests(true);
+  }
+}
+
+// คิดเงินคิวนี้ — เปิดเครื่องคิดเงินสปาพร้อมชื่อลูกค้า/บริการ/จำนวนจากคิว
+function spaCalcForQueue(id){
+  const q=S.spaApproved.find(x=>x.id===id); if(!q)return;
+  const counts={nail:0,spa:0};
+  counts[q.service==='spa'?'spa':'nail']=q.gliderCount||1;
+  openSpaCalc({guest:q.guestName||'',counts:counts});
+}
+
+// สปาเสร็จสิ้น — ปิดคิวออกจากรายการ (บันทึกสถานะ done เก็บเป็นประวัติในชีต)
+function completeSpaBooking(id){
+  const q=S.spaApproved.find(x=>x.id===id); if(!q)return;
+  const svc=spaSvcOf(q.service);
+  showModal(`<div class="modal" style="max-width:420px;" onclick="event.stopPropagation()">
+    <h2 style="font-size:22px;">สปาเสร็จสิ้น</h2>
+    <p style="color:var(--cm);margin:12px 0 8px;">ปิดคิวของ <b>${esc(q.guestName)}</b><br/>
+    ${svc.icon} ${svc.label} · ${q.gliderCount||1} ตัว<br/>
+    📅 ${thD(q.date,true)} · 🕐 ${esc(q.time)} น.</p>
+    <p style="color:var(--cm);font-size:12px;margin-bottom:20px;">คิวจะหายจากรายการนี้ แต่ข้อมูลยังเก็บอยู่ในชีต SpaRequests เป็นประวัติ (สถานะ "done") — ถ้ายังไม่ได้คิดเงิน กดปุ่ม 💰 ก่อนนะคะ</p>
+    <div class="factions">
+      <button class="btn btn-g" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-p" onclick="doCompleteSpa('${id}')">✓ เสร็จสิ้น ปิดคิว</button>
+    </div>
+  </div>`);
+}
+async function doCompleteSpa(id){
+  closeModal();
+  S.spaApproved=S.spaApproved.filter(r=>r.id!==id);
+  render();
+  try{
+    await callApi('update_spa',{id:id,status:'done'});
+    toast('✓ ปิดคิวเรียบร้อย — ขอบคุณที่ใช้บริการค่ะ 🌸','ok');
+  }catch(err){
+    toast('✗ ปิดคิวไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v16)','err');
     fetchSpaRequests(true);
   }
 }
@@ -4197,8 +4240,9 @@ function spaCalc(){
   return {items,total:items.reduce((t,i)=>t+i.amt,0),count:items.reduce((t,i)=>t+i.qty,0)};
 }
 
-function openSpaCalc(){
+function openSpaCalc(prefill){
   SPA_COUNTS={nail:0,spa:0};
+  if(prefill&&prefill.counts) Object.assign(SPA_COUNTS,prefill.counts);
   showModal(`<div class="co-modal" onclick="event.stopPropagation()">
     <button class="mclose" style="position:absolute;top:14px;right:14px;z-index:10;background:rgba(255,255,255,.25);color:#fff;" onclick="closeModal()">✕</button>
     <div class="co-header" style="background:linear-gradient(135deg,var(--gold) 0%,#A07E2D 100%);">
@@ -4208,7 +4252,7 @@ function openSpaCalc(){
     </div>
     <div class="co-body">
       <div class="co-fg"><label class="co-label">ชื่อลูกค้า (ไม่บังคับ)</label>
-        <input id="spa-guest" type="text" class="co-input" placeholder="เช่น คุณสมหญิง"></div>
+        <input id="spa-guest" type="text" class="co-input" placeholder="เช่น คุณสมหญิง" value="${esc(prefill&&prefill.guest?prefill.guest:'')}"></div>
       <div class="co-sec-title">💅 เลือกบริการ</div>
       ${SPA_SERVICES.map(s=>`
       <div class="spa-svc">
@@ -4216,7 +4260,7 @@ function openSpaCalc(){
         <div class="spa-info"><h4>${s.label}</h4><div class="spa-price">${s.price} บาท / ตัว</div></div>
         <div class="spa-ctrl">
           <button class="spa-cbtn minus" onclick="spaUpdate('${s.key}',-1)">−</button>
-          <span class="spa-qty" id="spa-qty-${s.key}">0</span>
+          <span class="spa-qty" id="spa-qty-${s.key}">${SPA_COUNTS[s.key]||0}</span>
           <button class="spa-cbtn plus" onclick="spaUpdate('${s.key}',1)">＋</button>
         </div>
       </div>`).join('')}
