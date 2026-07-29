@@ -1687,6 +1687,13 @@ function stdLabel(rn){rn=Number(rn)||1;return rn<=MAIN_CAGES?'STD-'+pad(rn):'ส
 function gsLabel(rn){return 'Grand Suite #'+(Number(rn)||1);}
 const BACKUP_NOTE='ไม่ใช่กรง Stainless และไม่มีกล้องไว้ดูน้องชูก้า';
 
+// กรงชูการ์ของเจ้าของ — อยู่ประจำที่ร้าน นับรวมตอนเตรียมผลไม้/อาหารทุกวัน
+const OWNER_CAGES=[
+  {name:'มิว มี่ มู่', count:3},
+  {name:'จูเนียร์ จิ๋ว เดมี', count:3},
+  {name:'สมาร์ท', count:1},
+];
+
 // ============================
 // SYNC
 // ============================
@@ -2674,6 +2681,7 @@ function render(){
     </div>
     <div class="bgroup">
       ${S.syncUrl?`<button class="btn btn-s btn-sm" onclick="manualSync()" ${S.syncSt==='syncing'?'disabled':''}>🔄 Sync</button>`:''}
+      <button class="btn btn-s" onclick="openFoodSummary()">🍽 สรุปเตรียมอาหาร</button>
       <button class="btn btn-s" onclick="openSpaCalc()">🛁 คิดเงินสปา</button>
       <button class="btn btn-p" onclick="openForm()">＋ เพิ่มการจอง</button>
     </div>
@@ -2779,6 +2787,93 @@ function renderToday(){
 }
 
 function toggleBackup(){S.showBackup=!S.showBackup;render();}
+
+// ============================
+// สรุปเตรียมอาหาร — นับจำนวนกรงแยกตามจำนวนตัวต่อกรง
+// ใช้เตรียมผลไม้/อาหารตามจำนวนน้องของแต่ละกรง (รวมกรงชูการ์ของเจ้าของด้วย)
+// ============================
+function foodSummaryData(dateStr){
+  // กรงลูกค้าที่เข้าพักในวันที่เลือก
+  const guest=onDate(S.bookings,dateStr).map(b=>({
+    label:b.roomType==='grand_suite'?'👑 '+gsLabel(b.roomNumber):stdLabel(b.roomNumber),
+    name:b.gliderName||b.guestName||'ไม่ระบุ',
+    count:parseInt(b.gliderCount)||1,
+    owner:false
+  }));
+  // กรงเจ้าของ — อยู่ประจำ นับรวมทุกวัน
+  const own=OWNER_CAGES.map((c,i)=>({label:'กรงเจ้าของ #'+(i+1),name:c.name,count:c.count,owner:true}));
+  const all=[...guest,...own];
+  const groups={};
+  all.forEach(c=>{(groups[c.count]=groups[c.count]||[]).push(c);});
+  const counts=Object.keys(groups).map(Number).sort((a,b)=>a-b);
+  return {all,groups,counts,
+    totalCages:all.length,
+    totalGliders:all.reduce((s,c)=>s+c.count,0),
+    guestCages:guest.length};
+}
+
+function foodSummaryText(dateStr){
+  const d=foodSummaryData(dateStr);
+  let m='🍽 สรุปเตรียมอาหาร '+thD(dateStr)+'\n';
+  m+='รวม '+d.totalCages+' กรง · ชูการ์ '+d.totalGliders+' ตัว (รวมกรงเจ้าของ '+OWNER_CAGES.length+' กรง)\n';
+  d.counts.forEach(n=>{
+    const list=d.groups[n];
+    m+='\n🐿 กรง '+n+' ตัว — '+list.length+' กรง (รวม '+(n*list.length)+' ตัว)\n';
+    list.forEach(c=>{m+='  • '+c.label+' · '+c.name+'\n';});
+  });
+  return m;
+}
+
+function copyFoodSummary(){
+  navigator.clipboard.writeText(foodSummaryText(S.selDate||todayKey())).then(()=>{
+    const btn=document.getElementById('food-copy-btn');
+    if(btn){btn.textContent='✓ คัดลอกแล้ว!';setTimeout(()=>{if(btn)btn.textContent='📋 คัดลอกข้อความ';},2000);}
+  });
+}
+
+function openFoodSummary(){
+  const date=S.selDate||todayKey();
+  const isT=date===todayKey();
+  const d=foodSummaryData(date);
+  let rows='';
+  d.counts.forEach(n=>{
+    const list=d.groups[n];
+    rows+=`<div style="display:flex;justify-content:space-between;align-items:center;background:var(--cream);border-radius:10px;padding:9px 14px;margin:14px 0 8px;">
+      <span style="font-weight:700;color:var(--cocoa);">🐿 กรง ${n} ตัว</span>
+      <span style="font-size:12.5px;color:var(--cm);"><b style="color:var(--cocoa);font-size:14px;">${list.length}</b> กรง · รวม ${n*list.length} ตัว</span>
+    </div>`;
+    rows+=list.map(c=>`<div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:4px 14px;line-height:1.6;">
+      <span style="color:var(--cm);white-space:nowrap;">${c.owner?'🏡 ':''}${esc(c.label)}</span>
+      <span style="text-align:right;color:var(--cocoa);">${esc(c.name)}</span>
+    </div>`).join('');
+  });
+  if(!d.counts.length) rows='<div class="meta" style="text-align:center;padding:20px 0;">ยังไม่มีกรงที่ต้องเตรียมอาหาร</div>';
+  showModal(`<div class="modal" onclick="event.stopPropagation()" style="max-width:460px;">
+    <button class="mclose" onclick="closeModal()">✕</button>
+    <h2>🍽 สรุปเตรียมอาหาร</h2>
+    <p class="msub">${isT?'วันนี้ · ':''}${thD(date)} · นับจำนวนกรงตามจำนวนตัว เพื่อเตรียมผลไม้/อาหารของแต่ละกรง</p>
+    <div style="display:flex;gap:8px;margin-bottom:6px;">
+      <div style="flex:1;background:var(--cream);border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:var(--cocoa);">${d.totalCages}</div>
+        <div style="font-size:11px;color:var(--cm);">กรงทั้งหมด</div>
+      </div>
+      <div style="flex:1;background:var(--cream);border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:var(--cocoa);">${d.totalGliders}</div>
+        <div style="font-size:11px;color:var(--cm);">ชูการ์รวม (ตัว)</div>
+      </div>
+      <div style="flex:1;background:var(--cream);border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:var(--cocoa);">${d.guestCages}</div>
+        <div style="font-size:11px;color:var(--cm);">กรงลูกค้า</div>
+      </div>
+    </div>
+    <div style="font-size:11.5px;color:var(--cm);margin-bottom:4px;">🏡 = กรงชูการ์ของเจ้าของ (${OWNER_CAGES.length} กรง — นับรวมทุกวัน)</div>
+    <div style="max-height:46vh;overflow-y:auto;margin:0 -4px;padding:0 4px;">${rows}</div>
+    <div class="factions" style="margin-top:16px;">
+      <button class="btn btn-g" onclick="closeModal()">ปิด</button>
+      <button class="btn btn-p" id="food-copy-btn" onclick="copyFoodSummary()">📋 คัดลอกข้อความ</button>
+    </div>
+  </div>`);
+}
 
 function roomCell(rt,rn,isSuite){
   const b=roomOf(S.bookings,rt,rn,S.selDate);
