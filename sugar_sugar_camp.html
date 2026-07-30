@@ -604,7 +604,12 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google Apps Script (v16-spa)
+ * Sugar Sugar Camp - Google Apps Script (v17-food)
+ *
+ * ★ v17: สรุปเตรียมอาหารในไลน์รอบเย็น 18:00
+ *   - ข้อความเย็นเพิ่ม "🍽 เตรียมอาหารคืนนี้" — นับจำนวนกรงตามจำนวนตัวต่อกรง
+ *     (กรง 1 ตัวมีกี่กรง / กรง 2 ตัวมีกี่กรง ...) ไม่ลงรายละเอียดรายกรง
+ *   - นับรวมกรงชูการ์ของเจ้าของ (OWNER_CAGES) ที่อยู่ประจำทุกวัน
  *
  * ★ v16: ปิดคิวสปาเมื่อทำเสร็จได้ (สถานะ "done")
  *   - กดปุ่ม ✅ ในรายการ "คิวสปาที่อนุมัติแล้ว" เมื่อให้บริการเสร็จ
@@ -726,7 +731,7 @@ function doGet(e) {
     } else if (act === 'spa_schedule_set' && p.data) {
       result = { ok:true, schedule: setSpaSchedule(JSON.parse(decodeURIComponent(p.data))) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v16-spa', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v17-food', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -1134,6 +1139,32 @@ function summaryForDate(targetDate) {
   };
 }
 
+// ── 🍽 สรุปเตรียมอาหาร — นับจำนวนกรงตามจำนวนตัวต่อกรง ──────
+// กรงชูการ์ของเจ้าของ — อยู่ประจำที่ร้าน นับรวมตอนเตรียมอาหารทุกวัน
+// (แก้รายการที่นี่ให้ตรงกับ OWNER_CAGES ในหน้า Dashboard)
+const OWNER_CAGES = [
+  { name:'มิว มี่ มู่', count:3 },
+  { name:'จูเนียร์ จิ๋ว เดมี', count:3 },
+  { name:'สมาร์ท', count:1 },
+];
+
+// สรุปแค่จำนวน: กรง 1 ตัวมีกี่กรง / กรง 2 ตัวมีกี่กรง ... ไม่ลงรายกรง
+function foodPrepLines_(targetDate) {
+  const counts = {};
+  summaryForDate(targetDate).occ.forEach(b => {
+    const n = Number(b.gliderCount) || 1;
+    counts[n] = (counts[n] || 0) + 1;
+  });
+  OWNER_CAGES.forEach(c => { counts[c.count] = (counts[c.count] || 0) + 1; });
+  const keys = Object.keys(counts).map(Number).sort((a,b) => a - b);
+  const totalCages   = keys.reduce((s,n) => s + counts[n], 0);
+  const totalGliders = keys.reduce((s,n) => s + n * counts[n], 0);
+  let m = '🍽 เตรียมอาหารคืนนี้:';
+  keys.forEach(n => { m += '\\n• กรง ' + n + ' ตัว — ' + counts[n] + ' กรง'; });
+  m += '\\nรวม ' + totalCages + ' กรง · ชูการ์ ' + totalGliders + ' ตัว (รวมกรงเจ้าของ ' + OWNER_CAGES.length + ' กรง)';
+  return m;
+}
+
 // เข้ากังเดิม — คืน summary ของวันนี้
 function dailySummary() {
   const today = dateStr_(new Date());
@@ -1171,6 +1202,7 @@ function buildEveningMessage() {
   m += '👋 เช็คเอาท์พรุ่งนี้: ' + d.co.length      + ' บ้าน\\n';
   m += '🌙 พักต่อเนื่อง: '       + staying.length   + ' บ้าน\\n';
   m += '🐿 ชูการ์คืนนี้: '       + summaryForDate(today).gliders + ' ตัว';
+  m += '\\n\\n' + foodPrepLines_(today);
   if (d.ci.length)  m += '\\n\\n🚪 เข้าพรุ่งนี้:\\n• ' + d.ci.map(nameOf_).join('\\n• ');
   if (d.co.length)  m += '\\n\\n👋 ออกพรุ่งนี้:\\n• ' + d.co.map(nameOf_).join('\\n• ');
   return m;
@@ -3631,6 +3663,11 @@ function buildLocalEveningText(){
   m+='👋 เช็คเอาท์พรุ่งนี้: '+d.co.length+' บ้าน\n';
   m+='🌙 พักต่อเนื่อง: '+staying.length+' บ้าน\n';
   m+='🐿 ชูการ์คืนนี้: '+todayOcc.gliders+' ตัว';
+  // สรุปเตรียมอาหารคืนนี้ — นับแค่จำนวนกรงตามจำนวนตัว ไม่ลงรายกรง
+  const fp=foodSummaryData(todayKey());
+  m+='\n\n🍽 เตรียมอาหารคืนนี้:';
+  fp.counts.forEach(n=>{m+='\n• กรง '+n+' ตัว — '+fp.groups[n].length+' กรง';});
+  m+='\nรวม '+fp.totalCages+' กรง · ชูการ์ '+fp.totalGliders+' ตัว (รวมกรงเจ้าของ '+OWNER_CAGES.length+' กรง)';
   if(d.ci.length) m+='\n\n🚪 เข้าพรุ่งนี้:\n• '+d.ci.map(localNameOf).join('\n• ');
   if(d.co.length) m+='\n\n👋 ออกพรุ่งนี้:\n• '+d.co.map(localNameOf).join('\n• ');
   return m;
