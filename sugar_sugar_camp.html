@@ -604,7 +604,7 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google Apps Script (v17-food)
+ * Sugar Sugar Camp - Google t (v17-food)
  *
  * ★ v17: สรุปเตรียมอาหารในไลน์รอบเย็น 18:00
  *   - ข้อความเย็นเพิ่ม "🍽 เตรียมอาหารคืนนี้" — นับจำนวนกรงตามจำนวนตัวต่อกรง
@@ -640,7 +640,7 @@ const AS_CODE = `/**
  * ★★★ Bot เงียบสนิท 100% — ไม่มีข้อความอัตโนมัติถึงลูกค้าทุกกรณี ★★★
  *   - ไม่มีโค้ดตอบกลับ (reply) เหลืออยู่เลย — ใครทักมา Bot ไม่ตอบเด็ดขาด
  *   - ไม่มีการลงทะเบียนผู้รับอัตโนมัติ — ตั้งผู้รับได้ทางเดียวคือเจ้าของร้าน
- *     กดรันฟังก์ชันใน Apps Script เอง (ดู "วิธีตั้งผู้รับ" ด้านล่าง)
+ *     กดรันฟังก์ชันใน t เอง (ดู "วิธีตั้งผู้รับ" ด้านล่าง)
  *   - ใช้ชื่อ property ใหม่ (SSC_SUMMARY_TARGET / SSC_BOOKING_TARGET)
  *     ค่าเก่า LINE_TARGET_ID / LINE_GROUP_ID ที่อาจถูกลูกค้าทับไว้ = ถูกเลิกใช้ทันที
  *   - ไม่มี broadcast — ส่งแบบเจาะจงผู้รับ (push) เท่านั้น
@@ -649,7 +649,7 @@ const AS_CODE = `/**
  *   - ตั้งกลุ่มร้านอย่างเดียว → ทั้ง "สรุปเช้า 06:00 / เย็น 18:00" และ
  *     "แจ้งคำขอจองใหม่" ส่งเข้ากลุ่มเดียวกันทั้งหมด
  *
- * ── วิธีตั้งผู้รับ (ทำใน Apps Script Editor เท่านั้น) ──
+ * ── วิธีตั้งผู้รับ (ทำใน t Editor เท่านั้น) ──
  *  ✔ แนะนำ: เชิญ Bot เข้ากลุ่มร้าน → ส่งข้อความในกลุ่ม 1 ข้อความ
  *    → รัน setBookingTargetFromLastSeenGroup ทันที = จบ ทุกอย่างเข้ากลุ่ม
  *  (ทางเลือก) อยากให้สรุปประจำวันเข้าแชทส่วนตัวแทน:
@@ -777,7 +777,7 @@ function doPost(e) {
 // ─── LINE Webhook handler ───────────────────────────────────
 // ★★★ Bot เงียบสนิท: ไม่ตอบกลับใครทั้งสิ้น ไม่มีข้อความอัตโนมัติทุกกรณี ★★★
 // หน้าที่เดียวคือ "จด ID ล่าสุดที่เห็น" ไว้เงียบๆ เพื่อให้เจ้าของร้าน
-// กดรันฟังก์ชันตั้งผู้รับใน Apps Script เอง (ไม่มีการตั้งผู้รับอัตโนมัติ)
+// กดรันฟังก์ชันตั้งผู้รับใน t เอง (ไม่มีการตั้งผู้รับอัตโนมัติ)
 function handleLineWebhook(body) {
   const props = PropertiesService.getScriptProperties();
   (body.events || []).forEach(function(ev) {
@@ -794,7 +794,7 @@ function handleLineWebhook(body) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ══ วิธีตั้งผู้รับ — เจ้าของร้านรันเองใน Apps Script Editor เท่านั้น ══
+// ══ วิธีตั้งผู้รับ — เจ้าของร้านรันเองใน t Editor เท่านั้น ══
 //
 //  💡 ง่ายสุด (ทุกอย่างเข้ากลุ่มเดียว): ตั้งแค่กลุ่ม (ข้อ B) พอ
 //     → ทั้ง "สรุปเช้า-เย็น" และ "แจ้งคำขอจองใหม่" จะเข้ากลุ่มร้านทั้งหมด
@@ -1220,7 +1220,7 @@ function sendLine_(text) {
   const token  = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
   if (!token)  throw new Error('ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN ใน Script Properties');
   const target = (props.getProperty('SSC_SUMMARY_TARGET') || props.getProperty('SSC_BOOKING_TARGET') || '').trim();
-  if (!target) throw new Error('ยังไม่ได้ตั้งผู้รับ — รัน setBookingTargetFromLastSeenGroup (กลุ่ม) หรือ setSummaryTargetFromLastSeen (ส่วนตัว) ใน Apps Script');
+  if (!target) throw new Error('ยังไม่ได้ตั้งผู้รับ — รัน setBookingTargetFromLastSeenGroup (กลุ่ม) หรือ setSummaryTargetFromLastSeen (ส่วนตัว) ใน t');
   const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
     method: 'post', contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + token },
@@ -1384,7 +1384,7 @@ function sendBookingLine_(text) {
   const token  = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
   if (!token)  throw new Error('ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN');
   const target = (props.getProperty('SSC_BOOKING_TARGET') || props.getProperty('SSC_SUMMARY_TARGET') || '').trim();
-  if (!target) throw new Error('ยังไม่ได้ตั้งกลุ่ม/ผู้รับ — รัน setBookingTargetFromLastSeenGroup ใน Apps Script (ระบบไม่ส่งหาใครเองเด็ดขาด)');
+  if (!target) throw new Error('ยังไม่ได้ตั้งกลุ่ม/ผู้รับ — รัน setBookingTargetFromLastSeenGroup ใน t (ระบบไม่ส่งหาใครเองเด็ดขาด)');
   const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
     method: 'post', contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + token },
@@ -1656,7 +1656,7 @@ const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 // ตั้งค่า Apps Script URL ตรงนี้ — ใช้ได้ทุกเครื่องทันที
 // วาง URL ของคุณระหว่าง '' ด้านล่าง แล้วบันทึกไฟล์
 // ══════════════════════════════════════════════════════
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5yCyNP68M6piBfiGDWqWI8P0C7l3i2pGBjUGxhVEb_98QCrRxDpUJdxT_NEszN7qE/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwodiIEBus7MxGO6CN3H-F3xGOUOnaAnzr63XbhfD-Yjl17cmKAHQmRhUhfXPIbTEwF/exec';
 // ตัวอย่าง: const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/ABC123.../exec';
 // ══════════════════════════════════════════════════════
 
