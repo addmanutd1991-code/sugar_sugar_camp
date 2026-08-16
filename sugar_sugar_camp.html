@@ -4060,10 +4060,14 @@ function coSelectedBookings(){
 function calcCheckout(){
   const list = coSelectedBookings();
   if(!list.length) return {sub:0,disc:0,discPct:0,discB:0,del:0,extT:0,total:0,nights:0,gliders:0,extras:[],rooms:[]};
+  const main = list[0];
   const rooms = list.map(b=>{
-    const nights = nts(b.checkIn, b.checkOut);
+    // กรงที่รวมบิลคิดเฉพาะคืนที่ทับช่วงเวลาของบิลหลัก — คืนนอกช่วงถูกคิดในบิลของรอบนั้นเอง
+    const ci = b.checkIn > main.checkIn ? b.checkIn : main.checkIn;
+    const co = b.checkOut < main.checkOut ? b.checkOut : main.checkOut;
+    const nights = nts(ci, co);
     const gliders = parseInt(b.gliderCount)||1;
-    return {b, nights, gliders, amt: gliders * PRICE_PER_GLIDER_NIGHT * nights};
+    return {b, ci, co, nights, gliders, amt: gliders * PRICE_PER_GLIDER_NIGHT * nights};
   });
   const sub = rooms.reduce((s,r)=>s+r.amt,0);
   const gliders = rooms.reduce((s,r)=>s+r.gliders,0);
@@ -4161,24 +4165,30 @@ function openCheckout(id){
   const sub=gliders*PRICE_PER_GLIDER_NIGHT*nights;
   const roomLabel=coRoomLabel(b);
 
-  // กรงอื่นที่เช็คเอาท์ได้ (เข้าพักอยู่/ผ่านไปแล้ว) — เจ้าของเดียวกันขึ้นก่อน
+  // กรงอื่นที่รวมบิลได้ — เฉพาะกรงที่พักทับช่วงเวลาของบิลนี้เท่านั้น
+  // (รอบเข้าพักช่วงอื่นถูกคิดเงินตอนเช็คเอาท์ของรอบนั้นแล้ว ไม่ให้เลือกซ้ำ) — เจ้าของเดียวกันขึ้นก่อน
   const sameFam=x=>(b.phone&&x.phone&&x.phone.trim()===b.phone.trim())||
     (x.guestName&&x.guestName.trim()===b.guestName.trim());
-  const candidates=S.bookings.filter(x=>x.id!==id&&bSt(x)!=='upcoming')
+  const candidates=S.bookings.filter(x=>x.id!==id&&bSt(x)!=='upcoming'
+      &&x.checkIn<b.checkOut&&x.checkOut>b.checkIn)
     .sort((a,c)=>(sameFam(c)?1:0)-(sameFam(a)?1:0)||(a.checkIn<c.checkIn?-1:1));
   const mergeSec=candidates.length?`
       <details class="sc" style="margin:0 0 16px;">
         <summary><span>🔗 รวมบิลหลายกรง <span id="co-merge-count" class="co-merge-tag" style="display:none;"></span></span></summary>
         <div>
-      <div class="fhelp" style="margin:0 0 10px;">ถ้าน้องครอบครัวเดียวกันพักแยกหลายกรง ติ๊กเลือกกรงเพิ่มด้านล่าง เพื่อออกใบเสร็จรวมใบเดียวได้เลยค่ะ</div>
+      <div class="fhelp" style="margin:0 0 10px;">ถ้าน้องครอบครัวเดียวกันพักแยกหลายกรงช่วงเดียวกัน ติ๊กเลือกกรงเพิ่มด้านล่าง เพื่อออกใบเสร็จรวมใบเดียวได้เลยค่ะ (แสดงเฉพาะกรงที่พักตรงช่วง ${formatDateTH(b.checkIn)} → ${formatDateTH(b.checkOut)} และคิดเงินเฉพาะคืนในช่วงนี้)</div>
       <div class="co-merge-list">
         ${candidates.map(x=>{
-          const n=nts(x.checkIn,x.checkOut), g=parseInt(x.gliderCount)||1, amt=g*PRICE_PER_GLIDER_NIGHT*n;
+          const ci=x.checkIn>b.checkIn?x.checkIn:b.checkIn;
+          const co=x.checkOut<b.checkOut?x.checkOut:b.checkOut;
+          const n=nts(ci,co), g=parseInt(x.gliderCount)||1, amt=g*PRICE_PER_GLIDER_NIGHT*n;
+          const clipped=ci!==x.checkIn||co!==x.checkOut;
           return `<label class="co-merge-item" id="co-merge-${x.id}">
             <input type="checkbox" onchange="coToggleMerge('${x.id}',this.checked)">
             <div class="co-merge-info">
               <div class="co-merge-name">${coRoomLabel(x)} · ${esc(x.guestName)}${sameFam(x)?'<span class="co-merge-tag">เจ้าของเดียวกัน</span>':''}</div>
-              <div class="co-merge-sub">${x.gliderName?'น้อง '+esc(x.gliderName)+' · ':''}${g} ตัว × ${n} คืน · ${formatDateTH(x.checkIn)} → ${formatDateTH(x.checkOut)}</div>
+              <div class="co-merge-sub">${x.gliderName?'น้อง '+esc(x.gliderName)+' · ':''}${g} ตัว × ${n} คืน · ${formatDateTH(ci)} → ${formatDateTH(co)}</div>
+              ${clipped?`<div class="co-merge-sub" style="color:var(--pd);">⏱ คิดเฉพาะคืนที่ตรงกับบิลนี้ (พักจริง ${formatDateTH(x.checkIn)} → ${formatDateTH(x.checkOut)})</div>`:''}
             </div>
             <div class="co-merge-amt">฿${fmtTHB(amt)}</div>
           </label>`;
@@ -4259,8 +4269,8 @@ function showCheckoutReceipt(id){
     rooms.forEach(r=>{
       stayRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏠 ${coRoomLabel(r.b)}</span><span class="co-rc-val">${r.gliders} ตัว × ${r.nights} คืน · ฿${fmtTHB(r.amt)}</span></div>`;
     });
-    const minCi=rooms.reduce((m,r)=>r.b.checkIn<m?r.b.checkIn:m,rooms[0].b.checkIn);
-    const maxCo=rooms.reduce((m,r)=>r.b.checkOut>m?r.b.checkOut:m,rooms[0].b.checkOut);
+    const minCi=rooms.reduce((m,r)=>r.ci<m?r.ci:m,rooms[0].ci);
+    const maxCo=rooms.reduce((m,r)=>r.co>m?r.co:m,rooms[0].co);
     stayRows+=`<div class="co-rc-row"><span class="co-rc-lbl">📅 เข้าพัก</span><span class="co-rc-val">${formatDateTH(minCi)} → ${formatDateTH(maxCo)}</span></div>`;
   }else{
     stayRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏠 ห้อง</span><span class="co-rc-val">${roomLabel}</span></div>`;
