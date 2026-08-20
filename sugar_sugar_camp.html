@@ -565,6 +565,22 @@ details.sc>div{padding:0 18px 18px;}
 .cust-badge{font-size:10px;font-weight:600;background:var(--gs);color:#856B2A;
   padding:2px 8px;border-radius:999px;}
 
+/* กล่องประวัติการจองย้อนหลังของลูกค้า (ในฟอร์มจอง) */
+.cust-history{background:var(--cream);border:1px solid var(--ln);border-radius:12px;
+  margin:0 0 16px;overflow:hidden;}
+.hist-head{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;
+  color:var(--cocoa);padding:9px 12px;background:var(--phs);border-bottom:1px solid var(--ln);}
+.hist-close{margin-left:auto;border:none;background:transparent;cursor:pointer;
+  font-family:inherit;font-size:13px;color:var(--cm);padding:2px 6px;border-radius:8px;}
+.hist-close:hover{background:rgba(0,0,0,.06);}
+.hist-list{max-height:190px;overflow-y:auto;}
+.hist-item{padding:9px 12px;border-bottom:1px solid var(--ln);}
+.hist-item:last-child{border-bottom:none;}
+.hist-line1{font-size:12.5px;font-weight:600;color:var(--cocoa);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.hist-line1 .stpill{font-size:10px;padding:2px 8px;}
+.hist-line2{font-size:11.5px;color:var(--cm);margin-top:3px;line-height:1.5;}
+
 /* ══════════════════════════════════
    LINE SUMMARY BANNER
 ══════════════════════════════════ */
@@ -3098,41 +3114,57 @@ function getCustomerProfiles(){
     if(!name)return;
     const ph=(b.phone||'').trim();
     const key=ph?('p:'+ph):('n:'+name.toLowerCase());
-    if(!map[key]) map[key]={name,phone:ph,gliderName:'',gliderCount:1,notes:'',count:0,lastDate:b.checkIn};
+    if(!map[key]) map[key]={name,phone:ph,gliderName:'',gliderNames:[],gliderCount:1,notes:'',count:0,lastDate:b.checkIn,history:[]};
     const m=map[key];
     m.count++;
     m.name=name;
     if(ph) m.phone=ph;
-    if(b.gliderName) m.gliderName=b.gliderName;
+    if(b.gliderName){
+      m.gliderName=b.gliderName;
+      // สะสมชื่อน้องทุกตัวที่เคยมาพัก (ไม่ซ้ำ) — รองรับกรอกหลายชื่อคั่นด้วย , /
+      String(b.gliderName).split(/[,\/]+/).map(s=>s.trim()).filter(Boolean).forEach(nm=>{
+        if(!m.gliderNames.some(x=>x.toLowerCase()===nm.toLowerCase())) m.gliderNames.push(nm);
+      });
+    }
     if(b.gliderCount) m.gliderCount=parseInt(b.gliderCount)||m.gliderCount;
     if(b.notes) m.notes=b.notes;
     if(b.checkIn>(m.lastDate||'')) m.lastDate=b.checkIn;
+    m.history.push(b);
   });
-  return Object.values(map).sort((a,b)=>(b.lastDate||'').localeCompare(a.lastDate||''));
+  const out=Object.values(map);
+  out.forEach(m=>m.history.sort((a,b)=>(b.checkIn||'').localeCompare(a.checkIn||''))); // ใหม่→เก่า
+  return out.sort((a,b)=>(b.lastDate||'').localeCompare(a.lastDate||''));
 }
 
-// แสดงรายการ suggestion ใต้ช่องชื่อเจ้าของ
-function custSuggest(q){
-  const box=document.getElementById('cust-suggest');
+// แสดงรายการ suggestion ใต้ช่องชื่อเจ้าของ / ช่องชื่อน้องชูการ์ฯ
+// src: 'fg' = ช่องชื่อเจ้าของ, 'fgl' = ช่องชื่อน้อง — ค้นจากชื่อเจ้าของ, เบอร์โทร และชื่อน้องได้ทุกช่อง
+function custSuggest(q,src){
+  src=src||'fg';
+  const box=document.getElementById(src==='fgl'?'cust-suggest-gl':'cust-suggest');
+  const other=document.getElementById(src==='fgl'?'cust-suggest':'cust-suggest-gl');
+  if(other){other.style.display='none';other.innerHTML='';}
   if(!box)return;
   q=(q||'').toLowerCase().trim();
   if(q.length<1){ box.style.display='none'; box.innerHTML=''; return; }
   const all=getCustomerProfiles();
   const matches=all.filter(c=>
-    c.name.toLowerCase().includes(q) || (c.phone||'').toLowerCase().includes(q)
+    c.name.toLowerCase().includes(q) || (c.phone||'').toLowerCase().includes(q) ||
+    (c.gliderNames||[]).some(nm=>nm.toLowerCase().includes(q))
   ).slice(0,6);
   CUST_MATCHES=matches;
   if(matches.length===0){ box.style.display='none'; box.innerHTML=''; return; }
-  box.innerHTML='<div class="cust-suggest-head">🔁 ลูกค้าเดิม — แตะเพื่อเติมข้อมูล</div>'+
-    matches.map((c,i)=>`
+  box.innerHTML='<div class="cust-suggest-head">🔁 ลูกค้าเดิม — แตะเพื่อเติมข้อมูล + ดูประวัติ</div>'+
+    matches.map((c,i)=>{
+      const names=(c.gliderNames&&c.gliderNames.length)?c.gliderNames.join(', '):c.gliderName;
+      return `
     <button type="button" class="cust-item" onmousedown="event.preventDefault();applyCust(${i})">
       <div class="cust-name">${esc(c.name)}${c.count>1?`<span class="cust-badge">เคยพัก ${c.count} ครั้ง</span>`:''}</div>
-      <div class="cust-sub">${c.gliderName?'🐿 '+esc(c.gliderName)+' · ':''}${c.gliderCount} ตัว${c.phone?' · 📞 '+esc(c.phone):''}${c.lastDate?' · ล่าสุด '+thD(c.lastDate,true):''}</div>
-    </button>`).join('');
+      <div class="cust-sub">${names?'🐿 '+esc(names)+' · ':''}${c.gliderCount} ตัว${c.phone?' · 📞 '+esc(c.phone):''}${c.lastDate?' · ล่าสุด '+thD(c.lastDate,true):''}</div>
+    </button>`;}).join('');
   box.style.display='';
 }
 
-// เติมข้อมูลลูกค้าเดิมลงในฟอร์ม
+// เติมข้อมูลลูกค้าเดิมลงในฟอร์ม + แสดงประวัติการจองทั้งหมดย้อนหลัง
 function applyCust(i){
   const c=CUST_MATCHES[i]; if(!c)return;
   const g=document.getElementById('fg');   if(g)  g.value=c.name;
@@ -3144,8 +3176,37 @@ function applyCust(i){
   if(cnt) cnt.value=gc;
   if(disp) disp.textContent=gc;
   const minus=document.getElementById('cnt-minus'); if(minus) minus.style.opacity=gc<=1?'0.3':'1';
-  const box=document.getElementById('cust-suggest'); if(box){box.style.display='none';box.innerHTML='';}
+  ['cust-suggest','cust-suggest-gl'].forEach(id=>{
+    const box=document.getElementById(id); if(box){box.style.display='none';box.innerHTML='';}
+  });
+  showCustHistory(c);
   toast('✓ เติมข้อมูลลูกค้าเดิม: '+c.name,'ok');
+}
+
+// แสดงประวัติการจองทั้งหมดของลูกค้าในฟอร์ม (ย้อนหลังทุกรายการที่เคยจองผ่าน Dashboard)
+function showCustHistory(c){
+  const el=document.getElementById('cust-history'); if(!el)return;
+  const hist=(c&&c.history)||[];
+  if(hist.length===0){ el.style.display='none'; el.innerHTML=''; return; }
+  const stLbl={upcoming:'กำลังจะมา',active:'เข้าพักอยู่',past:'ผ่านไปแล้ว'};
+  const stCls={upcoming:'st-u',active:'st-a',past:'st-p'};
+  el.innerHTML=`<div class="hist-head">🕘 ประวัติการจองของ ${esc(c.name)}
+      <span class="cust-badge">${hist.length} ครั้ง</span>
+      <button type="button" class="hist-close" onclick="hideCustHistory()" title="ซ่อนประวัติ">✕</button></div>
+    <div class="hist-list">${hist.map(b=>{
+      const st=bSt(b);
+      const room=b.roomType==='grand_suite'?'👑 '+gsLabel(b.roomNumber):'🏠 '+stdLabel(b.roomNumber);
+      return `<div class="hist-item">
+        <div class="hist-line1">${thD(b.checkIn,true)} → ${thD(b.checkOut,true)} · ${nts(b.checkIn,b.checkOut)} คืน
+          <span class="stpill ${stCls[st]||''}">${stLbl[st]||''}</span></div>
+        <div class="hist-line2">${room}${b.gliderName?' · 🐿 '+esc(b.gliderName):''} · ${b.gliderCount||1} ตัว${b.notes?'<br>📝 '+esc(b.notes):''}</div>
+      </div>`;
+    }).join('')}</div>`;
+  el.style.display='';
+}
+function hideCustHistory(){
+  const el=document.getElementById('cust-history');
+  if(el){el.style.display='none';el.innerHTML='';}
 }
 
 
@@ -3194,15 +3255,18 @@ function drawForm(v,isEdit){
     <div class="frow2">
       <div class="fg" style="position:relative;"><label class="fl">ชื่อเจ้าของ *</label>
         <input id="fg" class="fi" value="${esc(v.guestName)}" placeholder="เช่น คุณสมหญิง" autocomplete="off"
-          oninput="custSuggest(this.value)" onfocus="custSuggest(this.value)"
+          oninput="custSuggest(this.value,'fg')" onfocus="custSuggest(this.value,'fg')"
           onblur="setTimeout(()=>{const b=document.getElementById('cust-suggest');if(b){b.style.display='none';}},160)">
         <div id="cust-suggest" class="cust-suggest" style="display:none;"></div></div>
       <div class="fg"><label class="fl">เบอร์โทร</label>
         <input id="fp" class="fi" value="${esc(v.phone)}" placeholder="08X-XXX-XXXX"></div>
     </div>
     <div class="frow2">
-      <div class="fg"><label class="fl">ชื่อน้องชูการ์ฯ</label>
-        <input id="fgl" class="fi" value="${esc(v.gliderName)}" placeholder="เช่น โมจิ, ลาเต้, มะปราง…"></div>
+      <div class="fg" style="position:relative;"><label class="fl">ชื่อน้องชูการ์ฯ</label>
+        <input id="fgl" class="fi" value="${esc(v.gliderName)}" placeholder="เช่น โมจิ, ลาเต้, มะปราง…" autocomplete="off"
+          oninput="custSuggest(this.value,'fgl')" onfocus="custSuggest(this.value,'fgl')"
+          onblur="setTimeout(()=>{const b=document.getElementById('cust-suggest-gl');if(b){b.style.display='none';}},160)">
+        <div id="cust-suggest-gl" class="cust-suggest" style="display:none;"></div></div>
       <div class="fg"><label class="fl">จำนวนน้อง 🐿 *</label>
         <div style="display:flex;align-items:center;gap:0;border:1px solid var(--ln);border-radius:12px;overflow:hidden;background:var(--cream);">
           <button type="button" onclick="changeCount(-1)" style="width:42px;height:44px;border:none;background:transparent;font-size:20px;cursor:pointer;font-family:inherit;color:var(--cocoa);" id="cnt-minus">−</button>
@@ -3213,6 +3277,7 @@ function drawForm(v,isEdit){
         <div style="font-size:11px;color:var(--cm);margin-top:5px;text-align:center;">ตัว</div>
       </div>
     </div>
+    <div id="cust-history" class="cust-history" style="display:none;"></div>
     <div class="fg"><label class="fl">ประเภทห้อง</label>
       <div class="rttog">
         <button type="button" id="rt-s" class="rtbtn ${FS.roomType==='standard'?'act':''}"
@@ -3249,6 +3314,12 @@ function drawForm(v,isEdit){
     </div>
   </div>`);
   document.getElementById('fg').focus();
+  // แก้ไขการจอง: โชว์ประวัติการจองทั้งหมดของลูกค้าคนนี้อัตโนมัติ
+  if(isEdit){
+    const ph=(v.phone||'').trim(), nm=(v.guestName||'').trim().toLowerCase();
+    const prof=getCustomerProfiles().find(c=>(ph&&c.phone===ph)||(nm&&c.name.toLowerCase()===nm));
+    if(prof) showCustHistory(prof);
+  }
 }
 
 function changeCount(delta){
