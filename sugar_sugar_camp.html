@@ -524,6 +524,20 @@ details.sc>div{padding:0 18px 18px;}
   border-radius:999px;font-weight:600;margin-left:5px;vertical-align:1px;white-space:nowrap;}
 
 /* ══════════════════════════════════
+   สัตว์ชนิดอื่นฝากเพิ่ม (OTHER PET CHECKOUT)
+══════════════════════════════════ */
+.co-pet-row{display:grid;grid-template-columns:1fr 74px 74px;gap:8px;align-items:end;
+  background:var(--cream);border:1.5px solid var(--ln);border-radius:12px;
+  padding:9px 12px;margin-bottom:7px;transition:all .15s;}
+.co-pet-row.on{background:var(--ps);border-color:var(--pd);}
+.co-pet-info{min-width:0;align-self:center;}
+.co-pet-name{font-size:13px;font-weight:600;color:var(--cocoa);}
+.co-pet-price{font-size:11px;color:var(--cm);}
+.co-pet-fld label{display:block;font-size:9.5px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--cm);margin-bottom:3px;text-align:center;}
+.co-pet-fld .co-input{padding:8px 6px;text-align:center;}
+
+/* ══════════════════════════════════
    SUGAR SUGAR SPA (คิดเงินสปา)
 ══════════════════════════════════ */
 .spa-svc{display:flex;align-items:center;gap:12px;background:var(--cream);border:1px solid var(--ln);
@@ -4092,6 +4106,12 @@ setInterval(()=>{
 
 const PRICE_PER_GLIDER_NIGHT = 90;
 
+// สัตว์ชนิดอื่นที่ฝากเลี้ยงเพิ่มได้ — คิดเพิ่มต่อตัวต่อคืน
+const OTHER_PET_TYPES = [
+  {key:'bushbaby', icon:'🐒', label:'บุชเบบี้',  price:150},
+  {key:'dormouse', icon:'🐭', label:'ดอร์เมาส์', price:50}
+];
+
 function fmtTHB(n){return Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
 function genReceiptNo(prefix){
@@ -4130,7 +4150,7 @@ function coSelectedBookings(){
 
 function calcCheckout(){
   const list = coSelectedBookings();
-  if(!list.length) return {sub:0,disc:0,discPct:0,discB:0,del:0,extT:0,total:0,nights:0,gliders:0,extras:[],rooms:[]};
+  if(!list.length) return {sub:0,disc:0,discPct:0,discB:0,del:0,extT:0,petT:0,total:0,nights:0,gliders:0,extras:[],pets:[],rooms:[]};
   const rooms = list.map(b=>{
     const nights = nts(b.checkIn, b.checkOut);
     const gliders = parseInt(b.gliderCount)||1;
@@ -4142,10 +4162,21 @@ function calcCheckout(){
   const db = parseFloat(document.getElementById('co-disc-baht')?.value)||0;
   const del = parseFloat(document.getElementById('co-delivery')?.value)||0;
   const extras = getCoExtras();
+  const pets = getCoOtherPets();
   const damt = sub * dp / 100;
   const extT = extras.reduce((s,e)=>s+e.amt,0);
-  const total = sub - damt - db + del + extT;
-  return {sub,disc:damt,discPct:dp,discB:db,del,extT,total,nights:rooms[0].nights,gliders,extras,rooms};
+  const petT = pets.reduce((s,p)=>s+p.amt,0);
+  const total = sub - damt - db + del + extT + petT;
+  return {sub,disc:damt,discPct:dp,discB:db,del,extT,petT,total,nights:rooms[0].nights,gliders,extras,pets,rooms};
+}
+
+// สัตว์ชนิดอื่นฝากเพิ่ม (บุชเบบี้/ดอร์เมาส์) — อ่านจำนวนตัว & คืนจากฟอร์ม
+function getCoOtherPets(){
+  return OTHER_PET_TYPES.map(t=>{
+    const count=parseInt(document.getElementById('co-pet-cnt-'+t.key)?.value)||0;
+    const nights=Math.max(1,parseInt(document.getElementById('co-pet-nts-'+t.key)?.value)||1);
+    return {...t,count,nights,amt:count*t.price*nights};
+  }).filter(p=>p.count>0);
 }
 
 function getCoExtras(){
@@ -4159,7 +4190,7 @@ function getCoExtras(){
 }
 
 function coUpdatePreview(){
-  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras,rooms}=calcCheckout();
+  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras,pets,rooms}=calcCheckout();
   const b=S.bookings.find(x=>x.id===COState.bookingId);
   if(!b)return;
   let html='';
@@ -4174,12 +4205,21 @@ function coUpdatePreview(){
   if(discPct>0) html+=`<div class="co-prev-row disc"><span>ส่วนลด ${discPct}%</span><span>-฿${fmtTHB(disc)}</span></div>`;
   if(discB>0) html+=`<div class="co-prev-row disc"><span>ส่วนลด (฿)</span><span>-฿${fmtTHB(discB)}</span></div>`;
   if(del>0) html+=`<div class="co-prev-row"><span>ค่าบริการรับ-ส่ง</span><span>+฿${fmtTHB(del)}</span></div>`;
+  pets.forEach(p=>{ html+=`<div class="co-prev-row ext"><span>${p.icon} ${p.label} ${p.count} ตัว × ${p.nights} คืน × ฿${p.price}</span><span>+฿${fmtTHB(p.amt)}</span></div>`; });
   extras.forEach(e=>{ if(e.amt>0) html+=`<div class="co-prev-row ext"><span>➕ ${esc(e.name)}</span><span>+฿${fmtTHB(e.amt)}</span></div>`; });
   html+=`<div class="co-prev-row" style="border-top:1.5px solid rgba(74,51,38,.2);margin-top:6px;padding-top:8px;font-weight:700;font-size:15px;color:var(--cocoa);">
     <span>💰 รวมทั้งหมด</span><span style="font-family:'Fraunces',serif;font-size:18px;">฿${fmtTHB(total)}</span>
   </div>`;
   const el=document.getElementById('co-preview-rows');
   if(el) el.innerHTML=html;
+}
+
+// ไฮไลต์แถวสัตว์ชนิดอื่นเมื่อใส่จำนวน แล้วอัปเดตสรุปค่าใช้จ่าย
+function coPetChanged(key){
+  const cnt=parseInt(document.getElementById('co-pet-cnt-'+key)?.value)||0;
+  const row=document.getElementById('co-pet-row-'+key);
+  if(row) row.classList.toggle('on',cnt>0);
+  coUpdatePreview();
 }
 
 function addCoExtra(){
@@ -4290,6 +4330,20 @@ function openCheckout(id){
       <div class="co-fg"><label class="co-label">ค่าบริการรับ-ส่ง (฿)</label>
         <input id="co-delivery" type="number" class="co-input" min="0" value="0" oninput="coUpdatePreview()"></div>
 
+      <div class="co-sec-title">🐾 สัตว์ชนิดอื่นฝากเพิ่ม</div>
+      <div class="fhelp" style="margin:0 0 10px;">ถ้ามีสัตว์ชนิดอื่นมาฝากเลี้ยงด้วย ใส่จำนวนตัวได้เลยค่ะ (จำนวนคืนปรับได้)</div>
+      ${OTHER_PET_TYPES.map(t=>`
+      <div class="co-pet-row" id="co-pet-row-${t.key}">
+        <div class="co-pet-info">
+          <div class="co-pet-name">${t.icon} ${t.label}</div>
+          <div class="co-pet-price">฿${t.price}/ตัว/คืน</div>
+        </div>
+        <div class="co-pet-fld"><label>จำนวนตัว</label>
+          <input id="co-pet-cnt-${t.key}" type="number" class="co-input" min="0" value="0" oninput="coPetChanged('${t.key}')"></div>
+        <div class="co-pet-fld"><label>คืน</label>
+          <input id="co-pet-nts-${t.key}" type="number" class="co-input" min="1" value="${Math.max(1,nights)}" oninput="coUpdatePreview()"></div>
+      </div>`).join('')}
+
       <div class="co-sec-title">➕ ค่าใช้จ่ายอื่นๆ</div>
       <div id="co-extras-list"></div>
       <button class="co-add-btn" onclick="addCoExtra()">+ เพิ่มรายการ</button>
@@ -4314,7 +4368,7 @@ function openCheckout(id){
 function showCheckoutReceipt(id){
   const b=S.bookings.find(x=>x.id===id);
   if(!b)return;
-  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras,rooms}=calcCheckout();
+  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras,pets,rooms}=calcCheckout();
   const notes=(document.getElementById('co-notes')?.value||'').trim();
   const roomLabel=coRoomLabel(b);
   const rno=genReceiptNo();
@@ -4344,6 +4398,7 @@ function showCheckoutReceipt(id){
   if(discPct>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏷 ส่วนลด ${discPct}%</span><span class="co-rc-val disc">-฿${fmtTHB(disc)}</span></div>`;
   if(discB>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏷 ส่วนลด (฿)</span><span class="co-rc-val disc">-฿${fmtTHB(discB)}</span></div>`;
   if(del>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🚗 ค่ารับ-ส่ง</span><span class="co-rc-val">+฿${fmtTHB(del)}</span></div>`;
+  pets.forEach(p=>{ breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">${p.icon} ฝากเลี้ยง${p.label} ${p.count} ตัว × ${p.nights} คืน</span><span class="co-rc-val ext">+฿${fmtTHB(p.amt)}</span></div>`; });
   extras.forEach(e=>{ if(e.amt>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">➕ ${esc(e.name)}</span><span class="co-rc-val ext">+฿${fmtTHB(e.amt)}</span></div>`; });
 
   closeModal();
