@@ -1742,7 +1742,7 @@ function countGlidersOnDate(dateStr){
 }
 const MAIN_CAGES=25;   // จำนวนกรงหลัก Standard (กรง Stainless + มีกล้องดูน้อง)
 const BACKUP_CAGES=35; // จำนวนกรงสำรอง — ไม่ใช่กรง Stainless และไม่มีกล้องไว้ดูน้อง
-const GS_CAGES=2;      // จำนวนกรง Grand Suite
+const GS_CAGES=3;      // จำนวนกรง Grand Suite
 function totalStd(){return MAIN_CAGES+BACKUP_CAGES;}
 function totalRooms(){return totalStd()+GS_CAGES;}
 function isBackup(rn){return Number(rn)>MAIN_CAGES;}
