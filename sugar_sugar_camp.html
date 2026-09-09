@@ -4163,9 +4163,10 @@ function calcCheckout(){
   const del = parseFloat(document.getElementById('co-delivery')?.value)||0;
   const extras = getCoExtras();
   const pets = getCoOtherPets();
-  const damt = sub * dp / 100;
   const extT = extras.reduce((s,e)=>s+e.amt,0);
   const petT = pets.reduce((s,p)=>s+p.amt,0);
+  // ส่วนลด % คิดจากค่าฝากรวม: ชูก้า + บุชเบบี้/ดอร์เมาส์ (ไม่รวมค่าใช้จ่ายอื่นๆ เช่น ค่าจิ้งหรีด และค่ารับ-ส่ง)
+  const damt = (sub + petT) * dp / 100;
   const total = sub - damt - db + del + extT + petT;
   return {sub,disc:damt,discPct:dp,discB:db,del,extT,petT,total,nights:rooms[0].nights,gliders,extras,pets,rooms};
 }
@@ -4202,10 +4203,10 @@ function coUpdatePreview(){
   }else{
     html+=`<div class="co-prev-row"><span>ค่าพักรวม ${gliders} ตัว × ${nights} คืน × ฿${PRICE_PER_GLIDER_NIGHT}</span><span>฿${fmtTHB(sub)}</span></div>`;
   }
-  if(discPct>0) html+=`<div class="co-prev-row disc"><span>ส่วนลด ${discPct}%</span><span>-฿${fmtTHB(disc)}</span></div>`;
+  pets.forEach(p=>{ html+=`<div class="co-prev-row ext"><span>${p.icon} ${p.label} ${p.count} ตัว × ${p.nights} คืน × ฿${p.price}</span><span>+฿${fmtTHB(p.amt)}</span></div>`; });
+  if(discPct>0) html+=`<div class="co-prev-row disc"><span>ส่วนลด ${discPct}% (ค่าฝากรวม)</span><span>-฿${fmtTHB(disc)}</span></div>`;
   if(discB>0) html+=`<div class="co-prev-row disc"><span>ส่วนลด (฿)</span><span>-฿${fmtTHB(discB)}</span></div>`;
   if(del>0) html+=`<div class="co-prev-row"><span>ค่าบริการรับ-ส่ง</span><span>+฿${fmtTHB(del)}</span></div>`;
-  pets.forEach(p=>{ html+=`<div class="co-prev-row ext"><span>${p.icon} ${p.label} ${p.count} ตัว × ${p.nights} คืน × ฿${p.price}</span><span>+฿${fmtTHB(p.amt)}</span></div>`; });
   extras.forEach(e=>{ if(e.amt>0) html+=`<div class="co-prev-row ext"><span>➕ ${esc(e.name)}</span><span>+฿${fmtTHB(e.amt)}</span></div>`; });
   html+=`<div class="co-prev-row" style="border-top:1.5px solid rgba(74,51,38,.2);margin-top:6px;padding-top:8px;font-weight:700;font-size:15px;color:var(--cocoa);">
     <span>💰 รวมทั้งหมด</span><span style="font-family:'Fraunces',serif;font-size:18px;">฿${fmtTHB(total)}</span>
@@ -4327,6 +4328,7 @@ function openCheckout(id){
         <div class="co-fg"><label class="co-label">ส่วนลด (฿)</label>
           <input id="co-disc-baht" type="number" class="co-input" min="0" value="0" oninput="coUpdatePreview()"></div>
       </div>
+      <div class="fhelp" style="margin:0 0 10px;">ส่วนลด % คิดจากค่าฝากรวม (ชูก้า + บุชเบบี้ + ดอร์เมาส์) ไม่รวมค่าใช้จ่ายอื่นๆ และค่ารับ-ส่งค่ะ</div>
       <div class="co-fg"><label class="co-label">ค่าบริการรับ-ส่ง (฿)</label>
         <input id="co-delivery" type="number" class="co-input" min="0" value="0" oninput="coUpdatePreview()"></div>
 
@@ -4395,10 +4397,10 @@ function showCheckoutReceipt(id){
   // build receipt HTML
   let breakdownRows='';
   breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏠 ค่าพักรวม${multi?' '+rooms.length+' กรง':''}</span><span class="co-rc-val">฿${fmtTHB(sub)}</span></div>`;
-  if(discPct>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏷 ส่วนลด ${discPct}%</span><span class="co-rc-val disc">-฿${fmtTHB(disc)}</span></div>`;
+  pets.forEach(p=>{ breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">${p.icon} ฝากเลี้ยง${p.label} ${p.count} ตัว × ${p.nights} คืน</span><span class="co-rc-val ext">+฿${fmtTHB(p.amt)}</span></div>`; });
+  if(discPct>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏷 ส่วนลด ${discPct}% (ค่าฝากรวม)</span><span class="co-rc-val disc">-฿${fmtTHB(disc)}</span></div>`;
   if(discB>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏷 ส่วนลด (฿)</span><span class="co-rc-val disc">-฿${fmtTHB(discB)}</span></div>`;
   if(del>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🚗 ค่ารับ-ส่ง</span><span class="co-rc-val">+฿${fmtTHB(del)}</span></div>`;
-  pets.forEach(p=>{ breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">${p.icon} ฝากเลี้ยง${p.label} ${p.count} ตัว × ${p.nights} คืน</span><span class="co-rc-val ext">+฿${fmtTHB(p.amt)}</span></div>`; });
   extras.forEach(e=>{ if(e.amt>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">➕ ${esc(e.name)}</span><span class="co-rc-val ext">+฿${fmtTHB(e.amt)}</span></div>`; });
 
   closeModal();
