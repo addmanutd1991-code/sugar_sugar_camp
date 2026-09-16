@@ -516,6 +516,8 @@ details.sc>div{padding:0 18px 18px;}
 .co-merge-item:hover{border-color:var(--pd);}
 .co-merge-item.sel{background:var(--ps);border-color:var(--pd);}
 .co-merge-item input{accent-color:var(--pd);width:16px;height:16px;flex-shrink:0;cursor:pointer;}
+.co-icard.off{opacity:.5;}
+.co-icard.off .civ{text-decoration:line-through;text-decoration-thickness:1.5px;}
 .co-merge-info{flex:1;min-width:0;}
 .co-merge-name{font-size:12.5px;font-weight:600;color:var(--cocoa);}
 .co-merge-sub{font-size:11px;color:var(--cm);}
@@ -4297,6 +4299,7 @@ function formatDateTH(s){
 let COState = {
   bookingId: '',
   mergeIds: [],   // กรงอื่นๆ ที่รวมบิลเดียวกัน (ครอบครัวเดียวกันพักหลายกรง)
+  noSugar: false, // ลูกค้าฝากเฉพาะบุชเบบี้/ดอร์เมาส์ — ตัดค่าพักชูการ์ (default) ออกจากบิล
   extras: [],
   discPct: 0,
   discBaht: 0,
@@ -4317,11 +4320,12 @@ function coSelectedBookings(){
 
 function calcCheckout(){
   const list = coSelectedBookings();
-  if(!list.length) return {sub:0,disc:0,discPct:0,discB:0,del:0,extT:0,petT:0,total:0,nights:0,gliders:0,extras:[],pets:[],rooms:[]};
+  if(!list.length) return {sub:0,disc:0,discPct:0,discB:0,del:0,extT:0,petT:0,total:0,nights:0,gliders:0,extras:[],pets:[],rooms:[],noSugar:false};
+  const noSugar = !!COState.noSugar;
   const rooms = list.map(b=>{
     const nights = nts(b.checkIn, b.checkOut);
     const gliders = parseInt(b.gliderCount)||1;
-    return {b, nights, gliders, amt: gliders * PRICE_PER_GLIDER_NIGHT * nights};
+    return {b, nights, gliders, amt: noSugar ? 0 : gliders * PRICE_PER_GLIDER_NIGHT * nights};
   });
   const sub = rooms.reduce((s,r)=>s+r.amt,0);
   const gliders = rooms.reduce((s,r)=>s+r.gliders,0);
@@ -4335,7 +4339,7 @@ function calcCheckout(){
   // ส่วนลด % คิดจากค่าฝากรวม: ชูก้า + บุชเบบี้/ดอร์เมาส์ (ไม่รวมค่าใช้จ่ายอื่นๆ เช่น ค่าจิ้งหรีด และค่ารับ-ส่ง)
   const damt = (sub + petT) * dp / 100;
   const total = sub - damt - db + del + extT + petT;
-  return {sub,disc:damt,discPct:dp,discB:db,del,extT,petT,total,nights:rooms[0].nights,gliders,extras,pets,rooms};
+  return {sub,disc:damt,discPct:dp,discB:db,del,extT,petT,total,nights:rooms[0].nights,gliders,extras,pets,rooms,noSugar};
 }
 
 // สัตว์ชนิดอื่นฝากเพิ่ม (บุชเบบี้/ดอร์เมาส์) — อ่านจำนวนตัว & คืนจากฟอร์ม
@@ -4358,11 +4362,13 @@ function getCoExtras(){
 }
 
 function coUpdatePreview(){
-  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras,pets,rooms}=calcCheckout();
+  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras,pets,rooms,noSugar}=calcCheckout();
   const b=S.bookings.find(x=>x.id===COState.bookingId);
   if(!b)return;
   let html='';
-  if(rooms.length>1){
+  if(noSugar){
+    html+=`<div class="co-prev-row" style="color:var(--cm);"><span>🐿 ไม่มีชูการ์มาฝาก — ไม่คิดค่าพักชูการ์</span><span>฿0.00</span></div>`;
+  }else if(rooms.length>1){
     rooms.forEach(r=>{
       html+=`<div class="co-prev-row"><span>🏠 ${coRoomLabel(r.b)} · ${r.gliders} ตัว × ${r.nights} คืน</span><span>฿${fmtTHB(r.amt)}</span></div>`;
     });
@@ -4417,11 +4423,28 @@ function coToggleMerge(id,checked){
   coUpdatePreview();
 }
 
+// ตัดค่าพักชูการ์ (default) ออกจากบิล — กรณีลูกค้าฝากเฉพาะบุชเบบี้/ดอร์เมาส์ ไม่มีชูการ์ไกลเดอร์
+function coToggleNoSugar(checked){
+  COState.noSugar=checked;
+  const card=document.getElementById('co-base-card');
+  if(card) card.classList.toggle('off',checked);
+  const row=document.getElementById('co-no-sugar-row');
+  if(row) row.classList.toggle('sel',checked);
+  coUpdateBase();
+  coUpdatePreview();
+}
+
 function coUpdateBase(){
-  const {sub,gliders,rooms}=calcCheckout();
+  const {sub,gliders,rooms,noSugar}=calcCheckout();
   const lbl=document.getElementById('co-base-lbl');
   const amt=document.getElementById('co-base-amt');
   if(!lbl||!amt||!rooms.length)return;
+  if(noSugar){
+    const orig=rooms.reduce((s,r)=>s+r.gliders*PRICE_PER_GLIDER_NIGHT*r.nights,0);
+    lbl.textContent='🐿 ไม่มีชูการ์มาฝาก — ไม่คิดค่าพักชูการ์';
+    amt.textContent='฿'+fmtTHB(orig);
+    return;
+  }
   if(rooms.length>1){
     lbl.textContent='💰 ค่าพักรวม '+rooms.length+' กรง ('+gliders+' ตัว × ฿'+PRICE_PER_GLIDER_NIGHT+'/คืน)';
   }else{
@@ -4435,6 +4458,7 @@ function openCheckout(id){
   if(!b)return;
   COState.bookingId=id;
   COState.mergeIds=[];
+  COState.noSugar=false;
   const nights=nts(b.checkIn,b.checkOut);
   const gliders=parseInt(b.gliderCount)||1;
   const sub=gliders*PRICE_PER_GLIDER_NIGHT*nights;
@@ -4482,10 +4506,17 @@ function openCheckout(id){
         <div class="co-icard"><div class="cil">จำนวนคืน</div><div class="civ big">${nights} คืน</div></div>
         <div class="co-icard"><div class="cil">น้องชูการ์</div><div class="civ big">${gliders} ตัว</div></div>
       </div>
-      <div class="co-icard" style="margin-bottom:16px;background:linear-gradient(135deg,var(--gs),var(--phs));border-color:var(--gold);">
+      <div class="co-icard" id="co-base-card" style="margin-bottom:10px;background:linear-gradient(135deg,var(--gs),var(--phs));border-color:var(--gold);">
         <div class="cil" id="co-base-lbl">💰 ค่าพักเริ่มต้น (${gliders} ตัว × ${nights} คืน × ฿${PRICE_PER_GLIDER_NIGHT})</div>
         <div class="civ big" id="co-base-amt" style="font-family:'Fraunces',serif;font-size:22px;margin-top:4px;">฿${fmtTHB(sub)}</div>
       </div>
+      <label class="co-merge-item" id="co-no-sugar-row" style="margin:0 0 16px;">
+        <input type="checkbox" id="co-no-sugar" onchange="coToggleNoSugar(this.checked)">
+        <div class="co-merge-info">
+          <div class="co-merge-name">🐿 ไม่มีชูการ์มาฝาก</div>
+          <div class="co-merge-sub">ตัดค่าพักชูการ์ออกจากบิล — กรณีฝากเฉพาะบุชเบบี้/ดอร์เมาส์ค่ะ</div>
+        </div>
+      </label>
       ${mergeSec}
 
       <div class="co-sec-title">💝 ส่วนลด & บริการเสริม</div>
@@ -4537,7 +4568,7 @@ function openCheckout(id){
 function showCheckoutReceipt(id){
   const b=S.bookings.find(x=>x.id===id);
   if(!b)return;
-  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras,pets,rooms}=calcCheckout();
+  const {sub,disc,discPct,discB,del,extT,total,nights,gliders,extras,pets,rooms,noSugar}=calcCheckout();
   const notes=(document.getElementById('co-notes')?.value||'').trim();
   const roomLabel=coRoomLabel(b);
   const rno=genReceiptNo();
@@ -4551,7 +4582,7 @@ function showCheckoutReceipt(id){
   if(multi){
     stayRows+=`<div style="margin:8px 0 2px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cm);">กรงที่เข้าพัก (${rooms.length} กรง)</div>`;
     rooms.forEach(r=>{
-      stayRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏠 ${coRoomLabel(r.b)}</span><span class="co-rc-val">${r.gliders} ตัว × ${r.nights} คืน · ฿${fmtTHB(r.amt)}</span></div>`;
+      stayRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏠 ${coRoomLabel(r.b)}</span><span class="co-rc-val">${noSugar?r.nights+' คืน':r.gliders+' ตัว × '+r.nights+' คืน · ฿'+fmtTHB(r.amt)}</span></div>`;
     });
     const minCi=rooms.reduce((m,r)=>r.b.checkIn<m?r.b.checkIn:m,rooms[0].b.checkIn);
     const maxCo=rooms.reduce((m,r)=>r.b.checkOut>m?r.b.checkOut:m,rooms[0].b.checkOut);
@@ -4563,7 +4594,7 @@ function showCheckoutReceipt(id){
 
   // build receipt HTML
   let breakdownRows='';
-  breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏠 ค่าพักรวม${multi?' '+rooms.length+' กรง':''}</span><span class="co-rc-val">฿${fmtTHB(sub)}</span></div>`;
+  if(!noSugar) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏠 ค่าพักรวม${multi?' '+rooms.length+' กรง':''}</span><span class="co-rc-val">฿${fmtTHB(sub)}</span></div>`;
   pets.forEach(p=>{ breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">${p.icon} ฝากเลี้ยง${p.label} ${p.count} ตัว × ${p.nights} คืน</span><span class="co-rc-val ext">+฿${fmtTHB(p.amt)}</span></div>`; });
   if(discPct>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏷 ส่วนลด ${discPct}% (ค่าฝากรวม)</span><span class="co-rc-val disc">-฿${fmtTHB(disc)}</span></div>`;
   if(discB>0) breakdownRows+=`<div class="co-rc-row"><span class="co-rc-lbl">🏷 ส่วนลด (฿)</span><span class="co-rc-val disc">-฿${fmtTHB(discB)}</span></div>`;
@@ -4587,7 +4618,7 @@ function showCheckoutReceipt(id){
       <div class="co-rc-body">
         <div class="co-rc-ref">เลขที่ ${rno} &nbsp;|&nbsp; ออก: ${issueDate}</div>
         <div class="co-rc-row"><span class="co-rc-lbl">👤 เจ้าของ</span><span class="co-rc-val big">${esc(b.guestName)}</span></div>
-        ${gliderNames?`<div class="co-rc-row"><span class="co-rc-lbl">🐿 น้อง</span><span class="co-rc-val">${esc(gliderNames)} (${gliders} ตัว)</span></div>`:`<div class="co-rc-row"><span class="co-rc-lbl">🐿 จำนวน</span><span class="co-rc-val">${gliders} ตัว</span></div>`}
+        ${noSugar?'':gliderNames?`<div class="co-rc-row"><span class="co-rc-lbl">🐿 น้อง</span><span class="co-rc-val">${esc(gliderNames)} (${gliders} ตัว)</span></div>`:`<div class="co-rc-row"><span class="co-rc-lbl">🐿 จำนวน</span><span class="co-rc-val">${gliders} ตัว</span></div>`}
         ${b.phone?`<div class="co-rc-row"><span class="co-rc-lbl">📞 โทร</span><span class="co-rc-val">${esc(b.phone)}</span></div>`:''}
         ${stayRows}
         <div style="margin:8px 0 2px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cm);">รายละเอียดค่าใช้จ่าย</div>
