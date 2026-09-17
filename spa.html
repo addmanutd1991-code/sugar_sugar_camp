@@ -172,11 +172,11 @@ textarea.fi{resize:vertical;min-height:64px;}
 
     <div class="fg"><label class="fl">เลือกบริการ *</label>
       <div class="svc-grid">
-        <button type="button" class="svc sel" id="svc-nail" onclick="selService('nail')">
-          <span class="si">💅</span><span class="sn">ตัดเล็บ</span><span class="sp">20 บาท / ตัว</span>
-        </button>
-        <button type="button" class="svc" id="svc-spa" onclick="selService('spa')">
+        <button type="button" class="svc sel" id="svc-spa" onclick="selService('spa')">
           <span class="si">🛁</span><span class="sn">ตัดเล็บ + ทำสปา</span><span class="sp">70 บาท / ตัว</span>
+        </button>
+        <button type="button" class="svc" id="svc-nail" onclick="selService('nail')">
+          <span class="si">💅</span><span class="sn">ตัดเล็บ</span><span class="sp">20 บาท / ตัว</span>
         </button>
       </div>
     </div>
@@ -289,7 +289,7 @@ const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 const endOf = t => { const h=parseInt(t,10); const mm=(t.split(':')[1]||'00'); return pad((h+1)%24)+':'+mm; };
 
 // ── state ──
-let SERVICE = 'nail';
+let SERVICE = 'spa';   // ค่าเริ่มต้น: ตัดเล็บ + ทำสปา
 let COUNT = 1;
 let DAYS = [];        // [{date, slots:[{time, free}]}] จากทางร้าน
 let selDate = '';

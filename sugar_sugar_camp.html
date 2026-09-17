@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build: v18-spa-direct -->
+<!-- build: v19-spa-edit -->
 <html lang="th">
 <head>
 <meta charset="UTF-8"/>
@@ -636,7 +636,13 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google t (v18-spa-direct)
+ * Sugar Sugar Camp - Google t (v19-spa-edit)
+ *
+ * ★ v19: แก้ไขคิวสปาที่จองไว้แล้วได้ + ค่าเริ่มต้นเป็น "ตัดเล็บ + ทำสปา"
+ *   - action ใหม่ "edit_spa" — แก้ชื่อ/เบอร์/น้อง/จำนวน/บริการ/วัน/เวลา/บันทึก
+ *     ของคิวที่ยัง pending หรือ approved (คิวที่ปิดไปแล้วแก้ไม่ได้)
+ *   - ย้ายวัน-เวลาได้ถ้าสลอตใหม่เปิดรับและยังว่าง — สลอตเดิมกลับมาว่างอัตโนมัติ
+ *   - ฟอร์มจองสปาเลือก "ตัดเล็บ + ทำสปา" ไว้ให้เป็นค่าเริ่มต้น
  *
  * ★ v18: ทางร้านจองคิวสปาให้ลูกค้าโดยตรง (direct)
  *   - action request_spa รองรับ flag "direct" — ปุ่ม "จองให้ลูกค้า" บน Dashboard
@@ -764,12 +770,15 @@ function doGet(e) {
       result = { ok:true, ...spaPendingResult() };
     } else if (act === 'update_spa' && p.id && p.status) {
       result = { ok:true, ...updateSpaStatus(p.id, p.status) };
+    } else if (act === 'edit_spa' && p.id && p.data) {
+      // แก้ไขรายละเอียดคิวที่จองไว้แล้ว (ทางร้านแก้จาก Dashboard)
+      result = { ok:true, ...updateSpaRequest(p.id, JSON.parse(decodeURIComponent(p.data))) };
     } else if (act === 'spa_schedule_get') {
       result = { ok:true, schedule: getSpaSchedule() };
     } else if (act === 'spa_schedule_set' && p.data) {
       result = { ok:true, schedule: setSpaSchedule(JSON.parse(decodeURIComponent(p.data))) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v18-spa-direct', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v19-spa-edit', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -800,6 +809,7 @@ function doPost(e) {
     if (d.action === 'request_spa') return corsOut({ ok:true, ...addSpaRequest(d.request||{}) });
     if (d.action === 'pending_spa') return corsOut({ ok:true, ...spaPendingResult() });
     if (d.action === 'update_spa') return corsOut({ ok:true, ...updateSpaStatus(d.id, d.status) });
+    if (d.action === 'edit_spa') return corsOut({ ok:true, ...updateSpaRequest(d.id, d.request||{}) });
     if (d.action === 'spa_schedule_get') return corsOut({ ok:true, schedule: getSpaSchedule() });
     if (d.action === 'spa_schedule_set') return corsOut({ ok:true, schedule: setSpaSchedule(d.schedule||{}) });
     if (d.action === 'send_line') return corsOut({ ok:true, ...sendMorningLineSummary() });
@@ -1634,6 +1644,69 @@ function updateSpaStatus(id, status) {
   }
 }
 
+// ★ v19: แก้ไขรายละเอียดคิวสปาที่จองไว้แล้ว (ก่อนถึงวันทำสปาจริง)
+//   แก้ได้ทั้งคิว pending และ approved — ย้ายวัน/เวลาได้ถ้าสลอตใหม่เปิดรับและยังว่าง
+//   (สลอตเดิมของคิวนี้ไม่นับว่าชน — ย้ายกลับมาที่เดิมได้)
+function updateSpaRequest(id, patch) {
+  if (!id) throw new Error('ไม่พบคิวที่ต้องการแก้ไข');
+  const p = patch || {};
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = getSpaReqSheet();
+    if (sh.getLastRow() < 2) throw new Error('ไม่พบคิว ' + id);
+    const ids = sh.getRange(2,1,sh.getLastRow()-1,1).getValues();
+    let row = -1;
+    for (let i = 0; i < ids.length; i++) {
+      if (String(ids[i][0]) === String(id)) { row = i + 2; break; }
+    }
+    if (row < 0) throw new Error('ไม่พบคิว ' + id);
+    const rv = sh.getRange(row,1,1,SPA_REQ_COLS).getValues()[0];
+    const cur = {
+      guestName: String(rv[1]||''), phone: String(rv[2]||''), line: String(rv[3]||''),
+      gliderName: String(rv[4]||''), gliderCount: Number(rv[5])||1,
+      service: String(rv[6]||'nail'), date: fmtD(rv[7]), time: fmtT_(rv[8]),
+      notes: String(rv[9]||''), status: String(rv[10]||'pending')
+    };
+    if (['pending','approved'].indexOf(cur.status) < 0)
+      throw new Error('คิวนี้ปิดไปแล้ว (' + cur.status + ') จึงแก้ไขไม่ได้ค่ะ');
+    const pick = function(k){ return p[k] === undefined || p[k] === null ? cur[k] : String(p[k]).trim(); };
+    const next = {
+      guestName: pick('guestName'), phone: pick('phone'), line: pick('line'),
+      gliderName: pick('gliderName'),
+      gliderCount: Math.min(20, Math.max(1, Number(p.gliderCount === undefined ? cur.gliderCount : p.gliderCount) || 1)),
+      service: pick('service'), date: pick('date'), time: pick('time'), notes: pick('notes')
+    };
+    if (!next.guestName) throw new Error('กรุณาใส่ชื่อเจ้าของ');
+    if (['nail','spa'].indexOf(next.service) < 0) throw new Error('บริการไม่ถูกต้อง');
+    if (!next.date || !next.time) throw new Error('กรุณาเลือกวันและเวลา');
+    if (next.date !== cur.date || next.time !== cur.time) {
+      const slots = spaSlotsForDate_(next.date, getSpaSchedule());
+      if (slots.map(String).indexOf(next.time) < 0)
+        throw new Error('ช่วงเวลานี้ไม่เปิดรับจองแล้ว กรุณาเลือกเวลาใหม่ค่ะ');
+      const dup = readSpaRequests().some(function(x){
+        return String(x.id) !== String(id) &&
+          (x.status === 'pending' || x.status === 'approved') &&
+          x.date === next.date && x.time === next.time;
+      });
+      if (dup) throw new Error('สลอตนี้มีคิวอยู่แล้ว กรุณาเลือกเวลาใหม่ค่ะ');
+    }
+    // เวลาใส่ apostrophe นำหน้า — กัน Sheet แปลง "10:00" เป็นค่าเวลา
+    sh.getRange(row,2,1,9).setValues([[next.guestName, next.phone, next.line,
+      next.gliderName, next.gliderCount, next.service,
+      next.date, "'" + next.time, next.notes]]);
+    sh.getRange(row,13).setValue(Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss'));
+    SpreadsheetApp.flush();
+    return { id: String(id), status: cur.status, request: {
+      id: String(id), guestName: next.guestName, phone: next.phone, line: next.line,
+      gliderName: next.gliderName, gliderCount: next.gliderCount, service: next.service,
+      date: next.date, time: next.time, notes: next.notes, status: cur.status
+    } };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 // สำหรับ Dashboard: คำขอรออนุมัติ + คิวที่อนุมัติแล้ว (วันนี้เป็นต้นไป)
 function spaPendingResult() {
   const all = readSpaRequests();
@@ -2184,6 +2257,7 @@ function spaRqCard(q){
       </div>
     </div>
     <div class="bacts">
+      <button class="ib" onclick="openSpaEdit('${q.id}')" title="แก้ไขรายละเอียดคิวนี้">✎</button>
       <button class="ib confirm" onclick="approveSpaRequest('${q.id}')" title="อนุมัติคิวนี้">✓</button>
       <button class="ib danger" onclick="rejectSpaRequest('${q.id}')" title="ปฏิเสธคำขอ">✕</button>
     </div>
@@ -2205,7 +2279,8 @@ function spaApprovedList(){
           <span>${svc.icon} ${svc.label}</span>
           <span>${esc(q.guestName)}${q.gliderName?' · น้อง '+esc(q.gliderName):''} (${q.gliderCount||1} ตัว)</span>
           ${q.phone?`<span style="color:var(--cm);">📞 ${esc(q.phone)}</span>`:''}
-          <button class="ib" style="margin-left:auto;flex-shrink:0;" onclick="showSpaSlip('${q.id}')" title="ออกใบยืนยันคิว — บันทึกรูปส่งให้ลูกค้า">🧾</button>
+          <button class="ib" style="margin-left:auto;flex-shrink:0;" onclick="openSpaEdit('${q.id}')" title="แก้ไขคิวนี้ — เปลี่ยนบริการ/วัน/เวลา/รายละเอียด">✎</button>
+          <button class="ib" style="flex-shrink:0;" onclick="showSpaSlip('${q.id}')" title="ออกใบยืนยันคิว — บันทึกรูปส่งให้ลูกค้า">🧾</button>
           <button class="ib" style="flex-shrink:0;" onclick="spaCalcForQueue('${q.id}')" title="คิดเงินคิวนี้ — เปิดเครื่องคิดเงินพร้อมข้อมูลคิว">💰</button>
           <button class="ib confirm" style="flex-shrink:0;" onclick="completeSpaBooking('${q.id}')" title="สปาเสร็จสิ้น — ปิดคิวนี้ออกจากรายการ">✓</button>
           <button class="ib danger" style="flex-shrink:0;" onclick="cancelSpaBooking('${q.id}')" title="ยกเลิกคิวนี้ — สลอตจะเปิดให้จองใหม่">✕</button>
@@ -2240,6 +2315,166 @@ async function doCancelSpa(id){
   }catch(err){
     toast('✗ ยกเลิกไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v15)','err');
     fetchSpaRequests(true);
+  }
+}
+
+// ============================
+// SPA EDIT — แก้ไขคิวสปาที่จองไว้แล้ว ★ v19
+// ใช้ได้ทั้งคิวรออนุมัติและคิวที่อนุมัติแล้ว — ย้ายวัน/เวลาได้ถ้าสลอตใหม่ว่าง
+// ============================
+let SPA_ED={id:'',from:'approved',days:[],service:'nail'};
+
+function spaQueueById(id){
+  const a=S.spaApproved.find(x=>x.id===id);
+  if(a) return {q:a,from:'approved'};
+  const r=S.spaRequests.find(x=>x.id===id);
+  if(r) return {q:r,from:'pending'};
+  return null;
+}
+
+async function openSpaEdit(id){
+  const hit=spaQueueById(id); if(!hit) return;
+  if(!S.syncUrl){ openSettings(); return; }
+  const q=hit.q;
+  SPA_ED={id:id,from:hit.from,days:[],service:q.service==='spa'?'spa':'nail'};
+  showModal(`<div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
+    <h2 style="font-size:22px;">✎ แก้ไขคิวสปา</h2>
+    <p style="color:var(--cm);text-align:center;padding:24px 0;">⏳ กำลังโหลดสลอตว่าง…</p>
+  </div>`);
+  try{
+    const d=await callApi('spa_availability');
+    const today=todayKey();
+    // สลอตว่าง (วันนี้เป็นต้นไป) + สลอตเดิมของคิวนี้ซึ่งระบบนับว่าไม่ว่างเพราะคิวนี้จองอยู่
+    const days=(d.days||[]).map(day=>({
+      date:day.date,
+      slots:(day.slots||[]).filter(s=>s.free).map(s=>s.time)
+    })).filter(day=>day.slots.length);
+    let own=days.find(day=>day.date===q.date);
+    if(!own){ own={date:q.date,slots:[]}; days.push(own); }
+    if(q.time&&own.slots.indexOf(q.time)<0) own.slots.push(q.time);
+    days.forEach(day=>day.slots.sort());
+    days.sort((a,b)=>a.date<b.date?-1:1);
+    SPA_ED.days=days.filter(day=>day.date>=today||day.date===q.date);
+    drawSpaEditForm();
+  }catch(err){
+    showModal(`<div class="modal" style="max-width:440px;" onclick="event.stopPropagation()">
+      <h2 style="font-size:22px;">✎ แก้ไขคิวสปา</h2>
+      <p style="color:var(--cm);margin:14px 0 20px;">⚠ โหลดสลอตว่างไม่สำเร็จ: ${esc(err.message)}</p>
+      <div class="factions">
+        <button class="btn btn-g" onclick="closeModal()">ปิด</button>
+        <button class="btn btn-p" onclick="openSpaEdit('${id}')">🔄 ลองอีกครั้ง</button>
+      </div>
+    </div>`);
+  }
+}
+
+function drawSpaEditForm(){
+  const hit=spaQueueById(SPA_ED.id); if(!hit){ closeModal(); return; }
+  const q=hit.q;
+  showModal(`<div class="modal" style="max-width:520px;" onclick="event.stopPropagation()">
+    <h2 style="font-size:22px;">✎ แก้ไขคิวสปา</h2>
+    <p style="color:var(--cm);font-size:12.5px;margin:8px 0 14px;">
+      คิวเดิม: <b style="color:var(--cocoa);">${thD(q.date,true)} · ${esc(q.time)} น.</b>
+      ${SPA_ED.from==='pending'?' · สถานะ รออนุมัติ':' · ยืนยันคิวแล้ว'}
+      — ย้ายวัน/เวลาได้เฉพาะสลอตที่ยังว่าง สลอตเดิมจะกลับมาเปิดให้จองใหม่ค่ะ</p>
+    <div id="sed-err"></div>
+    <div class="fg"><label class="fl">บริการ *</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-sm ${SPA_ED.service==='spa'?'btn-p':'btn-o'}" id="sed-svc-spa" onclick="spaEdSvc('spa')">🛁 ตัดเล็บ+สปา · 70.-/ตัว</button>
+        <button type="button" class="btn btn-sm ${SPA_ED.service==='nail'?'btn-p':'btn-o'}" id="sed-svc-nail" onclick="spaEdSvc('nail')">💅 ตัดเล็บ · 20.-/ตัว</button>
+      </div></div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">วันที่ *</label>
+        <select id="sed-date" class="fi" onchange="spaEdDateChange()">
+          ${SPA_ED.days.map(day=>`<option value="${day.date}"${day.date===q.date?' selected':''}>${TH_D[parseD(day.date).getDay()]} ${thD(day.date,true)} (ว่าง ${day.slots.length})${day.date===q.date?' · คิวเดิม':''}</option>`).join('')}
+        </select></div>
+      <div class="fg"><label class="fl">เวลา (1 ชม.) *</label>
+        <select id="sed-time" class="fi"></select></div>
+    </div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">ชื่อลูกค้า *</label>
+        <input id="sed-name" class="fi" value="${esc(q.guestName)}" placeholder="เช่น คุณสมหญิง" /></div>
+      <div class="fg"><label class="fl">เบอร์โทร</label>
+        <input id="sed-phone" class="fi" inputmode="tel" value="${esc(q.phone)}" placeholder="08X-XXX-XXXX" /></div>
+    </div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">ชื่อน้องชูการ์ฯ</label>
+        <input id="sed-glider" class="fi" value="${esc(q.gliderName)}" placeholder="เช่น โมจิ, ลาเต้…" /></div>
+      <div class="fg"><label class="fl">จำนวนน้อง 🐿</label>
+        <input id="sed-count" class="fi" type="number" min="1" max="20" value="${q.gliderCount||1}" /></div>
+    </div>
+    <div class="fg"><label class="fl">บันทึก</label>
+      <input id="sed-notes" class="fi" value="${esc(q.notes)}" placeholder="นิสัยน้อง, สิ่งที่ต้องระวัง…" /></div>
+    <div class="factions">
+      <button class="btn btn-g" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-p" id="sed-submit" onclick="submitSpaEdit()">💾 บันทึกการแก้ไข</button>
+    </div>
+  </div>`);
+  spaEdDateChange(q.time);
+}
+
+function spaEdSvc(k){
+  SPA_ED.service=k;
+  const n=document.getElementById('sed-svc-nail'), s=document.getElementById('sed-svc-spa');
+  if(n) n.className='btn btn-sm '+(k==='nail'?'btn-p':'btn-o');
+  if(s) s.className='btn btn-sm '+(k==='spa'?'btn-p':'btn-o');
+}
+
+function spaEdDateChange(keepTime){
+  const dSel=document.getElementById('sed-date'), tSel=document.getElementById('sed-time');
+  if(!dSel||!tSel) return;
+  const day=SPA_ED.days.find(x=>x.date===dSel.value)||SPA_ED.days[0];
+  const slots=day?day.slots:[];
+  tSel.innerHTML=slots.map(t=>`<option value="${t}"${t===keepTime?' selected':''}>${t}–${spaSlotEnd(t)} น.</option>`).join('');
+}
+
+async function submitSpaEdit(){
+  const hit=spaQueueById(SPA_ED.id); if(!hit){ closeModal(); return; }
+  const errEl=document.getElementById('sed-err');
+  const show=t=>{ if(errEl) errEl.innerHTML=t?'<div class="errbx">⚠ '+esc(t)+'</div>':''; };
+  show('');
+  const patch={
+    guestName: (document.getElementById('sed-name').value||'').trim(),
+    phone:     (document.getElementById('sed-phone').value||'').trim(),
+    gliderName:(document.getElementById('sed-glider').value||'').trim(),
+    gliderCount: Math.min(20,Math.max(1,parseInt(document.getElementById('sed-count').value,10)||1)),
+    service: SPA_ED.service,
+    date: document.getElementById('sed-date').value,
+    time: document.getElementById('sed-time').value,
+    notes: (document.getElementById('sed-notes').value||'').trim()
+  };
+  if(!patch.guestName) return show('กรุณาใส่ชื่อลูกค้า');
+  if(!patch.date||!patch.time) return show('กรุณาเลือกวันและเวลา');
+  const btn=document.getElementById('sed-submit');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ กำลังบันทึก…'; }
+  const id=SPA_ED.id, from=SPA_ED.from;
+  try{
+    const d=await callApi('edit_spa',{id:id,data:encodeURIComponent(JSON.stringify(patch))});
+    // Apps Script เวอร์ชันเก่าไม่รู้จัก action นี้ — ตอบ "API ready" กลับมาโดยไม่แก้อะไรเลย
+    if(!d||!d.request){
+      if(btn){ btn.disabled=false; btn.textContent='💾 บันทึกการแก้ไข'; }
+      return show('ระบบหลังบ้านยังเป็นเวอร์ชันเก่า — ยังแก้ไขคิวไม่ได้ กรุณา Deploy Apps Script ใหม่ (v19) ก่อนค่ะ');
+    }
+    closeModal();
+    const upd={...hit.q,...(d.request||patch),id:id};
+    if(from==='approved'){
+      S.spaApproved=S.spaApproved.map(r=>r.id===id?upd:r)
+        .sort((a,b)=>(a.date+a.time)<(b.date+b.time)?-1:1);
+    }else{
+      S.spaRequests=S.spaRequests.map(r=>r.id===id?upd:r);
+    }
+    render();
+    toast('✓ แก้ไขคิวของ '+upd.guestName+' แล้ว — '+thD(upd.date,true)+' '+upd.time+' น.','ok');
+    fetchSpaRequests(true);
+  }catch(err){
+    if(btn){ btn.disabled=false; btn.textContent='💾 บันทึกการแก้ไข'; }
+    // สลอตเพิ่งถูกจองตัดหน้า / ร้านปิดรับ — โหลดสลอตใหม่ให้เลือกอีกครั้ง
+    if(/เลือกเวลาใหม่|มีคิวอยู่แล้ว|ไม่เปิดรับ/.test(err.message||'')){
+      toast('✗ '+err.message,'err');
+      openSpaEdit(id);
+      return;
+    }
+    show('บันทึกไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v19)');
   }
 }
 
@@ -2453,7 +2688,7 @@ async function doRejectSpa(id){
 // SPA DIRECT BOOKING — ทางร้านจองคิวสปาให้ลูกค้าโดยตรง ★ v18
 // ยืนยันคิวทันที (approved) ไม่ต้องอนุมัติ และไม่ส่งข้อความแจ้งเข้า LINE
 // ============================
-let SPA_DB={days:[],service:'nail'};
+let SPA_DB={days:[],service:'spa'};   // ค่าเริ่มต้น: ตัดเล็บ + ทำสปา
 
 async function openSpaDirectBook(){
   if(!S.syncUrl){ openSettings(); return; }
@@ -2470,7 +2705,7 @@ async function openSpaDirectBook(){
       date:day.date,
       slots:(day.slots||[]).filter(s=>s.free&&(day.date>today||s.time>cur)).map(s=>s.time)
     })).filter(day=>day.slots.length);
-    SPA_DB.service='nail';
+    SPA_DB.service='spa';   // ค่าเริ่มต้น: ตัดเล็บ + ทำสปา
     drawSpaDirectForm();
   }catch(err){
     showModal(`<div class="modal" style="max-width:440px;" onclick="event.stopPropagation()">
@@ -2503,8 +2738,8 @@ function drawSpaDirectForm(){
     <div id="sdb-err"></div>
     <div class="fg"><label class="fl">บริการ *</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button type="button" class="btn btn-sm ${SPA_DB.service==='nail'?'btn-p':'btn-o'}" id="sdb-svc-nail" onclick="spaDirSvc('nail')">💅 ตัดเล็บ · 20.-/ตัว</button>
         <button type="button" class="btn btn-sm ${SPA_DB.service==='spa'?'btn-p':'btn-o'}" id="sdb-svc-spa" onclick="spaDirSvc('spa')">🛁 ตัดเล็บ+สปา · 70.-/ตัว</button>
+        <button type="button" class="btn btn-sm ${SPA_DB.service==='nail'?'btn-p':'btn-o'}" id="sdb-svc-nail" onclick="spaDirSvc('nail')">💅 ตัดเล็บ · 20.-/ตัว</button>
       </div></div>
     <div class="frow2">
       <div class="fg"><label class="fl">วันที่ *</label>
