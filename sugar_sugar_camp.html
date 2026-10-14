@@ -319,6 +319,19 @@ textarea.fi{resize:vertical;min-height:72px;}
 .rnb.backup{border:1px dashed var(--gold);background:var(--gs);}
 .rnb.backup:hover:not(:disabled){border-color:var(--gold);background:#fff;}
 .rnb.backup.sel{background:var(--gold);color:#fff;border:1px solid var(--gold);}
+.rnb.rec{box-shadow:0 0 0 2.5px var(--gold);position:relative;}
+.rnb.rec::after{content:'⭐';position:absolute;top:-7px;right:-5px;font-size:10px;}
+/* แนะนำกรง */
+.rec-box{margin:0 0 12px;}
+.rec-box .okbx,.rec-box .warnbx,.rec-box .errbx{margin-bottom:8px;line-height:1.6;}
+.rec-opt{border:1px solid var(--ln);background:var(--cream);border-radius:12px;padding:10px 12px;
+  margin-bottom:8px;font-size:12.5px;color:var(--cocoa);line-height:1.6;}
+.rec-opt.on{border:1.5px solid var(--pd);background:var(--ps);}
+.rec-opt b{font-weight:600;}
+.rec-opt ul{margin:4px 0 6px 18px;padding:0;}
+.rec-alt{display:inline-block;border:1px solid var(--ln);background:#fff;border-radius:999px;padding:2px 10px;
+  margin:4px 4px 0 0;font-size:11.5px;cursor:pointer;font-family:inherit;color:var(--cocoa);}
+.rec-alt:hover{border-color:var(--pd);}
 .spick{display:flex;align-items:center;gap:12px;padding:14px 18px;
   background:linear-gradient(135deg,var(--gs),var(--phs));border:1px solid var(--gold);border-radius:14px;}
 .spick.na{background:var(--cs);border-color:var(--coral);opacity:.7;}
@@ -3477,7 +3490,8 @@ function drawForm(v,isEdit){
     </div>
     <div id="fnights" class="nights" style="${nights>0?'':'display:none'}">🌙 ${nights} คืน · ${thD(ci,true)} → ${thD(co,true)}</div>
     <div class="fg" id="rns" style="${FS.roomType==='standard'?'':'display:none'}">
-      <label class="fl">เลือกหมายเลขกรงหลัก (สีแดง = ไม่ว่าง)</label>
+      <div id="rec-box" class="rec-box"></div>
+      <label class="fl">เลือกหมายเลขกรงหลัก (สีแดง = ไม่ว่าง · ⭐ = แนะนำ)</label>
       <div class="rng">${rng}</div>
       <label class="fl" style="margin-top:12px;color:#A07E2D;">กรงสำรอง — ${BACKUP_NOTE}</label>
       <div class="rng">${brng}</div>
@@ -3496,6 +3510,7 @@ function drawForm(v,isEdit){
       <button class="btn btn-p" onclick="submitForm()">${isEdit?'บันทึกการแก้ไข':'ยืนยันการจอง'}</button>
     </div>
   </div>`);
+  renderRec();
   document.getElementById('fg').focus();
   // แก้ไขการจอง: โชว์ประวัติการจองทั้งหมดของลูกค้าคนนี้อัตโนมัติ
   if(isEdit){
@@ -3526,6 +3541,7 @@ function switchRT(rt){
       if(isAvail(S.bookings,'grand_suite',n,ci,co,FS.editId||null)){FS.roomNumber=n;break;}
     }
   }else FS.roomNumber=null;
+  FS.auto=false; FS.moves=null; FS.split=null;
   document.getElementById('rt-s').className='rtbtn '+(rt==='standard'?'act':'');
   document.getElementById('rt-g').className='rtbtn '+(rt==='grand_suite'?'act':'');
   document.getElementById('rns').style.display=rt==='standard'?'':'none';
@@ -3535,19 +3551,24 @@ function switchRT(rt){
 }
 
 function selSuite(n){
-  FS.roomNumber=n;
+  FS.roomNumber=n; FS.auto=false; FS.moves=null; FS.split=null;
   for(let i=1;i<=GS_CAGES;i++){
     const el=document.getElementById('gs-'+i);
     if(el) el.classList.toggle('sel',i===n&&!el.disabled);
   }
 }
 
-function selRoom(n){
-  FS.roomNumber=n;
-  document.querySelectorAll('.rnb').forEach(b=>b.classList.remove('sel'));
-  const el=document.getElementById('rnb-'+n);
-  if(el&&!el.disabled) el.classList.add('sel');
+function selRoom(n,auto){
+  FS.roomNumber=n; FS.auto=!!auto; FS.moves=null; FS.split=null;
+  markSel();
   updateBackupNote();
+  if(!auto) renderRec();
+}
+function markSel(){
+  document.querySelectorAll('.rnb').forEach(b=>b.classList.remove('sel'));
+  const el=FS.roomType==='standard'&&FS.roomNumber?document.getElementById('rnb-'+FS.roomNumber):null;
+  // แผนย้ายคิว: กรงที่เลือกยังติดคิวเดิมอยู่ (ปุ่มปิด) แต่จะว่างหลังย้าย — ไฮไลต์ไว้ให้เห็น
+  if(el&&(!el.disabled||FS.moves)) el.classList.add('sel');
 }
 
 // โชว์หมายเหตุกรงสำรองในฟอร์มจอง เมื่อกรงที่เลือกอยู่เป็นกรงสำรอง
@@ -3586,6 +3607,168 @@ function refreshAvail(){
     const dv=btn.querySelector('.gs-status');
     if(dv)dv.textContent=av?'ห้องว่างพร้อมรองรับ':'มีการจองในช่วงนี้แล้ว';
   }
+  renderRec();
+}
+
+// ============================
+// แนะนำกรง (CAGE RECOMMENDATION)
+// ============================
+// ลดปัญหา "ห้องว่างแต่คร่อมกัน" — ว่างรายคืนแต่ไม่มีกรงไหนว่างตลอดช่วง
+//  A. กรงที่พอดีที่สุด (best-fit): ต่อคิวเดิมให้ชิด เหลือช่องว่างก่อน/หลังน้อยสุด — กรงหลักก่อนเสมอ
+//  B. ย้ายคิวล่วงหน้า: ย้ายเลขกรงของคิวที่ยังไม่เช็คอิน ไปกรงหลักอื่น เพื่อเปิดกรงว่างตลอดช่วง
+//  C. แบ่งพัก: ไม่มีกรงไหนว่างตลอด → แบ่งเป็นช่วงๆ ย้ายน้องระหว่างพักให้น้อยครั้งที่สุด
+// แผนย้าย/แบ่งพัก ใช้เฉพาะกรงหลัก (STD) — ไม่ย้ายลูกค้าเข้า/ออกกรงสำรอง และไม่แตะ Grand Suite
+const REC_OPEN_GAP=60; // ไม่มีคิวถัดไปในกรงนั้น = ช่องว่างยาว (ยังขายได้อีกเยอะ ไม่ควรไปตัดแบ่ง)
+let REC={moves:null,split:null};
+
+function cageBks(bs,rn,ex){
+  return bs.filter(b=>b.id!==ex&&b.roomType==='standard'&&Number(b.roomNumber)===rn);
+}
+// ช่องว่าง (คืน) ที่จะเหลือก่อน/หลังช่วง ci–co ในกรงนี้ — score ยิ่งน้อยยิ่งพอดี
+function cageFit(bs,rn,ci,co,ex){
+  const t=todayKey();
+  let prev='',next='';
+  cageBks(bs,rn,ex).forEach(b=>{
+    if(b.checkOut<=ci&&b.checkOut>prev) prev=b.checkOut;
+    if(b.checkIn>=co&&(!next||b.checkIn<next)) next=b.checkIn;
+  });
+  const from=prev>t?prev:t;
+  const before=ci>from?nts(from,ci):0;
+  const after=next?nts(co,next):REC_OPEN_GAP;
+  return {rn,before,after,open:!next,score:(isBackup(rn)?1000:0)+before+after};
+}
+function fitReason(f){
+  if(f.before===0&&!f.open&&f.after===0) return 'พอดีเป๊ะ ต่อคิวก่อนหน้าและคิวถัดไป ไม่เหลือช่องว่าง';
+  const p=[];
+  p.push(f.before===0?'ต่อจากคิวก่อนหน้าพอดี':'ว่างก่อนหน้า '+f.before+' คืน');
+  if(!f.open) p.push(f.after===0?'ชนคิวถัดไปพอดี':'เหลือว่างก่อนคิวถัดไป '+f.after+' คืน');
+  return p.join(' · ');
+}
+
+// แบ่งพักในกรงหลัก: แต่ละช่วงเลือกกรงที่ว่างต่อเนื่องยาวที่สุด (= ย้ายน้องน้อยครั้งที่สุด)
+function planSplit(bs,ci,co,ex){
+  const segs=[]; let d=ci;
+  while(d<co){
+    let best=null;
+    for(let n=1;n<=MAIN_CAGES;n++){
+      if(!isAvail(bs,'standard',n,d,addDays(d,1),ex)) continue;
+      let e=addDays(d,1);
+      while(e<co&&isAvail(bs,'standard',n,e,addDays(e,1),ex)) e=addDays(e,1);
+      const sc=-nts(d,e)*1000+cageFit(bs,n,d,e,ex).score;
+      if(!best||sc<best.sc) best={rn:n,ci:d,co:e,sc};
+    }
+    if(!best) return null; // มีบางคืนที่กรงหลักเต็มทุกกรง
+    segs.push(best); d=best.co;
+  }
+  return segs.length>1?segs:null;
+}
+
+// ย้ายคิวล่วงหน้า (ยังไม่เช็คอิน) ไปกรงหลักอื่น เพื่อให้กรง n ว่างตลอดช่วง — เลือกแผนที่ย้ายน้อยสุด
+function planMoves(bs,ci,co,ex){
+  let best=null;
+  for(let n=1;n<=MAIN_CAGES;n++){
+    const conf=cageBks(bs,n,ex).filter(b=>!(co<=b.checkIn||ci>=b.checkOut));
+    if(!conf.length||conf.some(b=>bSt(b)!=='upcoming')) continue;
+    let work=bs.filter(b=>!conf.includes(b))
+      .concat([{id:'__rec_new',roomType:'standard',roomNumber:n,checkIn:ci,checkOut:co}]);
+    const moves=[]; let ok=true, cost=0;
+    // คิวยาวหาที่ยากกว่า — จัดก่อน
+    conf.slice().sort((a,c)=>nts(c.checkIn,c.checkOut)-nts(a.checkIn,a.checkOut)).forEach(b=>{
+      if(!ok) return;
+      let tgt=null;
+      for(let m=1;m<=MAIN_CAGES;m++){
+        if(m===n||!isAvail(work,'standard',m,b.checkIn,b.checkOut,ex)) continue;
+        const f=cageFit(work,m,b.checkIn,b.checkOut,ex);
+        if(!tgt||f.score<tgt.score) tgt=f;
+      }
+      if(!tgt){ok=false;return;}
+      moves.push({id:b.id,from:n,to:tgt.rn});
+      cost+=tgt.score;
+      work=work.concat([{...b,roomNumber:tgt.rn}]);
+    });
+    if(!ok) continue;
+    const sc=moves.length*1000+cost;
+    if(!best||sc<best.sc) best={rn:n,moves,sc};
+  }
+  return best;
+}
+
+function renderRec(){
+  const box=document.getElementById('rec-box'); if(!box) return;
+  document.querySelectorAll('.rnb.rec').forEach(b=>b.classList.remove('rec'));
+  const ci=document.getElementById('fci')?.value, co=document.getElementById('fco')?.value;
+  const key=ci+'|'+co;
+  // วันที่เปลี่ยน → แผนเดิมใช้ไม่ได้แล้ว
+  if((FS.moves||FS.split)&&FS.planKey!==key){FS.moves=null;FS.split=null;FS.roomNumber=null;}
+  REC={moves:null,split:null};
+  if(FS.roomType!=='standard'||!ci||!co||co<=ci){box.innerHTML='';return;}
+  const ex=FS.editId||null, newBk=!FS.editId;
+  const mark=n=>{const el=document.getElementById('rnb-'+n); if(el) el.classList.add('rec');};
+
+  const fits=[];
+  for(let n=1;n<=totalStd();n++) if(isAvail(S.bookings,'standard',n,ci,co,ex)) fits.push(cageFit(S.bookings,n,ci,co,ex));
+  fits.sort((a,b)=>a.score-b.score||a.rn-b.rn);
+  const main=fits.filter(f=>!isBackup(f.rn)), backup=fits.filter(f=>isBackup(f.rn));
+
+  // A. มีกรงหลักว่างตลอดช่วง → แนะนำกรงที่พอดีที่สุด (เลือกให้อัตโนมัติถ้ายังไม่ได้เลือกเอง)
+  if(main.length){
+    const top=main[0];
+    mark(top.rn);
+    if(newBk&&(!FS.roomNumber||FS.auto)) selRoom(top.rn,true);
+    const alts=main.slice(1,4).map(f=>`<button type="button" class="rec-alt" onclick="selRoom(${f.rn})" title="${esc(fitReason(f))}">${stdLabel(f.rn)}</button>`).join('');
+    box.innerHTML=`<div class="okbx">⭐ แนะนำ <b>${stdLabel(top.rn)}</b> — ${esc(fitReason(top))}
+      ${FS.roomNumber!==top.rn?`<br><button type="button" class="rec-alt" onclick="selRoom(${top.rn})">ใช้ ${stdLabel(top.rn)}</button>`:''}
+      ${alts?`<div style="font-size:11.5px;margin-top:2px;">ตัวเลือกถัดไป: ${alts}</div>`:''}</div>`;
+    return;
+  }
+
+  // กรงหลักไม่มีกรงไหนว่างตลอดช่วง
+  let html=`<div class="warnbx">⚠ กรงหลักไม่มีกรงไหนว่างตลอด ${nts(ci,co)} คืน — ทางเลือกที่ยังลงจองได้:</div>`;
+  let any=false;
+  if(newBk){
+    const mv=planMoves(S.bookings,ci,co,ex);
+    if(mv){
+      any=true; REC.moves=mv; mark(mv.rn);
+      const on=!!FS.moves;
+      const rows=mv.moves.map(m=>{const b=S.bookings.find(x=>x.id===m.id)||{};
+        return `<li>${esc(b.guestName||'')}${b.gliderName?' (น้อง '+esc(b.gliderName)+')':''} · ${thD(b.checkIn,true)} – ${thD(b.checkOut,true)} : ${stdLabel(m.from)} → <b>${stdLabel(m.to)}</b></li>`;}).join('');
+      html+=`<div class="rec-opt ${on?'on':''}">🔀 <b>ย้ายคิวล่วงหน้า ${mv.moves.length} คิว</b> แล้วจอง <b>${stdLabel(mv.rn)}</b> ได้ตลอดช่วง (น้องไม่ต้องย้ายกรงระหว่างพัก)
+        <ul>${rows}</ul>
+        <div style="font-size:11px;color:var(--cm);">ย้ายเฉพาะคิวที่ยังไม่เช็คอิน · ถ้าเคยแจ้งเลขกรงให้ลูกค้าคิวนั้นไปแล้ว อย่าลืมแจ้งเลขใหม่นะคะ</div>
+        ${on?'<div style="margin-top:4px;color:var(--pd);font-weight:600;">✓ เลือกแผนนี้แล้ว — กด "ยืนยันการจอง" เพื่อบันทึก</div>'
+            :'<button type="button" class="rec-alt" onclick="useRec(\'moves\')">ใช้แผนนี้</button>'}</div>`;
+    }
+    const sp=planSplit(S.bookings,ci,co,ex);
+    if(sp){
+      any=true; REC.split=sp;
+      const on=!!FS.split;
+      if(on) sp.forEach(g=>mark(g.rn));
+      const rows=sp.map((g,i)=>`<li>ช่วงที่ ${i+1}: <b>${stdLabel(g.rn)}</b> · ${thD(g.ci,true)} → ${thD(g.co,true)} (${nts(g.ci,g.co)} คืน)</li>`).join('');
+      html+=`<div class="rec-opt ${on?'on':''}">🔁 <b>แบ่งพัก ${sp.length} กรง</b> (ย้ายน้องระหว่างพัก ${sp.length-1} ครั้ง)
+        <ul>${rows}</ul>
+        ${on?'<div style="color:var(--pd);font-weight:600;">✓ เลือกแผนนี้แล้ว — ระบบจะลงจองแยกตามช่วง</div>'
+            :'<button type="button" class="rec-alt" onclick="useRec(\'split\')">ใช้แผนนี้</button>'}</div>`;
+    }
+  }
+  if(backup.length){
+    any=true;
+    const b0=backup[0]; if(!FS.moves&&!FS.split) mark(b0.rn);
+    html+=`<div class="rec-opt ${FS.roomNumber===b0.rn&&!FS.moves&&!FS.split?'on':''}">🏠 <b>กรงสำรอง ${stdLabel(b0.rn)}</b> ว่างตลอดช่วง — ${esc(fitReason(b0))}
+      <div style="font-size:11px;color:#A07E2D;">${BACKUP_NOTE}</div>
+      <button type="button" class="rec-alt" onclick="selRoom(${b0.rn})">ใช้ ${stdLabel(b0.rn)}</button></div>`;
+  }
+  if(!any) html+=`<div class="errbx">✗ ไม่มีวิธีจัดกรงหลักหรือกรงสำรองให้ครบช่วงนี้ได้ — ลองเลื่อนวัน หรือแยกจองเฉพาะบางคืน</div>`;
+  box.innerHTML=html;
+  markSel();
+}
+
+function useRec(kind){
+  const ci=document.getElementById('fci')?.value, co=document.getElementById('fco')?.value;
+  FS.planKey=ci+'|'+co; FS.auto=false;
+  if(kind==='moves'&&REC.moves){FS.moves=REC.moves.moves;FS.split=null;FS.roomNumber=REC.moves.rn;}
+  if(kind==='split'&&REC.split){FS.split=REC.split.map(g=>({rn:g.rn,ci:g.ci,co:g.co}));FS.moves=null;FS.roomNumber=FS.split[0].rn;}
+  updateBackupNote();
+  renderRec();
 }
 
 function submitForm(){
@@ -3601,11 +3784,32 @@ function submitForm(){
   if(!gn) return err('กรุณาใส่ชื่อเจ้าของ');
   if(!FS.roomNumber) return err('กรุณาเลือกหมายเลขห้อง');
   if(co<=ci) return err('วันเช็คเอาท์ต้องอยู่หลังวันเช็คอิน');
-  if(!isAvail(S.bookings,FS.roomType,FS.roomNumber,ci,co,FS.editId||null)) return err('ห้องนี้มีการจองในช่วงนี้แล้ว');
+  const plan=(FS.moves||FS.split)&&!FS.editId&&FS.planKey===ci+'|'+co;
   const data={guestName:gn,gliderName:gl,gliderCount:gc,phone:ph,notes:no,
     roomType:FS.roomType,roomNumber:FS.roomNumber,checkIn:ci,checkOut:co};
-  if(FS.editId) S.bookings=S.bookings.map(b=>b.id===FS.editId?{...b,...data}:b);
-  else S.bookings=[...S.bookings,{...data,id:genId(),createdAt:Date.now()}];
+  if(plan&&FS.split){
+    // แบ่งพักหลายกรง — ลงจองแยกตามช่วง (รวมบิลตอนเช็คเอาท์ได้ด้วย "รวมบิลหลายกรง")
+    if(FS.split.some(g=>!isAvail(S.bookings,'standard',g.rn,g.ci,g.co,null))) return err('แผนแบ่งพักมีกรงที่ถูกจองไปแล้ว — กรุณาเลือกแผนใหม่');
+    const N=FS.split.length, now=Date.now();
+    S.bookings=[...S.bookings,...FS.split.map((g,i)=>{
+      const nx=FS.split[i+1];
+      const tag='🔁 แบ่งพัก '+N+' กรง · ช่วงที่ '+(i+1)+'/'+N+(nx?' → ย้ายไป '+stdLabel(nx.rn)+' วันที่ '+thD(nx.ci,true):'');
+      return {...data,roomType:'standard',roomNumber:g.rn,checkIn:g.ci,checkOut:g.co,
+        notes:no?no+'\n'+tag:tag,id:genId(),createdAt:now+i};
+    })];
+  }else if(plan&&FS.moves){
+    // ย้ายคิวล่วงหน้าไปกรงอื่นก่อน แล้วค่อยลงจองใหม่ในกรงที่ว่างแล้ว
+    const mv=Object.fromEntries(FS.moves.map(m=>[m.id,m.to]));
+    const bs2=S.bookings.map(b=>mv[b.id]?{...b,roomNumber:mv[b.id]}:b);
+    const bad=FS.moves.some(m=>{const b=bs2.find(x=>x.id===m.id);
+      return !b||bSt(b)!=='upcoming'||!isAvail(bs2,'standard',m.to,b.checkIn,b.checkOut,b.id);});
+    if(bad||!isAvail(bs2,'standard',FS.roomNumber,ci,co,null)) return err('แผนย้ายคิวใช้ไม่ได้แล้ว (มีการจองเปลี่ยนไป) — กรุณาเลือกแผนใหม่');
+    S.bookings=[...bs2,{...data,id:genId(),createdAt:Date.now()}];
+  }else{
+    if(!isAvail(S.bookings,FS.roomType,FS.roomNumber,ci,co,FS.editId||null)) return err('ห้องนี้มีการจองในช่วงนี้แล้ว');
+    if(FS.editId) S.bookings=S.bookings.map(b=>b.id===FS.editId?{...b,...data}:b);
+    else S.bookings=[...S.bookings,{...data,id:genId(),createdAt:Date.now()}];
+  }
   const reqId=(!FS.editId&&APPROVING_REQ)?APPROVING_REQ:''; // จองนี้มาจากการอนุมัติคำขอ?
   save(); closeModal(); autoSync(); render();
   if(reqId) finalizeApprove(reqId);
