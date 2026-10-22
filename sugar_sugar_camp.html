@@ -4668,10 +4668,13 @@ function openCheckout(id){
   const sub=gliders*PRICE_PER_GLIDER_NIGHT*nights;
   const roomLabel=coRoomLabel(b);
 
-  // กรงอื่นที่เช็คเอาท์ได้ (เข้าพักอยู่/ผ่านไปแล้ว) — เจ้าของเดียวกันขึ้นก่อน
+  // กรงอื่นที่เช็คเอาท์ได้ (เข้าพักอยู่/ผ่านไปแล้ว) — เฉพาะช่วงเข้าพักทับ/ใกล้กับกรงนี้ (±3 วัน)
+  // เพื่อไม่ให้กรงเก่าๆ ขึ้นมาเต็มรายการ — เจ้าของเดียวกันขึ้นก่อน
+  const MERGE_NEAR_DAYS=3;
   const sameFam=x=>(b.phone&&x.phone&&x.phone.trim()===b.phone.trim())||
     (x.guestName&&x.guestName.trim()===b.guestName.trim());
-  const candidates=S.bookings.filter(x=>x.id!==id&&bSt(x)!=='upcoming')
+  const nearStay=x=>nts(b.checkOut,x.checkIn)<=MERGE_NEAR_DAYS&&nts(x.checkOut,b.checkIn)<=MERGE_NEAR_DAYS;
+  const candidates=S.bookings.filter(x=>x.id!==id&&bSt(x)!=='upcoming'&&nearStay(x))
     .sort((a,c)=>(sameFam(c)?1:0)-(sameFam(a)?1:0)||(a.checkIn<c.checkIn?-1:1));
   const mergeSec=candidates.length?`
       <details class="sc" style="margin:0 0 16px;">
