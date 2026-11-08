@@ -724,6 +724,13 @@ const SHEET_NAME    = 'Bookings';
 const TZ            = 'Asia/Bangkok';
 const N_COLS        = 12;
 
+// ป้ายชื่อกรง Standard — เลข roomNumber: 1..25 = STD-01..25 · 26..60 = สำรอง-01..35 · 61, 62 = STD-26, STD-27
+function stdLabel_(rn) {
+  rn = Number(rn)||1;
+  if (rn >= 26 && rn <= 60) return 'สำรอง-' + String(rn-25).padStart(2,'0');
+  return 'STD-' + String(rn > 60 ? rn-35 : rn).padStart(2,'0');
+}
+
 // ─── CORS helper ───────────────────────────────────────
 function corsOut(o) {
   return ContentService
@@ -1013,7 +1020,7 @@ function bookingRow_(b, eid, ts) {
 function upsertEvent_(cal, b, eid) {
   const gc = Number(b.gliderCount)||1;
   const title = (b.gliderName?'🐿 '+b.gliderName:'🐿 '+b.guestName)+' ('+gc+' ตัว) · '+
-    (b.roomType==='grand_suite'?'Grand Suite #'+(Number(b.roomNumber)||1):'STD-'+String(b.roomNumber).padStart(2,'0'));
+    (b.roomType==='grand_suite'?'Grand Suite #'+(Number(b.roomNumber)||1):stdLabel_(b.roomNumber));
   const desc = ['เจ้าของ: '+b.guestName,
     b.gliderName?'น้อง: '+b.gliderName:'',
     'จำนวน: '+gc+' ตัว',
@@ -1174,7 +1181,7 @@ function thDateShort_(dateStr) {
 function nameOf_(b) {
   return (b.gliderName || b.guestName || 'ไม่ระบุ') +
     ' (' + (Number(b.gliderCount)||1) + ' ตัว · ' +
-    (b.roomType==='grand_suite' ? 'Grand Suite #' + (Number(b.roomNumber)||1) : 'STD-' + String(b.roomNumber).padStart(2,'0')) + ')';
+    (b.roomType==='grand_suite' ? 'Grand Suite #' + (Number(b.roomNumber)||1) : stdLabel_(b.roomNumber)) + ')';
 }
 
 // ── สรุปข้อมูลตามวันที่ ─────────────────────────────────────
@@ -1766,13 +1773,24 @@ function countGlidersOnDate(dateStr){
   return onDate(S.bookings, dateStr)
     .reduce((sum,b) => sum + (parseInt(b.gliderCount)||1), 0);
 }
-const MAIN_CAGES=25;   // จำนวนกรงหลัก Standard (กรง Stainless + มีกล้องดูน้อง)
+const MAIN_CAGES=27;   // จำนวนกรงหลัก Standard (กรง Stainless + มีกล้องดูน้อง)
 const BACKUP_CAGES=35; // จำนวนกรงสำรอง — ไม่ใช่กรง Stainless และไม่มีกล้องไว้ดูน้อง
 const GS_CAGES=5;      // จำนวนกรง Grand Suite
+// เลข roomNumber ที่บันทึกใน Sheet (ห้ามเปลี่ยน เพื่อไม่ให้การจองเดิมย้ายกรง):
+//   กรงหลัก STD-01..25 = 1..25 · กรงสำรอง สำรอง-01..35 = 26..60
+//   กรงหลักที่เพิ่มทีหลัง (STD-26, STD-27, ...) = 61, 62, ... (ต่อท้ายกรงสำรอง)
+const LEGACY_MAIN=25;
+const BACKUP_FIRST=LEGACY_MAIN+1, BACKUP_LAST=LEGACY_MAIN+BACKUP_CAGES;
+const MAIN_RNS=Array.from({length:MAIN_CAGES},(_,i)=>i<LEGACY_MAIN?i+1:BACKUP_LAST+1+(i-LEGACY_MAIN));
+const BACKUP_RNS=Array.from({length:BACKUP_CAGES},(_,i)=>BACKUP_FIRST+i);
+const STD_RNS=MAIN_RNS.concat(BACKUP_RNS);
 function totalStd(){return MAIN_CAGES+BACKUP_CAGES;}
 function totalRooms(){return totalStd()+GS_CAGES;}
-function isBackup(rn){return Number(rn)>MAIN_CAGES;}
-function stdLabel(rn){rn=Number(rn)||1;return rn<=MAIN_CAGES?'STD-'+pad(rn):'สำรอง-'+pad(rn-MAIN_CAGES);}
+function isBackup(rn){rn=Number(rn);return rn>=BACKUP_FIRST&&rn<=BACKUP_LAST;}
+function mainNo(rn){rn=Number(rn)||1;return rn>BACKUP_LAST?rn-BACKUP_CAGES:rn;}  // เลขกรงหลักที่แสดง
+function backupNo(rn){return (Number(rn)||1)-LEGACY_MAIN;}                       // เลขกรงสำรองที่แสดง
+function stdOrder(rn){return STD_RNS.indexOf(Number(rn));}                       // ลำดับแสดงผล
+function stdLabel(rn){rn=Number(rn)||1;return isBackup(rn)?'สำรอง-'+pad(backupNo(rn)):'STD-'+pad(mainNo(rn));}
 function gsLabel(rn){return 'Grand Suite #'+(Number(rn)||1);}
 const BACKUP_NOTE='ไม่ใช่กรง Stainless และไม่มีกล้องไว้ดูน้องชูก้า';
 
@@ -2984,15 +3002,15 @@ function renderToday(){
   const occ=onDate(S.bookings,S.selDate).length;
   const glidersToday=countGlidersOnDate(S.selDate);
   let rooms='';
-  for(let n=1;n<=MAIN_CAGES;n++) rooms+=roomCell('standard',n,false);
+  MAIN_RNS.forEach(n=>{rooms+=roomCell('standard',n,false);});
   // กรงสำรอง: ปกติซ่อนไว้ไม่ให้รกหน้า Dashboard — โชว์เฉพาะกรงที่มีน้องเข้าพัก
   // กด "ดูกรงทั้งหมด" เพื่อกางกรงสำรองครบทุกกรง
   const occBk=[];
-  for(let n=MAIN_CAGES+1;n<=totalStd();n++) if(roomOf(S.bookings,'standard',n,S.selDate)) occBk.push(n);
+  BACKUP_RNS.forEach(n=>{if(roomOf(S.bookings,'standard',n,S.selDate)) occBk.push(n);});
   let backupSec='';
   if(S.showBackup){
     let br='';
-    for(let n=MAIN_CAGES+1;n<=totalStd();n++) br+=roomCell('standard',n,false);
+    BACKUP_RNS.forEach(n=>{br+=roomCell('standard',n,false);});
     backupSec=`<div class="bdivider">กรงสำรอง ${BACKUP_CAGES} กรง</div>
       <div class="warnbx">📌 <b>กรงสำรอง</b> ${BACKUP_NOTE} — แจ้งลูกค้าให้ทราบตอนจองด้วยนะคะ</div>
       <div class="rgrid">${br}</div>`;
@@ -3125,8 +3143,8 @@ function roomCell(rt,rn,isSuite){
   const oc=!!b;
   const bk=!isSuite&&isBackup(rn);
   const cls='rc '+(oc?'oc':'av')+(isSuite?' suite':'')+(bk?' backup':'');
-  const num=isSuite?'GS'+rn:(bk?pad(rn-MAIN_CAGES):pad(rn));
-  const lbl=isSuite?'GRAND SUITE #'+rn:(bk?'สำรอง':'STD-'+pad(rn));
+  const num=isSuite?'GS'+rn:(bk?pad(backupNo(rn)):pad(mainNo(rn)));
+  const lbl=isSuite?'GRAND SUITE #'+rn:(bk?'สำรอง':stdLabel(rn));
   const cnt=b?(parseInt(b.gliderCount)||1):0;
   const nameDisp=b?(b.gliderName||b.guestName):'';
   const bot=oc?`<div class="rname">${esc(nameDisp)}</div><div class="rstat" style="font-size:10px;opacity:.8;">🐿 ${cnt} ตัว</div>`:`<div class="rstat">ว่าง</div>`;
@@ -3151,13 +3169,13 @@ function renderCalendar(){
   const dates=[]; for(let i=0;i<DAYS;i++) dates.push(addDays(S.calStart,i));
   const today=todayKey();
   const allRooms=Array.from({length:GS_CAGES},(_,i)=>({type:'grand_suite',num:i+1,label:gsLabel(i+1),isSuite:true}));
-  for(let i=0;i<MAIN_CAGES;i++) allRooms.push({type:'standard',num:i+1,label:'STD-'+pad(i+1),isSuite:false});
+  MAIN_RNS.forEach(n=>allRooms.push({type:'standard',num:n,label:stdLabel(n),isSuite:false}));
   // กรงสำรอง: โชว์เฉพาะแถวที่มีการจองคาบเกี่ยวช่วงวันที่แสดง — กด "ดูกรงทั้งหมด" เพื่อกางครบ
   const rangeEnd=addDays(dates[DAYS-1],1);
   let hiddenBk=0;
-  for(let n=MAIN_CAGES+1;n<=totalStd();n++){
+  for(const n of BACKUP_RNS){
     const used=S.bookings.some(b=>b.roomType==='standard'&&Number(b.roomNumber)===n&&b.checkIn<rangeEnd&&b.checkOut>dates[0]);
-    if(S.showBackup||used) allRooms.push({type:'standard',num:n,label:'สำรอง-'+pad(n-MAIN_CAGES),isSuite:false,backup:true});
+    if(S.showBackup||used) allRooms.push({type:'standard',num:n,label:stdLabel(n),isSuite:false,backup:true});
     else hiddenBk++;
   }
 
@@ -3234,8 +3252,8 @@ function renderBookings(){
     return `<div class="bc ${st}">
       <div class="badge ${isS?'suite':''}">
         ${isS?`<span style="font-size:20px;">👑</span><div class="bt">SUITE ${Number(b.roomNumber)||1}</div>`
-          :isBackup(b.roomNumber)?`<div class="bn">${pad(Number(b.roomNumber)-MAIN_CAGES)}</div><div class="bt">สำรอง</div>`
-          :`<div class="bn">${pad(b.roomNumber)}</div><div class="bt">STD</div>`}
+          :isBackup(b.roomNumber)?`<div class="bn">${pad(backupNo(b.roomNumber))}</div><div class="bt">สำรอง</div>`
+          :`<div class="bn">${pad(mainNo(b.roomNumber))}</div><div class="bt">STD</div>`}
       </div>
       <div class="binfo">
         <div class="bhead">
@@ -3421,15 +3439,15 @@ function openEditForm(id){
 function drawForm(v,isEdit){
   const ci=v.checkIn, co=v.checkOut;
   const nights=co>ci?nts(ci,co):0;
-  let rng=''; for(let n=1;n<=MAIN_CAGES;n++){
+  let rng=''; for(const n of MAIN_RNS){
     const av=isAvail(S.bookings,'standard',n,ci,co,FS.editId||null);
     rng+=`<button type="button" class="rnb ${FS.roomNumber===n&&FS.roomType==='standard'?'sel':''}" id="rnb-${n}"
-      ${!av?'disabled':''} onclick="selRoom(${n})">${pad(n)}</button>`;
+      ${!av?'disabled':''} onclick="selRoom(${n})">${pad(mainNo(n))}</button>`;
   }
-  let brng=''; for(let n=MAIN_CAGES+1;n<=totalStd();n++){
+  let brng=''; for(const n of BACKUP_RNS){
     const av=isAvail(S.bookings,'standard',n,ci,co,FS.editId||null);
     brng+=`<button type="button" class="rnb backup ${FS.roomNumber===n&&FS.roomType==='standard'?'sel':''}" id="rnb-${n}"
-      ${!av?'disabled':''} onclick="selRoom(${n})">${pad(n-MAIN_CAGES)}</button>`;
+      ${!av?'disabled':''} onclick="selRoom(${n})">${pad(backupNo(n))}</button>`;
   }
   let gsBtns='';
   for(let n=1;n<=GS_CAGES;n++){
@@ -3591,7 +3609,7 @@ function refreshAvail(){
   const ci=document.getElementById('fci')?.value;
   const co=document.getElementById('fco')?.value;
   if(!ci||!co)return;
-  for(let n=1;n<=totalStd();n++){
+  for(const n of STD_RNS){
     const btn=document.getElementById('rnb-'+n); if(!btn)continue;
     const av=isAvail(S.bookings,'standard',n,ci,co,FS.editId||null);
     btn.disabled=!av;
@@ -3650,7 +3668,7 @@ function planSplit(bs,ci,co,ex){
   const segs=[]; let d=ci;
   while(d<co){
     let best=null;
-    for(let n=1;n<=MAIN_CAGES;n++){
+    for(const n of MAIN_RNS){
       if(!isAvail(bs,'standard',n,d,addDays(d,1),ex)) continue;
       let e=addDays(d,1);
       while(e<co&&isAvail(bs,'standard',n,e,addDays(e,1),ex)) e=addDays(e,1);
@@ -3666,7 +3684,7 @@ function planSplit(bs,ci,co,ex){
 // ย้ายคิวล่วงหน้า (ยังไม่เช็คอิน) ไปกรงหลักอื่น เพื่อให้กรง n ว่างตลอดช่วง — เลือกแผนที่ย้ายน้อยสุด
 function planMoves(bs,ci,co,ex){
   let best=null;
-  for(let n=1;n<=MAIN_CAGES;n++){
+  for(const n of MAIN_RNS){
     const conf=cageBks(bs,n,ex).filter(b=>!(co<=b.checkIn||ci>=b.checkOut));
     if(!conf.length||conf.some(b=>bSt(b)!=='upcoming')) continue;
     let work=bs.filter(b=>!conf.includes(b))
@@ -3676,7 +3694,7 @@ function planMoves(bs,ci,co,ex){
     conf.slice().sort((a,c)=>nts(c.checkIn,c.checkOut)-nts(a.checkIn,a.checkOut)).forEach(b=>{
       if(!ok) return;
       let tgt=null;
-      for(let m=1;m<=MAIN_CAGES;m++){
+      for(const m of MAIN_RNS){
         if(m===n||!isAvail(work,'standard',m,b.checkIn,b.checkOut,ex)) continue;
         const f=cageFit(work,m,b.checkIn,b.checkOut,ex);
         if(!tgt||f.score<tgt.score) tgt=f;
@@ -3706,8 +3724,8 @@ function renderRec(){
   const mark=n=>{const el=document.getElementById('rnb-'+n); if(el) el.classList.add('rec');};
 
   const fits=[];
-  for(let n=1;n<=totalStd();n++) if(isAvail(S.bookings,'standard',n,ci,co,ex)) fits.push(cageFit(S.bookings,n,ci,co,ex));
-  fits.sort((a,b)=>a.score-b.score||a.rn-b.rn);
+  for(const n of STD_RNS) if(isAvail(S.bookings,'standard',n,ci,co,ex)) fits.push(cageFit(S.bookings,n,ci,co,ex));
+  fits.sort((a,b)=>a.score-b.score||stdOrder(a.rn)-stdOrder(b.rn));
   const main=fits.filter(f=>!isBackup(f.rn)), backup=fits.filter(f=>isBackup(f.rn));
 
   // A. มีกรงหลักว่างตลอดช่วง → แนะนำกรงที่พอดีที่สุด (เลือกให้อัตโนมัติถ้ายังไม่ได้เลือกเอง)
@@ -4513,7 +4531,7 @@ let COState = {
 
 function coRoomLabel(b){
   if(b.roomType==='grand_suite') return '👑 '+gsLabel(b.roomNumber);
-  return isBackup(b.roomNumber)?'Standard สำรอง #'+pad(Number(b.roomNumber)-MAIN_CAGES):'Standard #'+pad(b.roomNumber);
+  return isBackup(b.roomNumber)?'Standard สำรอง #'+pad(backupNo(b.roomNumber)):'Standard #'+pad(mainNo(b.roomNumber));
 }
 
 // การจองทั้งหมดในบิลนี้ — กรงหลัก + กรงที่เลือกรวมบิล
