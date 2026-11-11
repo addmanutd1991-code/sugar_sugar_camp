@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build: v18-spa-direct -->
+<!-- build: v19-memos -->
 <html lang="th">
 <head>
 <meta charset="UTF-8"/>
@@ -650,7 +650,12 @@ details.sc>div{padding:0 18px 18px;}
 // T CODE (for copy)
 // ============================
 const AS_CODE = `/**
- * Sugar Sugar Camp - Google t (v18-spa-direct)
+ * Sugar Sugar Camp - Google t (v19-memos)
+ *
+ * ★ v19: โน้ตเตือนความจำของทางร้าน
+ *   - Sheet "Memos" (สร้างอัตโนมัติ) — ทางร้านตั้งโน้ตเองจาก Dashboard (วันที่ + ข้อความ)
+ *   - action: memos_get / memo_add / memo_del
+ *   - สรุป LINE เช้า 06:00 แนบโน้ตของวันนี้ · เย็น 18:00 แนบโน้ตของพรุ่งนี้
  *
  * ★ v18: ทางร้านจองคิวสปาให้ลูกค้าโดยตรง (direct)
  *   - action request_spa รองรับ flag "direct" — ปุ่ม "จองให้ลูกค้า" บน Dashboard
@@ -785,12 +790,18 @@ function doGet(e) {
       result = { ok:true, ...spaPendingResult() };
     } else if (act === 'update_spa' && p.id && p.status) {
       result = { ok:true, ...updateSpaStatus(p.id, p.status) };
+    } else if (act === 'memos_get') {
+      result = { ok:true, memos: readMemos() };
+    } else if (act === 'memo_add' && p.data) {
+      result = { ok:true, ...addMemo(JSON.parse(decodeURIComponent(p.data))) };
+    } else if (act === 'memo_del' && p.id) {
+      result = { ok:true, ...deleteMemo(p.id) };
     } else if (act === 'spa_schedule_get') {
       result = { ok:true, schedule: getSpaSchedule() };
     } else if (act === 'spa_schedule_set' && p.data) {
       result = { ok:true, schedule: setSpaSchedule(JSON.parse(decodeURIComponent(p.data))) };
     } else {
-      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v18-spa-direct', schema:13 };
+      result = { ok:true, msg:'Sugar Sugar Camp API ready', version:'v19-memos', schema:13 };
     }
   } catch(err) {
     result = { ok:false, error:String(err) };
@@ -823,6 +834,9 @@ function doPost(e) {
     if (d.action === 'update_spa') return corsOut({ ok:true, ...updateSpaStatus(d.id, d.status) });
     if (d.action === 'spa_schedule_get') return corsOut({ ok:true, schedule: getSpaSchedule() });
     if (d.action === 'spa_schedule_set') return corsOut({ ok:true, schedule: setSpaSchedule(d.schedule||{}) });
+    if (d.action === 'memos_get') return corsOut({ ok:true, memos: readMemos() });
+    if (d.action === 'memo_add') return corsOut({ ok:true, ...addMemo(d.memo||{}) });
+    if (d.action === 'memo_del') return corsOut({ ok:true, ...deleteMemo(d.id) });
     if (d.action === 'send_line') return corsOut({ ok:true, ...sendMorningLineSummary() });
     if (d.action === 'send_line_evening') return corsOut({ ok:true, ...sendEveningLineSummary() });
     if (d.action === 'line_summary') return corsOut({ ok:true, summary: dailySummary(), message: buildMorningMessage() });
@@ -1244,6 +1258,7 @@ function buildMorningMessage() {
   m += '🐿 ชูการ์ทั้งหมด: '   + d.gliders   + ' ตัว';
   if (d.ci.length)  m += '\\n\\n🚪 เข้าวันนี้:\\n• ' + d.ci.map(nameOf_).join('\\n• ');
   if (d.co.length)  m += '\\n\\n👋 ออกวันนี้:\\n• ' + d.co.map(nameOf_).join('\\n• ');
+  m += memoLines_(today, 'วันนี้');
   return m;
 }
 
@@ -1264,6 +1279,7 @@ function buildEveningMessage() {
   m += '\\n\\n' + foodPrepLines_(today);
   if (d.ci.length)  m += '\\n\\n🚪 เข้าพรุ่งนี้:\\n• ' + d.ci.map(nameOf_).join('\\n• ');
   if (d.co.length)  m += '\\n\\n👋 ออกพรุ่งนี้:\\n• ' + d.co.map(nameOf_).join('\\n• ');
+  m += memoLines_(tomorrow, 'พรุ่งนี้');
   return m;
 }
 
@@ -1315,6 +1331,88 @@ function setupDailyLineTrigger() {
   ScriptApp.newTrigger('sendMorningLineSummary').timeBased().everyDays(1).atHour(6).create();
   ScriptApp.newTrigger('sendEveningLineSummary').timeBased().everyDays(1).atHour(18).create();
   return 'ตั้งทริกเกอร์แล้ว 2 รอบ: 🌅 06:00 สรุปวันนี้ · 🌆 18:00 แจ้งล่วงหน้าพรุ่งนี้';
+}
+
+// ════════════════════════════════════════════════════════════
+// MEMOS — โน้ตเตือนความจำของทางร้าน ★ v19
+// ────────────────────────────────────────────────────────────
+//  ทางร้านสร้างเองจากปุ่ม "📌 โน้ตเตือน" บน Dashboard (วันที่ + ข้อความ)
+//  เก็บใน Sheet "Memos" → แสดงบน Dashboard ทุกเครื่อง
+//  และแนบท้ายสรุป LINE: เช้า 06:00 = โน้ตของวันนี้ · เย็น 18:00 = โน้ตของพรุ่งนี้
+// ════════════════════════════════════════════════════════════
+const MEMO_SHEET = 'Memos';
+
+function getMemoSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(MEMO_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(MEMO_SHEET);
+    sh.getRange(1,1,1,4).setValues([['ID','Date','Text','Created At']])
+      .setFontWeight('bold').setBackground('#2A1810').setFontColor('#FAF3E9');
+    sh.setFrozenRows(1);
+    sh.setColumnWidth(3, 420);
+  }
+  return sh;
+}
+
+function readMemos() {
+  const sh = getMemoSheet();
+  if (sh.getLastRow() < 2) return [];
+  return sh.getRange(2,1,sh.getLastRow()-1,3).getValues()
+    .filter(function(r){ return r[0]; })
+    .map(function(r){ return { id:String(r[0]), date:fmtD(r[1]), text:String(r[2]||'') }; })
+    .sort(function(a,b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+}
+
+function addMemo(q) {
+  const id   = String(q.id || '').trim() || ('m' + Date.now());
+  const date = String(q.date || '').trim();
+  const text = String(q.text || '').trim().slice(0, 500);
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) throw new Error('วันที่ไม่ถูกต้อง');
+  if (!text) throw new Error('กรุณาใส่ข้อความโน้ต');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = getMemoSheet();
+    // ล้างโน้ตที่ผ่านมาเกิน 7 วัน — กันข้อมูลสะสมบวม
+    const cutoff = addDay_(dateStr_(new Date()), -7);
+    for (let i = sh.getLastRow(); i >= 2; i--) {
+      const d = fmtD(sh.getRange(i,2).getValue());
+      if (d && d < cutoff) sh.deleteRow(i);
+    }
+    // นำหน้าด้วย ' = บังคับเป็นข้อความ (กัน Sheet แปลงเป็นวันที่/สูตร)
+    sh.appendRow([id, "'" + date, "'" + text,
+      Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss')]);
+    SpreadsheetApp.flush();
+    return { memos: readMemos() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function deleteMemo(id) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = getMemoSheet();
+    for (let i = sh.getLastRow(); i >= 2; i--) {
+      if (String(sh.getRange(i,1).getValue()) === String(id)) sh.deleteRow(i);
+    }
+    SpreadsheetApp.flush();
+    return { memos: readMemos() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ข้อความโน้ตแนบท้ายสรุป LINE — ไม่มีโน้ต = ไม่แสดง · พังก็ไม่กระทบสรุปหลัก
+function memoLines_(dateStr, label) {
+  try {
+    const ms = readMemos().filter(function(m){ return m.date === dateStr; });
+    if (!ms.length) return '';
+    return '\\n\\n📌 โน้ตเตือนความจำ' + label + ':\\n• ' +
+      ms.map(function(m){ return m.text.replace(/\\s*\\n\\s*/g, ' / '); }).join('\\n• ');
+  } catch (_) { return ''; }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2936,6 +3034,8 @@ function render(){
     ${spaApprovedList()}
   </div>`:''}
 
+  ${memoBanner()}
+
   <div class="stats">
     <div class="scard sc-sage"><div class="sico">🏠</div><div class="sl">กรงว่าง</div><div class="sv">${avail}</div><div class="ss2">จากทั้งหมด ${total} กรง</div></div>
     <div class="scard sc-coral"><div class="sico">🌙</div><div class="sl">กรงที่เข้าพัก</div><div class="sv">${occ}</div><div class="ss2">กรง</div></div>
@@ -2952,6 +3052,7 @@ function render(){
     </div>
     <div class="bgroup">
       ${S.syncUrl?`<button class="btn btn-s btn-sm" onclick="manualSync()" ${S.syncSt==='syncing'?'disabled':''}>🔄 Sync</button>`:''}
+      <button class="btn btn-s" onclick="openMemos()">📌 โน้ตเตือน${MEMOS.filter(m=>m.date>=todayKey()).length?' ('+MEMOS.filter(m=>m.date>=todayKey()).length+')':''}</button>
       <button class="btn btn-s" onclick="openFoodSummary()">🍽 สรุปเตรียมอาหาร</button>
       <button class="btn btn-s" onclick="openSpaCalc()">🛁 คิดเงินสปา</button>
       <button class="btn btn-p" onclick="openForm()">＋ เพิ่มการจอง</button>
@@ -4116,6 +4217,122 @@ function saveSettings(){
 }
 
 // ============================
+// MEMOS — โน้ตเตือนความจำของทางร้าน ★ v19
+// (ทางร้านสร้างเอง: วันที่ + ข้อความ · เก็บใน Sheet "Memos" · ขึ้นสรุป LINE เช้า/เย็น)
+// ============================
+const LS_M='ssc_memos1';
+let MEMOS=[];
+try{MEMOS=JSON.parse(localStorage.getItem(LS_M)||'[]')||[];}catch(e){MEMOS=[];}
+function saveMemos(){try{localStorage.setItem(LS_M,JSON.stringify(MEMOS));}catch(e){}}
+function memosOn(date){return MEMOS.filter(m=>m.date===date);}
+function setMemos(list){
+  MEMOS=(list||[]).slice().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  saveMemos();
+}
+async function fetchMemos(silent){
+  if(!S.syncUrl) return;
+  try{
+    const d=await callApi('memos_get');
+    const changed=JSON.stringify(d.memos||[])!==JSON.stringify(MEMOS);
+    setMemos(d.memos);
+    if(changed){ render(); if(document.getElementById('memo-list')) drawMemoList(); }
+  }catch(err){
+    // Apps Script เวอร์ชันเก่า (ยังไม่มี action นี้) — เงียบไว้ถ้าเป็นการโหลดอัตโนมัติ
+    if(!silent) toast('✗ โหลดโน้ตไม่สำเร็จ: '+err.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v19)','err');
+  }
+}
+// การ์ดบนหน้าหลัก — โชว์เฉพาะเมื่อมีโน้ตของวันนี้/พรุ่งนี้
+function memoBanner(){
+  const t=todayKey(), tm=addDays(t,1);
+  const a=memosOn(t), b=memosOn(tm);
+  if(!a.length&&!b.length) return '';
+  const li=(m)=>`<div style="padding:5px 0;border-bottom:1px dashed var(--ln);white-space:pre-wrap;font-size:14px;">• ${esc(m.text)}</div>`;
+  return `<div class="sec" style="border:1.5px solid var(--gold);background:linear-gradient(135deg,var(--cl) 60%,var(--gs));">
+    <div class="stitle">
+      <div><h3>📌 โน้ตเตือนความจำ</h3>
+        <div class="meta">โน้ตที่ทางร้านตั้งไว้ — ขึ้นในสรุป LINE เช้า/เย็นด้วย</div></div>
+      <button class="btn btn-s btn-sm" onclick="openMemos()">✎ จัดการโน้ต</button>
+    </div>
+    ${a.length?`<div style="font-weight:700;color:var(--pd);margin-top:4px;">วันนี้ · ${thD(t,true)}</div>${a.map(li).join('')}`:''}
+    ${b.length?`<div style="font-weight:700;color:var(--cm);margin-top:10px;">พรุ่งนี้ · ${thD(tm,true)}</div>${b.map(li).join('')}`:''}
+  </div>`;
+}
+function openMemos(){
+  if(!S.syncUrl){openSettings();return;}
+  showModal(`<div class="modal" style="max-width:560px;" onclick="event.stopPropagation()">
+    <button class="mclose" onclick="closeModal()">✕</button>
+    <h2 style="font-size:22px;">📌 โน้ตเตือนความจำ</h2>
+    <p class="msub">ทางร้านตั้งเองได้ เช่น นัดรับ-ส่งน้อง, ของที่ต้องเตรียม — ระบบจะเตือนในสรุป LINE เช้าวันนั้น (06:00) และเย็นวันก่อนหน้า (18:00)</p>
+    <div class="frow2" style="grid-template-columns:150px 1fr;">
+      <div class="fg"><label class="fl">วันที่ *</label>
+        <input type="date" id="memo-date" class="fi" value="${S.selDate&&S.selDate>=todayKey()?S.selDate:todayKey()}" min="${todayKey()}"></div>
+      <div class="fg"><label class="fl">ข้อความ *</label>
+        <textarea id="memo-text" class="fi" maxlength="500" placeholder="เช่น ไปรับน้องโมจิ 10:00 ที่คอนโด…" style="min-height:64px;"></textarea></div>
+    </div>
+    <div id="memo-err"></div>
+    <div class="factions" style="margin-top:6px;">
+      <button class="btn btn-p" id="memo-add" onclick="addMemo()">＋ เพิ่มโน้ต</button>
+    </div>
+    <div id="memo-list" style="margin-top:18px;"></div>
+  </div>`);
+  drawMemoList();
+  fetchMemos(false);
+}
+function drawMemoList(){
+  const box=document.getElementById('memo-list'); if(!box)return;
+  const t=todayKey();
+  const up=MEMOS.filter(m=>m.date>=t);
+  if(!up.length){box.innerHTML='<div style="color:var(--cm);font-size:13px;text-align:center;padding:14px 0;">ยังไม่มีโน้ตที่ตั้งไว้</div>';return;}
+  let last='';
+  box.innerHTML=up.map(m=>{
+    const head=m.date!==last?`<div style="font-weight:700;color:var(--cocoa);margin-top:12px;">${TH_D[parseD(m.date).getDay()]} ${thD(m.date,true)}${m.date===t?' <span style="color:var(--pd);">· วันนี้</span>':m.date===addDays(t,1)?' <span style="color:var(--cm);">· พรุ่งนี้</span>':''}</div>`:'';
+    last=m.date;
+    return head+`<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px dashed var(--ln);">
+      <div style="flex:1;white-space:pre-wrap;font-size:14px;">${esc(m.text)}</div>
+      <button class="ib danger" onclick="delMemo('${esc(m.id)}')" title="ลบโน้ต">🗑</button>
+    </div>`;
+  }).join('');
+}
+async function addMemo(){
+  const date=document.getElementById('memo-date')?.value||'';
+  const text=(document.getElementById('memo-text')?.value||'').trim();
+  const err=document.getElementById('memo-err');
+  if(err) err.innerHTML='';
+  if(!date||!text){ if(err) err.innerHTML='<div class="errbx">⚠ กรุณาใส่วันที่และข้อความ</div>'; return; }
+  const btn=document.getElementById('memo-add');
+  if(btn){btn.disabled=true;btn.textContent='⏳ กำลังบันทึก…';}
+  try{
+    // encode สองชั้นตามแบบ spa_schedule_set — ฝั่ง Apps Script decodeURIComponent อีกรอบ
+    const d=await callApi('memo_add',{data:encodeURIComponent(JSON.stringify({id:'m'+genId(),date,text}))});
+    setMemos(d.memos);
+    const tx=document.getElementById('memo-text'); if(tx) tx.value='';
+    drawMemoList(); render();
+    toast('✓ บันทึกโน้ตแล้ว','ok');
+  }catch(e){
+    toast('✗ บันทึกโน้ตไม่สำเร็จ: '+e.message+' — ถ้าเพิ่งอัปเดตระบบ อย่าลืม Deploy Apps Script ใหม่ (v19)','err');
+  }
+  if(btn){btn.disabled=false;btn.textContent='＋ เพิ่มโน้ต';}
+}
+async function delMemo(id){
+  const keep=MEMOS;
+  MEMOS=MEMOS.filter(m=>m.id!==id); drawMemoList();
+  try{
+    const d=await callApi('memo_del',{id:id});
+    setMemos(d.memos); drawMemoList(); render();
+    toast('✓ ลบโน้ตแล้ว','ok');
+  }catch(e){
+    MEMOS=keep; drawMemoList();
+    toast('✗ ลบโน้ตไม่สำเร็จ: '+e.message,'err');
+  }
+}
+// ข้อความโน้ตแนบท้ายตัวอย่างสรุป LINE (ให้ตรงกับ memoLines_ ฝั่ง Apps Script)
+function localMemoLines(date,label){
+  const ms=memosOn(date);
+  if(!ms.length) return '';
+  return '\n\n📌 โน้ตเตือนความจำ'+label+':\n• '+ms.map(m=>m.text.replace(/\s*\n\s*/g,' / ')).join('\n• ');
+}
+
+// ============================
 // LINE SUMMARY
 // ============================
 // ── ยูทิลิตี้ฝั่ง JS ─────────────────────────────────
@@ -4150,6 +4367,7 @@ function buildLocalMorningText(){
   m+='🐿 ชูการ์ทั้งหมด: '+d.gliders+' ตัว';
   if(d.ci.length) m+='\n\n🚪 เข้าวันนี้:\n• '+d.ci.map(localNameOf).join('\n• ');
   if(d.co.length) m+='\n\n👋 ออกวันนี้:\n• '+d.co.map(localNameOf).join('\n• ');
+  m+=localMemoLines(t,'วันนี้');
   return m;
 }
 
@@ -4172,6 +4390,7 @@ function buildLocalEveningText(){
   m+='\nรวม '+fp.totalCages+' กรง · ชูการ์ '+fp.totalGliders+' ตัว (รวมกรงเจ้าของ '+OWNER_CAGES.length+' กรง)';
   if(d.ci.length) m+='\n\n🚪 เข้าพรุ่งนี้:\n• '+d.ci.map(localNameOf).join('\n• ');
   if(d.co.length) m+='\n\n👋 ออกพรุ่งนี้:\n• '+d.co.map(localNameOf).join('\n• ');
+  m+=localMemoLines(tomorrow,'พรุ่งนี้');
   return m;
 }
 
@@ -4507,13 +4726,14 @@ async function initSync(){
   if(S.syncUrl){
     fetchRequests(true);    // โหลดคำขอจองรออนุมัติ (ไม่บล็อกการ pull)
     fetchSpaRequests(true); // โหลดคิวสปารออนุมัติ + คิวที่อนุมัติแล้ว
+    fetchMemos(true);       // โหลดโน้ตเตือนความจำของทางร้าน
     await pullCloud(true);  // silent pull — ไม่ถามยืนยัน ไม่แสดง toast
   }
 }
 
 // รีเฟรชข้อมูลจาก Sheet + คำขอจอง ทุก 5 นาที (สำหรับกรณีเปิดหลายเครื่อง)
 setInterval(()=>{
-  if(S.syncUrl){ pullCloud(true); fetchRequests(true); fetchSpaRequests(true); }
+  if(S.syncUrl){ pullCloud(true); fetchRequests(true); fetchSpaRequests(true); fetchMemos(true); }
 }, 5 * 60 * 1000);
 
 
