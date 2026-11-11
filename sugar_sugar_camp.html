@@ -1185,6 +1185,27 @@ function nameOf_(b) {
     (b.roomType==='grand_suite' ? 'Grand Suite #' + (Number(b.roomNumber)||1) : stdLabel_(b.roomNumber)) + ')';
 }
 
+// ── ⏰ เวลานัดรับ-ส่ง ─────────────────────────────────────────
+// Dashboard เก็บเวลานัดไว้บรรทัดแรกของ Notes: "⏰ เข้า 10:00 · ออก 17:00"
+// (ไม่เพิ่มคอลัมน์ใน Sheet) — สรุปเช้า/เย็นดึงมาแสดงและเรียงตามเวลา
+function timesOf_(b) {
+  var t = { inT:'', outT:'' };
+  String(b.notes || '').split(/\\r?\\n/).forEach(function(l) {
+    var m = l.match(/^⏰ (?:เข้า (\\d{1,2}:\\d{2}))?(?: · )?(?:ออก (\\d{1,2}:\\d{2}))?\\s*$/);
+    if (m) { t.inT = m[1] || t.inT; t.outT = m[2] || t.outT; }
+  });
+  if (t.inT.length  === 4) t.inT  = '0' + t.inT;
+  if (t.outT.length === 4) t.outT = '0' + t.outT;
+  return t;
+}
+// รายการเข้า/ออก — มีเวลานัดขึ้นก่อน เรียงตามเวลา · ไม่มีเวลาต่อท้าย
+function timedNames_(list, key) {
+  return list.map(function(b) { return { t: timesOf_(b)[key], n: nameOf_(b) }; })
+    .sort(function(a, b) { return (a.t || '99:99').localeCompare(b.t || '99:99'); })
+    .map(function(x) { return (x.t ? '⏰ ' + x.t + ' น. — ' : '') + x.n; })
+    .join('\\n• ');
+}
+
 // ── สรุปข้อมูลตามวันที่ ─────────────────────────────────────
 function summaryForDate(targetDate) {
   const bs = readSheet();
@@ -1242,8 +1263,8 @@ function buildMorningMessage() {
   m += '👋 เช็คเอาท์วันนี้: ' + d.co.length  + ' บ้าน\\n';
   m += '🌙 กรงที่เข้าพักอยู่: ' + d.occ.length + ' บ้าน\\n';
   m += '🐿 ชูการ์ทั้งหมด: '   + d.gliders   + ' ตัว';
-  if (d.ci.length)  m += '\\n\\n🚪 เข้าวันนี้:\\n• ' + d.ci.map(nameOf_).join('\\n• ');
-  if (d.co.length)  m += '\\n\\n👋 ออกวันนี้:\\n• ' + d.co.map(nameOf_).join('\\n• ');
+  if (d.ci.length)  m += '\\n\\n🚪 เข้าวันนี้:\\n• ' + timedNames_(d.ci, 'inT');
+  if (d.co.length)  m += '\\n\\n👋 ออกวันนี้:\\n• ' + timedNames_(d.co, 'outT');
   return m;
 }
 
@@ -1262,8 +1283,8 @@ function buildEveningMessage() {
   m += '🌙 พักต่อเนื่อง: '       + staying.length   + ' บ้าน\\n';
   m += '🐿 ชูการ์คืนนี้: '       + summaryForDate(today).gliders + ' ตัว';
   m += '\\n\\n' + foodPrepLines_(today);
-  if (d.ci.length)  m += '\\n\\n🚪 เข้าพรุ่งนี้:\\n• ' + d.ci.map(nameOf_).join('\\n• ');
-  if (d.co.length)  m += '\\n\\n👋 ออกพรุ่งนี้:\\n• ' + d.co.map(nameOf_).join('\\n• ');
+  if (d.ci.length)  m += '\\n\\n🚪 เข้าพรุ่งนี้:\\n• ' + timedNames_(d.ci, 'inT');
+  if (d.co.length)  m += '\\n\\n👋 ออกพรุ่งนี้:\\n• ' + timedNames_(d.co, 'outT');
   return m;
 }
 
@@ -1801,6 +1822,30 @@ function stdOrder(rn){return STD_RNS.indexOf(Number(rn));}                      
 function stdLabel(rn){rn=Number(rn)||1;return isBackup(rn)?'สำรอง-'+pad(backupNo(rn)):'STD-'+pad(mainNo(rn));}
 function gsLabel(rn){return 'Grand Suite #'+(Number(rn)||1);}
 const BACKUP_NOTE='ไม่ใช่กรง Stainless และไม่มีกล้องไว้ดูน้องชูก้า';
+
+// ⏰ เวลานัดรับ-ส่ง — เก็บเป็นบรรทัดแรกของ notes: "⏰ เข้า 10:00 · ออก 17:00"
+// (ไม่เพิ่มคอลัมน์ใน Sheet → sync / Calendar / LINE ใช้ของเดิมได้เลย)
+const TM_LINE=/^⏰ (?:เข้า (\d{1,2}:\d{2}))?(?: · )?(?:ออก (\d{1,2}:\d{2}))?\s*$/;
+const padT=t=>t&&t.length===4?'0'+t:(t||'');
+function splitTimes(notes){
+  let inT='',outT='';const rest=[];
+  String(notes||'').split(/\r?\n/).forEach(l=>{
+    const m=l.match(TM_LINE);
+    if(m&&(m[1]||m[2])){inT=padT(m[1])||inT;outT=padT(m[2])||outT;}
+    else rest.push(l);
+  });
+  return {inT,outT,rest:rest.join('\n').trim()};
+}
+function joinTimes(inT,outT,rest){
+  const t=[inT?'เข้า '+inT:'',outT?'ออก '+outT:''].filter(Boolean).join(' · ');
+  return [t?'⏰ '+t:'',rest||''].filter(Boolean).join('\n');
+}
+// รายการเข้า/ออกสำหรับสรุป LINE — มีเวลานัดขึ้นก่อน เรียงตามเวลา
+function timedNames(list,key){
+  return list.map(b=>({t:splitTimes(b.notes)[key],n:localNameOf(b)}))
+    .sort((a,b)=>(a.t||'99:99').localeCompare(b.t||'99:99'))
+    .map(x=>(x.t?'⏰ '+x.t+' น. — ':'')+x.n).join('\n• ');
+}
 
 // กรงชูการ์ของเจ้าของ — อยู่ประจำที่ร้าน นับรวมตอนเตรียมผลไม้/อาหารทุกวัน
 const OWNER_CAGES=[
@@ -3262,6 +3307,7 @@ function bookingCards(){
     ${S.bookings.length===0?`<button class="btn btn-p" onclick="openForm()" style="margin-top:14px;">＋ เพิ่มการจองแรก</button>`:''}
   </div>`:bs.map(b=>{
     const st=bSt(b), nights=nts(b.checkIn,b.checkOut), isS=b.roomType==='grand_suite';
+    const tm=splitTimes(b.notes);
     return `<div class="bc ${st}">
       <div class="badge ${isS?'suite':''}">
         ${isS?`<span style="font-size:20px;">👑</span><div class="bt">SUITE ${Number(b.roomNumber)||1}</div>`
@@ -3279,7 +3325,8 @@ function bookingCards(){
           <span class="chip">🌙 ${nights} คืน</span>
           <span class="chip">🐿 ${b.gliderCount||1} ตัว</span>
           ${b.phone?`<span class="chip">📞 ${esc(b.phone)}</span>`:''}
-          ${b.notes?`<span class="chip">📝 ${esc(b.notes.length>28?b.notes.slice(0,28)+'…':b.notes)}</span>`:''}
+          ${tm.inT||tm.outT?`<span class="chip">⏰ ${[tm.inT?'เข้า '+tm.inT:'',tm.outT?'ออก '+tm.outT:''].filter(Boolean).join(' · ')}</span>`:''}
+          ${tm.rest?`<span class="chip">📝 ${esc(tm.rest.length>28?tm.rest.slice(0,28)+'…':tm.rest)}</span>`:''}
         </div>
       </div>
       <div class="bacts">
@@ -3410,7 +3457,7 @@ function applyCust(i){
   const g=document.getElementById('fg');   if(g)  g.value=c.name;
   const p=document.getElementById('fp');   if(p)  p.value=c.phone||'';
   const gl=document.getElementById('fgl'); if(gl) gl.value=c.gliderName||'';
-  const n=document.getElementById('fn');   if(n)  n.value=c.notes||'';
+  const n=document.getElementById('fn');   if(n)  n.value=splitTimes(c.notes).rest;
   const cnt=document.getElementById('fcnt'), disp=document.getElementById('fcnt-display');
   const gc=parseInt(c.gliderCount)||1;
   if(cnt) cnt.value=gc;
@@ -3464,6 +3511,7 @@ function openEditForm(id){
 
 function drawForm(v,isEdit){
   const ci=v.checkIn, co=v.checkOut;
+  const tm=splitTimes(v.notes);
   const nights=co>ci?nts(ci,co):0;
   let rng=''; for(const n of MAIN_RNS){
     const av=isAvail(S.bookings,'standard',n,ci,co,FS.editId||null);
@@ -3533,6 +3581,13 @@ function drawForm(v,isEdit){
         <input type="date" id="fco" class="fi" value="${co}" min="${addDays(ci,1)}" onchange="onDates()"></div>
     </div>
     <div id="fnights" class="nights" style="${nights>0?'':'display:none'}">🌙 ${nights} คืน · ${thD(ci,true)} → ${thD(co,true)}</div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">⏰ เวลานัดเข้า (ส่งน้อง)</label>
+        <input type="time" id="fti" class="fi" value="${tm.inT}"></div>
+      <div class="fg"><label class="fl">⏰ เวลานัดออก (รับน้อง)</label>
+        <input type="time" id="fto" class="fi" value="${tm.outT}"></div>
+    </div>
+    <div class="fhelp" style="margin:-4px 0 12px;">ไม่บังคับ — ถ้าใส่ เวลานัดจะขึ้นในสรุป LINE เช้า 06:00 / เย็น 18:00 (เรียงตามเวลา)</div>
     <div class="fg" id="rns" style="${FS.roomType==='standard'?'':'display:none'}">
       <div id="rec-box" class="rec-box"></div>
       <label class="fl">เลือกหมายเลขกรงหลัก (สีแดง = ไม่ว่าง · ⭐ = แนะนำ)</label>
@@ -3548,7 +3603,7 @@ function drawForm(v,isEdit){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">${gsBtns}</div>
     </div>
     <div class="fg"><label class="fl">บันทึกเพิ่มเติม</label>
-      <textarea id="fn" class="fi" placeholder="อาหาร, นิสัย, ของใช้…">${esc(v.notes)}</textarea></div>
+      <textarea id="fn" class="fi" placeholder="อาหาร, นิสัย, ของใช้…">${esc(tm.rest)}</textarea></div>
     <div class="factions">
       <button class="btn btn-g" onclick="closeModal()">ยกเลิก</button>
       <button class="btn btn-p" onclick="submitForm()">${isEdit?'บันทึกการแก้ไข':'ยืนยันการจอง'}</button>
@@ -3821,6 +3876,8 @@ function submitForm(){
   const gc=parseInt(document.getElementById('fcnt')?.value||'1',10)||1;
   const ph=(document.getElementById('fp')?.value||'').trim();
   const no=(document.getElementById('fn')?.value||'').trim();
+  const ti=document.getElementById('fti')?.value||'';
+  const to=document.getElementById('fto')?.value||'';
   const ci=document.getElementById('fci')?.value||'';
   const co=document.getElementById('fco')?.value||'';
   const err=t=>{ const e=document.getElementById('ferr'); if(e) e.innerHTML=`<div class="errbx">⚠ ${esc(t)}</div>`; };
@@ -3829,7 +3886,7 @@ function submitForm(){
   if(!FS.roomNumber) return err('กรุณาเลือกหมายเลขห้อง');
   if(co<=ci) return err('วันเช็คเอาท์ต้องอยู่หลังวันเช็คอิน');
   const plan=(FS.moves||FS.split)&&!FS.editId&&FS.planKey===ci+'|'+co;
-  const data={guestName:gn,gliderName:gl,gliderCount:gc,phone:ph,notes:no,
+  const data={guestName:gn,gliderName:gl,gliderCount:gc,phone:ph,notes:joinTimes(ti,to,no),
     roomType:FS.roomType,roomNumber:FS.roomNumber,checkIn:ci,checkOut:co};
   if(plan&&FS.split){
     // แบ่งพักหลายกรง — ลงจองแยกตามช่วง (รวมบิลตอนเช็คเอาท์ได้ด้วย "รวมบิลหลายกรง")
@@ -3839,7 +3896,8 @@ function submitForm(){
       const nx=FS.split[i+1];
       const tag='🔁 แบ่งพัก '+N+' กรง · ช่วงที่ '+(i+1)+'/'+N+(nx?' → ย้ายไป '+stdLabel(nx.rn)+' วันที่ '+thD(nx.ci,true):'');
       return {...data,roomType:'standard',roomNumber:g.rn,checkIn:g.ci,checkOut:g.co,
-        notes:no?no+'\n'+tag:tag,id:genId(),createdAt:now+i};
+        // เวลานัดเข้า = ช่วงแรก · เวลานัดออก = ช่วงสุดท้าย
+        notes:joinTimes(i===0?ti:'',i===N-1?to:'',no?no+'\n'+tag:tag),id:genId(),createdAt:now+i};
     })];
   }else if(plan&&FS.moves){
     // ย้ายคิวล่วงหน้าไปกรงอื่นก่อน แล้วค่อยลงจองใหม่ในกรงที่ว่างแล้ว
@@ -3864,6 +3922,7 @@ function submitForm(){
 // ============================
 function showDetail(b,rt,rn){
   const st=bSt(b), nights=nts(b.checkIn,b.checkOut), isS=rt==='grand_suite';
+  const tm=splitTimes(b.notes);
   const stLbl={upcoming:'กำลังจะมา',active:'เข้าพักอยู่',past:'ผ่านไปแล้ว'};
   showModal(`<div class="modal" onclick="event.stopPropagation()">
     <button class="mclose" onclick="closeModal()">✕</button>
@@ -3876,12 +3935,12 @@ function showDetail(b,rt,rn){
     ${b.gliderName?`<p class="msub" style="font-style:italic;">มากับน้อง ${esc(b.gliderName)} · ${b.gliderCount||1} ตัว</p>`:''}
     <div class="dg">
       <div class="dr"><span class="dlb">สถานะ</span><span class="stpill st-${st}">${stLbl[st]||''}</span></div>
-      <div class="dr"><span class="dlb">เช็คอิน</span><span>${thD(b.checkIn)}</span></div>
-      <div class="dr"><span class="dlb">เช็คเอาท์</span><span>${thD(b.checkOut)}</span></div>
+      <div class="dr"><span class="dlb">เช็คอิน</span><span>${thD(b.checkIn)}${tm.inT?' · ⏰ '+tm.inT+' น.':''}</span></div>
+      <div class="dr"><span class="dlb">เช็คเอาท์</span><span>${thD(b.checkOut)}${tm.outT?' · ⏰ '+tm.outT+' น.':''}</span></div>
       <div class="dr"><span class="dlb">ระยะเวลา</span><span>${nights} คืน</span></div>
       <div class="dr"><span class="dlb">จำนวนน้อง</span><span style="font-family:'Fraunces',serif;font-size:18px;">${b.gliderCount||1} ตัว</span></div>
       ${b.phone?`<div class="dr"><span class="dlb">เบอร์โทร</span><span>${esc(b.phone)}</span></div>`:''}
-      ${b.notes?`<div class="dr"><span class="dlb">บันทึก</span><span style="text-align:right;white-space:pre-wrap;">${esc(b.notes)}</span></div>`:''}
+      ${tm.rest?`<div class="dr"><span class="dlb">บันทึก</span><span style="text-align:right;white-space:pre-wrap;">${esc(tm.rest)}</span></div>`:''}
     </div>
     <div class="factions" style="flex-wrap:wrap;">
       <button class="btn btn-g" onclick="closeModal();confirmDel('${b.id}')">🗑 ลบ</button>
@@ -4148,8 +4207,8 @@ function buildLocalMorningText(){
   m+='👋 เช็คเอาท์วันนี้: '+d.co.length+' บ้าน\n';
   m+='🌙 กรงที่เข้าพักอยู่: '+d.occ.length+' บ้าน\n';
   m+='🐿 ชูการ์ทั้งหมด: '+d.gliders+' ตัว';
-  if(d.ci.length) m+='\n\n🚪 เข้าวันนี้:\n• '+d.ci.map(localNameOf).join('\n• ');
-  if(d.co.length) m+='\n\n👋 ออกวันนี้:\n• '+d.co.map(localNameOf).join('\n• ');
+  if(d.ci.length) m+='\n\n🚪 เข้าวันนี้:\n• '+timedNames(d.ci,'inT');
+  if(d.co.length) m+='\n\n👋 ออกวันนี้:\n• '+timedNames(d.co,'outT');
   return m;
 }
 
@@ -4170,8 +4229,8 @@ function buildLocalEveningText(){
   m+='\n\n🍽 เตรียมอาหารคืนนี้:';
   fp.counts.forEach(n=>{m+='\n• กรง '+n+' ตัว — '+fp.groups[n].length+' กรง';});
   m+='\nรวม '+fp.totalCages+' กรง · ชูการ์ '+fp.totalGliders+' ตัว (รวมกรงเจ้าของ '+OWNER_CAGES.length+' กรง)';
-  if(d.ci.length) m+='\n\n🚪 เข้าพรุ่งนี้:\n• '+d.ci.map(localNameOf).join('\n• ');
-  if(d.co.length) m+='\n\n👋 ออกพรุ่งนี้:\n• '+d.co.map(localNameOf).join('\n• ');
+  if(d.ci.length) m+='\n\n🚪 เข้าพรุ่งนี้:\n• '+timedNames(d.ci,'inT');
+  if(d.co.length) m+='\n\n👋 ออกพรุ่งนี้:\n• '+timedNames(d.co,'outT');
   return m;
 }
 
@@ -4360,19 +4419,19 @@ function showSlip(id){
         </div>
         <div class="slip-row">
           <span class="slip-lbl">เช็คอิน</span>
-          <span class="slip-val">${thFull(b.checkIn)}</span>
+          <span class="slip-val">${thFull(b.checkIn)}${splitTimes(b.notes).inT?' · '+splitTimes(b.notes).inT+' น.':''}</span>
         </div>
         <div class="slip-row">
           <span class="slip-lbl">เช็คเอาท์</span>
-          <span class="slip-val">${thFull(b.checkOut)}</span>
+          <span class="slip-val">${thFull(b.checkOut)}${splitTimes(b.notes).outT?' · '+splitTimes(b.notes).outT+' น.':''}</span>
         </div>
         <div class="slip-row">
           <span class="slip-lbl">ระยะเวลา</span>
           <span class="slip-val">${nights} คืน</span>
         </div>
-        ${b.notes?`<div class="slip-row">
+        ${splitTimes(b.notes).rest?`<div class="slip-row">
           <span class="slip-lbl">บันทึก</span>
-          <span class="slip-val" style="font-size:11.5px;font-weight:400;">${esc(b.notes)}</span>
+          <span class="slip-val" style="font-size:11.5px;font-weight:400;">${esc(splitTimes(b.notes).rest)}</span>
         </div>`:''}
       </div>
       <div class="slip-footer" style="position:relative;padding-right:90px;">
