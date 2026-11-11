@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="Sugar Camp"/>
 <meta name="theme-color" content="#FAF3E9"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="assets/i18n.js"></script>
 <style>
@@ -1704,6 +1705,13 @@ const isBooked = (s,ci,co) => s>=ci&&s<co;
 const onDate = (bs,s) => bs.filter(b=>isBooked(s,b.checkIn,b.checkOut));
 const isAvail = (bs,rt,rn,ci,co,ex) => !bs.some(b=>b.id!==ex&&b.roomType===rt&&b.roomNumber===rn&&!(co<=b.checkIn||ci>=b.checkOut));
 const roomOf = (bs,rt,rn,s) => bs.find(b=>b.roomType===rt&&b.roomNumber===rn&&isBooked(s,b.checkIn,b.checkOut));
+// ดัชนีการจองแยกตามกรง — สร้างครั้งเดียวต่อการวาด 1 รอบ แล้วค้นเฉพาะการจองของกรงนั้น
+// (เดิม roomOf ไล่ทุกการจองใหม่ทุกช่อง: ปฏิทิน 14 วัน × ~67 กรง × 3 รอบ ต่อการวาด 1 ครั้ง)
+const roomIndex = bs => { const m=new Map();
+  for(const b of bs){ const k=b.roomType+'|'+b.roomNumber; let a=m.get(k); if(!a)m.set(k,a=[]); a.push(b); }
+  return m; };
+const roomOfIdx = (idx,rt,rn,s) => { const a=idx.get(rt+'|'+rn);
+  return a ? a.find(b=>b.roomNumber===rn&&isBooked(s,b.checkIn,b.checkOut)) : undefined; };
 const bSt = b => { const t=todayKey(); return t<b.checkIn?'upcoming':t>=b.checkOut?'past':'active'; };
 const rel = ts => { if(!ts)return''; const d=Math.floor((Date.now()-ts)/1e3);
   if(d<10)return'เมื่อสักครู่'; if(d<60)return d+' วินาทีที่แล้ว';
@@ -2847,7 +2855,7 @@ function render(){
   app.innerHTML=`
   <div class="hrow">
     <div>
-      <img class="logo-img" src="assets/logo.png" alt="Sugar Sugar Camp — Sugar glider care"/>
+      <img class="logo-img" src="assets/logo.webp" width="480" height="469" decoding="async" alt="Sugar Sugar Camp — Sugar glider care"/>
       <div class="tagline">— ที่พักสำหรับชูการ์ไกลเดอร์ตัวโปรดของคุณ —</div>
     </div>
     <div class="hright">
@@ -3001,22 +3009,23 @@ function renderToday(){
   const isT=S.selDate===todayKey();
   const occ=onDate(S.bookings,S.selDate).length;
   const glidersToday=countGlidersOnDate(S.selDate);
+  const idx=roomIndex(S.bookings);
   let rooms='';
-  MAIN_RNS.forEach(n=>{rooms+=roomCell('standard',n,false);});
+  MAIN_RNS.forEach(n=>{rooms+=roomCell('standard',n,false,idx);});
   // กรงสำรอง: ปกติซ่อนไว้ไม่ให้รกหน้า Dashboard — โชว์เฉพาะกรงที่มีน้องเข้าพัก
   // กด "ดูกรงทั้งหมด" เพื่อกางกรงสำรองครบทุกกรง
   const occBk=[];
-  BACKUP_RNS.forEach(n=>{if(roomOf(S.bookings,'standard',n,S.selDate)) occBk.push(n);});
+  BACKUP_RNS.forEach(n=>{if(roomOfIdx(idx,'standard',n,S.selDate)) occBk.push(n);});
   let backupSec='';
   if(S.showBackup){
     let br='';
-    BACKUP_RNS.forEach(n=>{br+=roomCell('standard',n,false);});
+    BACKUP_RNS.forEach(n=>{br+=roomCell('standard',n,false,idx);});
     backupSec=`<div class="bdivider">กรงสำรอง ${BACKUP_CAGES} กรง</div>
       <div class="warnbx">📌 <b>กรงสำรอง</b> ${BACKUP_NOTE} — แจ้งลูกค้าให้ทราบตอนจองด้วยนะคะ</div>
       <div class="rgrid">${br}</div>`;
   }else if(occBk.length){
     backupSec=`<div class="bdivider">กรงสำรองที่มีน้องเข้าพัก (${occBk.length})</div>
-      <div class="rgrid">${occBk.map(n=>roomCell('standard',n,false)).join('')}</div>`;
+      <div class="rgrid">${occBk.map(n=>roomCell('standard',n,false,idx)).join('')}</div>`;
   }
   const backupToggle=`<div style="text-align:center;margin-top:16px;">
     <button class="btn btn-o btn-sm" onclick="toggleBackup()">
@@ -3042,7 +3051,7 @@ function renderToday(){
       <div class="li">👑 Grand Suite</div>
       <div class="li" style="margin-left:auto;font-style:italic;font-size:11.5px;">แตะห้อง · ดูรายละเอียด / จอง</div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px;">${Array.from({length:GS_CAGES},(_,i)=>roomCell('grand_suite',i+1,true)).join('')}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px;">${Array.from({length:GS_CAGES},(_,i)=>roomCell('grand_suite',i+1,true,idx)).join('')}</div>
     <div class="rgrid">${rooms}</div>
     ${backupSec}
     ${backupToggle}
@@ -3138,8 +3147,8 @@ function openFoodSummary(){
   </div>`);
 }
 
-function roomCell(rt,rn,isSuite){
-  const b=roomOf(S.bookings,rt,rn,S.selDate);
+function roomCell(rt,rn,isSuite,idx){
+  const b=idx?roomOfIdx(idx,rt,rn,S.selDate):roomOf(S.bookings,rt,rn,S.selDate);
   const oc=!!b;
   const bk=!isSuite&&isBackup(rn);
   const cls='rc '+(oc?'oc':'av')+(isSuite?' suite':'')+(bk?' backup':'');
@@ -3186,12 +3195,15 @@ function renderCalendar(){
   });
 
   let body='';
+  const idx=roomIndex(S.bookings);
   allRooms.forEach(room=>{
     body+=`<div class="crl ${room.isSuite?'suite':''}${room.backup?' bk':''}">${room.isSuite?'👑 ':''}${room.label}</div>`;
+    // หาผู้เข้าพักของกรงนี้ครบทุกวันครั้งเดียว แล้วใช้ซ้ำสำหรับวันก่อนหน้า/ถัดไป
+    const row=dates.map(d=>roomOfIdx(idx,room.type,room.num,d));
     dates.forEach((d,di)=>{
-      const b=roomOf(S.bookings,room.type,room.num,d);
-      const prev=di>0?roomOf(S.bookings,room.type,room.num,dates[di-1]):null;
-      const next=di<dates.length-1?roomOf(S.bookings,room.type,room.num,dates[di+1]):null;
+      const b=row[di];
+      const prev=di>0?row[di-1]:null;
+      const next=di<dates.length-1?row[di+1]:null;
       const isS=b&&(!prev||prev.id!==b.id), isE=b&&(!next||next.id!==b.id);
       let cls='cc'; if(b){cls+=' bk';if(isS)cls+=' s';if(isE)cls+=' e';} if(d===today)cls+=' tc';
       const tip=b?esc((b.gliderName||b.guestName)+' · 🐿 '+(parseInt(b.gliderCount)||1)+' ตัว · '+thD(b.checkIn,true)+' – '+thD(b.checkOut,true)):'ว่าง';
@@ -3235,7 +3247,8 @@ function calClick(rt,rn,d){
 // ============================
 // BOOKINGS VIEW
 // ============================
-function renderBookings(){
+// การ์ดรายการจองตามตัวกรอง/คำค้นปัจจุบัน — แยกออกมาเพื่อให้ช่องค้นหาอัปเดตเฉพาะรายการได้
+function bookingCards(){
   let bs=[...S.bookings];
   if(S.filter!=='all') bs=bs.filter(b=>bSt(b)===S.filter);
   const q=(S.search||'').toLowerCase().trim();
@@ -3276,22 +3289,35 @@ function renderBookings(){
       </div>
     </div>`;
   }).join('');
+  return {cards, meta:`${bs.length} รายการ จากทั้งหมด ${S.bookings.length}`};
+}
 
+// พิมพ์ค้นหา: วาดใหม่เฉพาะรายการ — ไม่วาดทั้งหน้า ช่องค้นหาจึงไม่หลุดโฟกัส/เคอร์เซอร์ไม่เด้ง
+function onSearch(v){
+  S.search=v;
+  const list=document.getElementById('bk-list'), meta=document.getElementById('bk-meta');
+  if(!list||!meta){ render(); return; }
+  const r=bookingCards();
+  list.innerHTML=r.cards; meta.textContent=r.meta;
+}
+
+function renderBookings(){
+  const {cards,meta}=bookingCards();
   return `<div class="sec">
     <div class="stitle">
-      <div><h3>รายการจองทั้งหมด</h3><div class="meta">${bs.length} รายการ จากทั้งหมด ${S.bookings.length}</div></div>
+      <div><h3>รายการจองทั้งหมด</h3><div class="meta" id="bk-meta">${meta}</div></div>
     </div>
     <div class="frow">
       <div class="sbox">🔍
         <input type="text" placeholder="ค้นหาชื่อเจ้าของ, ชื่อน้อง, เบอร์…"
-          value="${esc(S.search)}" oninput="S.search=this.value;render()">
+          value="${esc(S.search)}" oninput="onSearch(this.value)">
       </div>
       <div class="pills">
         ${[['all','ทั้งหมด'],['upcoming','กำลังจะมา'],['active','เข้าพักอยู่'],['past','ผ่านไปแล้ว']].map(([v,l])=>
           `<button class="pill ${S.filter===v?'act':''}" onclick="S.filter='${v}';render()">${l}</button>`).join('')}
       </div>
     </div>
-    <div class="blist">${cards}</div>
+    <div class="blist" id="bk-list">${cards}</div>
   </div>`;
 }
 
