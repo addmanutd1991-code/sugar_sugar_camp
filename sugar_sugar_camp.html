@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- build: v19-memos -->
+<!-- build: v20-mobile-layout -->
 <html lang="th">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>Sugar Sugar Camp 🐿</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"/>
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png"/>
@@ -31,7 +31,7 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
   background-image:radial-gradient(circle at 0% 0%,rgba(232,154,171,.18),transparent 45%),
     radial-gradient(circle at 100% 0%,rgba(240,176,128,.15),transparent 45%),
     radial-gradient(circle at 50% 100%,rgba(157,176,137,.10),transparent 55%);
-  min-height:100vh;font-size:14px;line-height:1.6;}
+  min-height:100vh;min-height:100dvh;font-size:14px;line-height:1.6;}
 .wrap{padding:28px 22px 80px;max-width:1280px;margin:0 auto;}
 .brand{font-family:'Fraunces',serif;font-size:clamp(36px,7vw,70px);line-height:.92;letter-spacing:-.025em;font-weight:400;}
 .brand em{color:var(--pd);font-style:italic;}
@@ -40,13 +40,15 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
 .tagline{font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:var(--cm);margin-top:10px;}
 .hrow{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:18px;margin-bottom:28px;}
 .hright{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+.hsync{display:flex;gap:6px;align-items:center;}
+.hname,.hdate{display:none;}
 .datebox{background:var(--cl);border:1px solid var(--ln);border-radius:16px;padding:12px 18px;text-align:right;}
 .datebox .dl{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--cm);}
 .datebox .dv{font-family:'Fraunces',serif;font-style:italic;font-size:17px;margin-top:2px;}
 .sbadge{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;
   border:1px solid var(--ln);background:var(--cl);font-size:12px;cursor:pointer;
   font-family:inherit;color:var(--cocoa);transition:all .15s;}
-.sbadge:hover{background:white;}
+@media(hover:hover){.sbadge:hover{background:white;}}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--cm);display:inline-block;flex-shrink:0;}
 .dot.synced{background:var(--sage);}
 .dot.syncing{background:var(--gold);animation:blink 1.2s infinite;}
@@ -74,13 +76,13 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
   border-radius:999px;border:1.5px solid var(--pd);cursor:pointer;
   display:inline-flex;align-items:center;gap:6px;transition:all .18s;white-space:nowrap;}
 .btn-link.primary{background:var(--pd);color:#fff;border-color:var(--pd);}
-.btn-link.primary:hover{background:var(--cocoa);border-color:var(--cocoa);}
+@media(hover:hover){.btn-link.primary:hover{background:var(--cocoa);border-color:var(--cocoa);}}
 .btn-link.ghost{background:transparent;color:var(--pd);}
-.btn-link.ghost:hover{background:rgba(196,108,126,.1);}
+@media(hover:hover){.btn-link.ghost:hover{background:rgba(196,108,126,.1);}}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:0 0 24px;}
 .scard{background:var(--cl);border:1px solid var(--ln);border-radius:20px;padding:20px 22px 18px;
   position:relative;transition:transform .2s;}
-.scard:hover{transform:translateY(-2px);}
+@media(hover:hover){.scard:hover{transform:translateY(-2px);}}
 .sico{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;font-size:18px;}
 .sc-sage .sico{background:var(--ss);} .sc-coral .sico{background:var(--cs);}
@@ -91,19 +93,23 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
 .abar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;}
 .tabs{display:flex;gap:4px;background:var(--cd);padding:4px;border-radius:999px;border:1px solid var(--ln);}
 .tab{padding:9px 16px;border-radius:999px;font-size:13px;font-weight:500;cursor:pointer;
-  border:none;background:transparent;color:var(--cm);font-family:inherit;transition:all .2s;}
+  border:none;background:transparent;color:var(--cm);font-family:inherit;transition:all .2s;
+  display:inline-flex;align-items:center;gap:6px;position:relative;}
+.tab-add{display:none;}
+.tbadge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;
+  border-radius:999px;background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;line-height:1;}
 .tab.active{background:var(--cocoa);color:var(--cl);}
-.tab:hover:not(.active){color:var(--cocoa);}
-.bgroup{display:flex;gap:8px;}
+@media(hover:hover){.tab:hover:not(.active){color:var(--cocoa);}}
+.bgroup{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
 .btn{font-family:inherit;font-size:13.5px;font-weight:500;padding:10px 20px;border-radius:999px;
   border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .2s;white-space:nowrap;}
 .btn-sm{padding:6px 14px;font-size:12px;}
-.btn-p{background:var(--pd);color:#fff;} .btn-p:hover{background:var(--cocoa);}
-.btn-s{background:var(--cd);color:var(--cocoa);} .btn-s:hover{background:var(--cl);}
-.btn-g{background:transparent;color:var(--cm);} .btn-g:hover{background:var(--cd);color:var(--cocoa);}
-.btn-d{background:var(--coral);color:#fff;} .btn-d:hover{background:#b85a47;}
+.btn-p{background:var(--pd);color:#fff;} @media(hover:hover){.btn-p:hover{background:var(--cocoa);}}
+.btn-s{background:var(--cd);color:var(--cocoa);} @media(hover:hover){.btn-s:hover{background:var(--cl);}}
+.btn-g{background:transparent;color:var(--cm);} @media(hover:hover){.btn-g:hover{background:var(--cd);color:var(--cocoa);}}
+.btn-d{background:var(--coral);color:#fff;} @media(hover:hover){.btn-d:hover{background:#b85a47;}}
 .btn-o{background:transparent;border:1px solid var(--cocoa);color:var(--cocoa);}
-.btn-o:hover{background:var(--cocoa);color:var(--cl);}
+@media(hover:hover){.btn-o:hover{background:var(--cocoa);color:var(--cl);}}
 .btn:disabled{opacity:.5;cursor:not-allowed;}
 .sec{background:var(--cl);border:1px solid var(--ln);border-radius:24px;padding:26px 28px;margin-bottom:18px;}
 .stitle{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;gap:16px;flex-wrap:wrap;}
@@ -111,11 +117,11 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
 .stitle .meta{font-size:13px;color:var(--cm);margin-top:4px;}
 .dnav{display:flex;align-items:center;gap:6px;}
 .di{border:1px solid var(--ln);background:var(--cream);font-family:inherit;font-size:13px;color:var(--cocoa);
-  outline:none;padding:8px 12px;border-radius:999px;cursor:pointer;}
+  outline:none;padding:8px 12px;border-radius:999px;cursor:pointer;min-width:0;}
 .di:focus{border-color:var(--pd);}
 .nb{width:34px;height:34px;border-radius:50%;border:1px solid var(--ln);background:var(--cl);
   cursor:pointer;font-size:16px;transition:all .15s;}
-.nb:hover{background:var(--cocoa);color:var(--cl);}
+@media(hover:hover){.nb:hover{background:var(--cocoa);color:var(--cl);}}
 .legend{display:flex;gap:18px;font-size:12px;color:var(--cm);flex-wrap:wrap;align-items:center;
   margin-bottom:16px;padding-bottom:14px;border-bottom:1px dashed var(--ln);}
 .li{display:flex;align-items:center;gap:6px;}
@@ -127,16 +133,18 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
   display:flex;flex-direction:column;justify-content:space-between;position:relative;
   text-align:left;font-family:inherit;color:inherit;transition:all .2s;aspect-ratio:1;}
 .rc.av{background:var(--ss);border-color:rgba(157,176,137,.4);}
-.rc.av:hover{background:var(--sage);color:#fff;transform:translateY(-2px);}
+@media(hover:hover){.rc.av:hover{background:var(--sage);color:#fff;transform:translateY(-2px);}}
 .rc.oc{background:var(--cs);border-color:rgba(221,132,112,.4);}
-.rc.oc:hover{background:var(--coral);color:#fff;transform:translateY(-2px);}
+@media(hover:hover){.rc.oc:hover{background:var(--coral);color:#fff;transform:translateY(-2px);}}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px;}
+.rcrown{position:absolute;top:12px;right:12px;font-size:15px;}
 .rc.suite{aspect-ratio:auto;height:110px;
   background:linear-gradient(135deg,var(--gs),var(--phs));border-color:var(--gold);}
 .rc.suite.oc{background:linear-gradient(135deg,var(--cs),var(--ps));border-color:var(--coral);}
-.rc.suite.av:hover{background:linear-gradient(135deg,var(--gold),var(--peach));color:#fff;}
-.rc.suite.oc:hover{background:linear-gradient(135deg,var(--coral),var(--pd));color:#fff;}
+@media(hover:hover){.rc.suite.av:hover{background:linear-gradient(135deg,var(--gold),var(--peach));color:#fff;}}
+@media(hover:hover){.rc.suite.oc:hover{background:linear-gradient(135deg,var(--coral),var(--pd));color:#fff;}}
 .rc.backup.av{background:var(--cream);border:1.5px dashed var(--gold);}
-.rc.backup.av:hover{background:var(--gs);color:var(--cocoa);}
+@media(hover:hover){.rc.backup.av:hover{background:var(--gs);color:var(--cocoa);}}
 .rc.backup .rcr{color:#A07E2D;opacity:1;}
 .bdivider{display:flex;align-items:center;gap:10px;margin:20px 0 12px;font-size:11.5px;
   letter-spacing:.08em;text-transform:uppercase;color:#A07E2D;font-weight:600;}
@@ -148,42 +156,49 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
 .rcr{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.7;margin-top:2px;}
 .rname{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .rstat{font-size:11px;font-style:italic;opacity:.7;}
-.calwrap{overflow-x:auto;padding-bottom:4px;}
-.calgrid{display:grid;gap:2px;background:var(--cd);padding:2px;border-radius:14px;min-width:100%;}
+.calwrap{overflow:auto;max-height:calc(100dvh - 120px);border-radius:14px;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;}
+.calgrid{display:grid;gap:2px;background:var(--cd);padding:2px;border-radius:14px;min-width:100%;width:max-content;
+  grid-template-columns:var(--clw,130px) repeat(var(--days,14),minmax(44px,1fr));}
 .ccorner{background:var(--cocoa);color:var(--cl);padding:10px 12px;font-size:11px;
-  letter-spacing:.1em;text-transform:uppercase;font-weight:600;}
-.ch{background:var(--cl);padding:7px 4px;text-align:center;}
+  letter-spacing:.1em;text-transform:uppercase;font-weight:600;
+  position:sticky;left:0;top:0;z-index:5;box-shadow:0 0 0 2px var(--cd);display:flex;align-items:center;}
+.ch{background:var(--cl);padding:7px 4px;text-align:center;position:sticky;top:0;z-index:4;box-shadow:0 0 0 2px var(--cd);}
 .ch.today{background:var(--gs);} .ch.wk{background:var(--cream);}
 .ch .dn{font-family:'Fraunces',serif;font-size:16px;font-weight:400;}
 .ch .dd{font-size:9px;color:var(--cm);text-transform:uppercase;letter-spacing:.05em;}
 .crl{background:var(--cl);padding:0 10px;font-size:12px;font-weight:500;
-  display:flex;align-items:center;gap:5px;height:36px;}
-.crl.suite{background:linear-gradient(90deg,var(--gs),var(--cl));
+  display:flex;align-items:center;gap:5px;height:36px;white-space:nowrap;
+  position:sticky;left:0;z-index:3;box-shadow:0 0 0 2px var(--cd);}
+.crl .lb-s{display:none;}
+.crl.suite{background:linear-gradient(90deg,var(--gs),var(--cl)),var(--cl);
   font-style:italic;font-family:'Fraunces',serif;font-size:13px;}
 .crl.bk{color:#A07E2D;}
 .cc{background:var(--cl);height:36px;border:none;cursor:pointer;position:relative;
   transition:background .12s;padding:0;font-family:inherit;}
-.cc:hover{background:var(--cd);}
+@media(hover:hover){.cc:hover{background:var(--cd);}}
 .cc.tc{background:rgba(201,162,78,.07);}
-.cc.bk{background:var(--coral);} .cc.bk:hover{background:var(--pd);}
+.cc.bk{background:var(--coral);} @media(hover:hover){.cc.bk:hover{background:var(--pd);}}
 .cc.bk.s{border-radius:999px 4px 4px 999px;margin-left:3px;}
 .cc.bk.e{border-radius:4px 999px 999px 4px;margin-right:3px;}
 .cc.bk.s.e{border-radius:999px;margin:0 3px;}
-.cctag{position:absolute;left:7px;top:50%;transform:translateY(-50%);
-  font-size:10px;color:#fff;font-weight:500;white-space:nowrap;pointer-events:none;}
+.cctag{position:absolute;left:8px;top:50%;transform:translateY(-50%);z-index:1;
+  font-size:10.5px;color:#fff;font-weight:600;white-space:nowrap;pointer-events:none;
+  overflow:hidden;text-overflow:ellipsis;text-align:left;}
 .frow{display:flex;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap;}
 .sbox{flex:1;min-width:220px;display:flex;align-items:center;gap:8px;background:var(--cream);
   border:1px solid var(--ln);border-radius:999px;padding:9px 16px;color:var(--cm);}
 .sbox:focus-within{border-color:var(--pd);background:#fff;}
 .sbox input{flex:1;border:none;background:transparent;font-family:inherit;font-size:13.5px;outline:none;color:var(--cocoa);}
 .pills{display:flex;gap:4px;flex-wrap:wrap;}
+.pill{white-space:nowrap;}
 .pill{font-family:inherit;font-size:12px;padding:7px 14px;border-radius:999px;
   border:1px solid var(--ln);background:var(--cream);color:var(--cm);cursor:pointer;transition:all .12s;}
 .pill.act{background:var(--cocoa);color:var(--cl);border-color:var(--cocoa);}
 .blist{display:flex;flex-direction:column;gap:10px;}
 .bc{background:var(--cream);border:1px solid var(--ln);border-radius:18px;padding:18px 20px;
   display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;transition:all .18s;}
-.bc:hover{border-color:var(--pd);background:var(--cl);transform:translateY(-1px);}
+@media(hover:hover){.bc:hover{border-color:var(--pd);background:var(--cl);transform:translateY(-1px);}}
 .bc.past{opacity:.65;}
 .bc.active{border-left:3px solid var(--sage);}
 .bc.upcoming{border-left:3px solid var(--gold);}
@@ -199,10 +214,10 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
 .bacts{display:flex;gap:4px;}
 .ib{width:34px;height:34px;border-radius:50%;border:1px solid transparent;background:var(--cd);
   cursor:pointer;font-size:14px;transition:all .12s;}
-.ib:hover{background:var(--ps);color:var(--pd);}
-.ib.danger:hover{background:var(--cs);color:var(--coral);}
+@media(hover:hover){.ib:hover{background:var(--ps);color:var(--pd);}}
+@media(hover:hover){.ib.danger:hover{background:var(--cs);color:var(--coral);}}
 .ib.confirm{background:var(--ss);color:var(--sage-d,#6B8A57);}
-.ib.confirm:hover{background:var(--sage);color:#fff;}
+@media(hover:hover){.ib.confirm:hover{background:var(--sage);color:#fff;}}
 .slip-overlay{position:fixed;inset:0;background:rgba(42,24,16,.55);backdrop-filter:blur(10px);
   z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
 .slip-wrap{max-width:420px;width:100%;animation:su .22s cubic-bezier(.34,1.56,.64,1);}
@@ -211,9 +226,9 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
   border-radius:999px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
   transition:all .18s;white-space:nowrap;}
 .slip-btn.dl{background:var(--pd);color:#fff;}
-.slip-btn.dl:hover{background:var(--cocoa);}
+@media(hover:hover){.slip-btn.dl:hover{background:var(--cocoa);}}
 .slip-btn.cl{background:var(--cd);color:var(--cocoa);}
-.slip-btn.cl:hover{background:var(--cl);}
+@media(hover:hover){.slip-btn.cl:hover{background:var(--cl);}}
 /* Save-image overlay: แสดงรูปจริงให้แตะค้างเพื่อบันทึกลง Photos บนมือถือ */
 .img-save-overlay{position:fixed;inset:0;background:rgba(42,24,16,.82);backdrop-filter:blur(14px);
   z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -296,7 +311,7 @@ body{font-family:'Sarabun',sans-serif;color:var(--cocoa);background:var(--cream)
 .modal .msub{color:var(--cm);font-size:13px;margin-bottom:20px;}
 .mclose{position:absolute;top:18px;right:18px;width:34px;height:34px;border-radius:50%;
   border:none;background:var(--cd);cursor:pointer;font-size:18px;}
-.mclose:hover{background:var(--cs);color:var(--coral);}
+@media(hover:hover){.mclose:hover{background:var(--cs);color:var(--coral);}}
 .fg{margin-bottom:14px;}
 .frow2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .fl{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
@@ -314,11 +329,11 @@ textarea.fi{resize:vertical;min-height:72px;}
 .rng{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;}
 .rnb{aspect-ratio:1;border:1px solid var(--ln);border-radius:10px;background:var(--cream);cursor:pointer;
   font-family:'Fraunces',serif;font-size:14px;color:var(--cocoa);transition:all .1s;}
-.rnb:hover:not(:disabled){border-color:var(--pd);background:#fff;}
+@media(hover:hover){.rnb:hover:not(:disabled){border-color:var(--pd);background:#fff;}}
 .rnb.sel{background:var(--pd);color:#fff;border-color:var(--pd);}
 .rnb:disabled{background:var(--cs);color:var(--coral);cursor:not-allowed;opacity:.55;text-decoration:line-through;}
 .rnb.backup{border:1px dashed var(--gold);background:var(--gs);}
-.rnb.backup:hover:not(:disabled){border-color:var(--gold);background:#fff;}
+@media(hover:hover){.rnb.backup:hover:not(:disabled){border-color:var(--gold);background:#fff;}}
 .rnb.backup.sel{background:var(--gold);color:#fff;border:1px solid var(--gold);}
 .rnb.rec{box-shadow:0 0 0 2.5px var(--gold);position:relative;}
 .rnb.rec::after{content:'⭐';position:absolute;top:-7px;right:-5px;font-size:10px;}
@@ -332,7 +347,7 @@ textarea.fi{resize:vertical;min-height:72px;}
 .rec-opt ul{margin:4px 0 6px 18px;padding:0;}
 .rec-alt{display:inline-block;border:1px solid var(--ln);background:#fff;border-radius:999px;padding:2px 10px;
   margin:4px 4px 0 0;font-size:11.5px;cursor:pointer;font-family:inherit;color:var(--cocoa);}
-.rec-alt:hover{border-color:var(--pd);}
+@media(hover:hover){.rec-alt:hover{border-color:var(--pd);}}
 .spick{display:flex;align-items:center;gap:12px;padding:14px 18px;
   background:linear-gradient(135deg,var(--gs),var(--phs));border:1px solid var(--gold);border-radius:14px;}
 .spick.na{background:var(--cs);border-color:var(--coral);opacity:.7;}
@@ -367,7 +382,7 @@ button.spick:disabled{cursor:not-allowed;}
 .copybtn{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.14);
   color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:5px 12px;
   font-family:inherit;font-size:11px;cursor:pointer;}
-.copybtn:hover{background:rgba(255,255,255,.24);}
+@media(hover:hover){.copybtn:hover{background:rgba(255,255,255,.24);}}
 details.sc{border:1px solid var(--ln);border-radius:14px;background:var(--cream);}
 details.sc summary{cursor:pointer;padding:14px 18px;font-weight:600;
   font-size:13px;list-style:none;display:flex;justify-content:space-between;}
@@ -382,16 +397,6 @@ details.sc>div{padding:0 18px 18px;}
 @keyframes tst{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 .empty{text-align:center;padding:56px 20px;color:var(--cm);}
 .empty h3{font-family:'Fraunces',serif;font-style:italic;font-size:22px;margin:10px 0 4px;color:var(--cocoa);}
-@media(max-width:700px){
-  .rng{grid-template-columns:repeat(6,1fr);}
-  .frow2{grid-template-columns:1fr;}
-  .bc{grid-template-columns:auto 1fr;}
-  .bacts{grid-column:1/-1;justify-content:flex-end;}
-  .stats{grid-template-columns:repeat(2,1fr);}
-  .scard .sv{font-size:36px;}
-  .sec{padding:20px 16px;}
-  .modal{padding:22px 18px;}
-}
 
 /* ══════════════════════════════════
    CHECKOUT SYSTEM STYLES
@@ -425,11 +430,11 @@ details.sc>div{padding:0 18px 18px;}
 .co-add-btn{width:100%;padding:8px;background:var(--ps);border:1.5px dashed rgba(196,108,126,.4);
   border-radius:10px;font-family:'Sarabun',sans-serif;font-size:12px;color:var(--pd);
   cursor:pointer;transition:all .2s;margin-top:4px;}
-.co-add-btn:hover{background:var(--phs);border-style:solid;}
+@media(hover:hover){.co-add-btn:hover{background:var(--phs);border-style:solid;}}
 .co-rm-btn{background:none;border:1.5px solid var(--ln);border-radius:8px;padding:0;
   width:34px;height:38px;cursor:pointer;font-size:14px;color:#ccc;
   transition:all .2s;display:flex;align-items:center;justify-content:center;}
-.co-rm-btn:hover{border-color:var(--coral);color:var(--coral);}
+@media(hover:hover){.co-rm-btn:hover{border-color:var(--coral);color:var(--coral);}}
 .co-preview{background:linear-gradient(135deg,var(--phs),var(--gs));border:1px solid rgba(201,162,78,.3);
   border-radius:14px;padding:14px 18px;margin:16px 0;}
 .co-prev-row{display:flex;justify-content:space-between;align-items:baseline;
@@ -511,15 +516,9 @@ details.sc>div{padding:0 18px 18px;}
   border-radius:999px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
   transition:all .18s;}
 .co-ra-btn.primary{background:var(--pd);color:#fff;}
-.co-ra-btn.primary:hover{background:var(--cocoa);}
+@media(hover:hover){.co-ra-btn.primary:hover{background:var(--cocoa);}}
 .co-ra-btn.ghost{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);}
-.co-ra-btn.ghost:hover{background:rgba(255,255,255,.25);}
-@media(max-width:700px){
-  .co-info-grid{grid-template-columns:1fr 1fr;}
-  .co-row2{grid-template-columns:1fr;}
-  .co-modal{max-height:100vh;border-radius:0;}
-  .co-actions{flex-direction:column;}
-}
+@media(hover:hover){.co-ra-btn.ghost:hover{background:rgba(255,255,255,.25);}}
 
 /* ══════════════════════════════════
    รวมบิลหลายกรง (MULTI-CAGE CHECKOUT)
@@ -527,7 +526,7 @@ details.sc>div{padding:0 18px 18px;}
 .co-merge-list{display:flex;flex-direction:column;gap:6px;margin-bottom:6px;}
 .co-merge-item{display:flex;align-items:center;gap:10px;background:var(--cream);
   border:1.5px solid var(--ln);border-radius:12px;padding:9px 12px;cursor:pointer;transition:all .15s;}
-.co-merge-item:hover{border-color:var(--pd);}
+@media(hover:hover){.co-merge-item:hover{border-color:var(--pd);}}
 .co-merge-item.sel{background:var(--ps);border-color:var(--pd);}
 .co-merge-item input{accent-color:var(--pd);width:16px;height:16px;flex-shrink:0;cursor:pointer;}
 .co-icard.off{opacity:.5;}
@@ -588,7 +587,7 @@ details.sc>div{padding:0 18px 18px;}
   padding:10px 14px;cursor:pointer;font-family:inherit;border-bottom:1px solid var(--ln);
   transition:background .12s;}
 .cust-item:last-child{border-bottom:none;}
-.cust-item:hover{background:var(--phs);}
+@media(hover:hover){.cust-item:hover{background:var(--phs);}}
 .cust-name{font-size:13.5px;font-weight:600;color:var(--cocoa);
   display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .cust-sub{font-size:11.5px;color:var(--cm);margin-top:2px;}
@@ -602,7 +601,7 @@ details.sc>div{padding:0 18px 18px;}
   color:var(--cocoa);padding:9px 12px;background:var(--phs);border-bottom:1px solid var(--ln);}
 .hist-close{margin-left:auto;border:none;background:transparent;cursor:pointer;
   font-family:inherit;font-size:13px;color:var(--cm);padding:2px 6px;border-radius:8px;}
-.hist-close:hover{background:rgba(0,0,0,.06);}
+@media(hover:hover){.hist-close:hover{background:rgba(0,0,0,.06);}}
 .hist-list{max-height:190px;overflow-y:auto;}
 .hist-item{padding:9px 12px;border-bottom:1px solid var(--ln);}
 .hist-item:last-child{border-bottom:none;}
@@ -634,10 +633,281 @@ details.sc>div{padding:0 18px 18px;}
   border-radius:999px;border:2px solid #fff;cursor:pointer;
   display:inline-flex;align-items:center;gap:6px;transition:all .18s;white-space:nowrap;}
 .btn-line.solid{background:#fff;color:#06C755;}
-.btn-line.solid:hover{background:rgba(255,255,255,.88);}
+@media(hover:hover){.btn-line.solid:hover{background:rgba(255,255,255,.88);}}
 .btn-line.ghost{background:rgba(255,255,255,.15);color:#fff;}
-.btn-line.ghost:hover{background:rgba(255,255,255,.28);}
+@media(hover:hover){.btn-line.ghost:hover{background:rgba(255,255,255,.28);}}
 .btn-line:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ══════════════════════════════════
+   APP LAYOUT (v20) — จัดหน้าใหม่ เน้นใช้งานบน iPhone Safari
+   · แถบเมนูล่าง + ปุ่มเพิ่มการจองตรงกลาง · การ์ดแจ้งเตือนพับได้
+   · หน้าต่างย่อยเป็น bottom sheet · ช่องกรอก 16px กัน Safari ซูมเอง
+══════════════════════════════════ */
+html{-webkit-text-size-adjust:100%;touch-action:manipulation;}
+button,a,summary,label,[role=button]{-webkit-tap-highlight-color:transparent;}
+button{color:inherit;}                 /* iOS: ปุ่มที่ไม่กำหนดสีจะกลายเป็นสีฟ้าของระบบ */
+input[type=date]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;}
+.overlay,.slip-overlay,.img-save-overlay,.co-receipt-overlay{-webkit-backdrop-filter:blur(10px);overscroll-behavior:contain;}
+.modal,.co-modal,.co-receipt-wrap{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+.btn:active,.tab:active,.ib:active,.rc:active,.nb:active,.pill:active,.mrow:active,.btn-link:active,.btn-line:active{transform:scale(.96);}
+
+/* ปุ่มมีป้ายชื่อ (อนุมัติ / ปฏิเสธ) */
+.btn-ok{background:var(--ss);color:#3F5828;border:1px solid rgba(157,176,137,.6);}
+.btn-no{background:var(--cl);color:#8a3d2a;border:1px solid rgba(221,132,112,.5);}
+@media(hover:hover){.btn-ok:hover{background:var(--sage);color:#fff;} .btn-no:hover{background:var(--coral);color:#fff;}}
+
+/* การ์ดแจ้งเตือน (โน้ต / คำขอจอง / คิวสปา) — แตะหัวข้อเพื่อพับ/กาง */
+.sec.al{padding:18px 22px;border-width:1.5px;}
+.sec.al-gold{border-color:var(--gold);background:linear-gradient(135deg,var(--cl) 60%,var(--gs));}
+.sec.al-pink{border-color:var(--pd);background:linear-gradient(135deg,var(--cl) 60%,var(--ps));}
+.sec.al .stitle{margin-bottom:14px;align-items:center;}
+.sec.al.folded .stitle{margin-bottom:0;}
+.sec.al.folded .fold-b,.sec.al.folded .meta{display:none;}
+.fold-t{cursor:pointer;flex:1;min-width:0;user-select:none;-webkit-user-select:none;}
+.fold-t h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.cnt{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 7px;
+  border-radius:999px;background:var(--gold);color:#fff;font-family:'Sarabun',sans-serif;font-size:12.5px;
+  font-weight:700;font-style:normal;}
+.cnt.pk{background:var(--pd);}
+.chev{font-family:'Sarabun',sans-serif;font-style:normal;font-size:13px;color:var(--cm);transition:transform .2s;}
+.folded .chev{transform:rotate(-90deg);}
+.sacts{display:flex;gap:8px;flex-wrap:wrap;}
+.al-add{display:none;width:100%;margin-top:10px;padding:11px;background:rgba(255,255,255,.55);
+  border:1.5px dashed rgba(196,108,126,.5);border-radius:14px;font-family:inherit;font-size:13.5px;
+  font-weight:600;color:var(--pd);cursor:pointer;}
+.memo-day{font-weight:700;color:var(--pd);margin-top:2px;font-size:13px;}
+.memo-day.tm{color:var(--cm);margin-top:10px;}
+.memo-li{padding:5px 0;border-bottom:1px dashed var(--ln);white-space:pre-wrap;font-size:14px;}
+.memo-li:last-child{border-bottom:none;}
+/* คิวสปาที่อนุมัติแล้ว */
+.sqlist{display:flex;flex-direction:column;gap:8px;}
+.sq{display:flex;gap:8px 14px;align-items:center;flex-wrap:wrap;padding:10px 14px;background:var(--cream);
+  border:1px solid var(--ln);border-radius:14px;font-size:13px;}
+.sq.soon{background:#fff;border-color:var(--pd);}
+.sq-main{flex:1;min-width:200px;display:flex;flex-wrap:wrap;gap:3px 12px;align-items:center;}
+.sq-soon{background:var(--pd);color:#fff;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:999px;}
+.sq-acts{display:flex;gap:6px;flex-shrink:0;margin-left:auto;}
+
+/* หน้า "เมนู" — เครื่องมือ / ลิงก์ลูกค้า / LINE / ระบบ */
+.more{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;align-items:start;}
+.more .sec,.more .booking-link-banner,.more .line-banner{margin-bottom:0;}
+.mcol{display:flex;flex-direction:column;gap:14px;min-width:0;}
+.mhead{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--cm);font-weight:700;margin:0 4px -6px;}
+.mlist{background:var(--cl);border:1px solid var(--ln);border-radius:20px;overflow:hidden;}
+.mrow{display:flex;align-items:center;gap:12px;width:100%;padding:13px 16px;border:none;background:transparent;
+  border-bottom:1px solid var(--ln);cursor:pointer;font-family:inherit;text-align:left;color:var(--cocoa);
+  text-decoration:none;transition:background .12s,transform .12s;}
+.mrow:last-child{border-bottom:none;}
+@media(hover:hover){.mrow:hover{background:var(--cream);}}
+.mrow:disabled{opacity:.5;cursor:not-allowed;}
+.mico{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;background:var(--phs);}
+.mico.g{background:var(--gs);} .mico.s{background:var(--ss);} .mico.p{background:var(--ps);} .mico.c{background:var(--cd);}
+.mtx{flex:1;min-width:0;}
+.mt{font-size:14.5px;font-weight:600;line-height:1.35;}
+.ms{font-size:12px;color:var(--cm);line-height:1.4;}
+.marr{color:var(--cm);font-size:18px;flex-shrink:0;}
+.line-banner .lb-actions{display:grid;grid-template-columns:auto auto;gap:6px;}
+.line-banner .btn-line{font-size:12px;padding:8px 14px;justify-content:center;}
+.line-banner .lb-day{font-size:10.5px;opacity:.85;}
+
+@media(min-width:761px){
+  .sec.al{margin-bottom:18px;}
+}
+
+/* ─────────── มือถือ (iPhone) ─────────── */
+@media(max-width:760px){
+  input,select,textarea{font-size:16px !important;}   /* <16px แล้ว Safari จะซูมหน้าเองตอนแตะช่องกรอก */
+  #ssc-lang-toggle{display:none !important;}          /* ปุ่มลอยทับแถบเมนูล่าง → ย้ายไปอยู่ในหน้า "เมนู" */
+  .wrap{padding:calc(10px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
+    calc(96px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));}
+
+  /* หัวหน้า: โลโก้เล็ก + ชื่อร้าน + วันที่ · ซิงก์อยู่ขวา */
+  .hrow{flex-wrap:nowrap;align-items:center;gap:10px;margin-bottom:12px;}
+  .hbrand{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+  .logo-img{width:56px;margin:-4px 0 -4px -4px;flex-shrink:0;}
+  .htxt{min-width:0;}
+  .hname{display:block;font-family:'Fraunces',serif;font-size:21px;line-height:1.15;letter-spacing:-.02em;white-space:nowrap;}
+  .hname em{color:var(--pd);font-style:italic;}
+  .hdate{display:block;font-size:12.5px;color:var(--cm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tagline,.datebox,#stime,.hide-m{display:none !important;}
+  .hname{overflow:hidden;text-overflow:ellipsis;}
+  .hright{flex-shrink:0;}
+  .sbadge{padding:9px 13px;min-height:38px;}
+
+  /* ตัวเลขสรุป: 3 + 2 ช่อง กะทัดรัด (แสดงเฉพาะหน้าสถานะห้อง) */
+  #app:not([data-tab=today]) .stats{display:none;}
+  .stats{grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px;}
+  .scard{grid-column:span 2;padding:10px 12px 9px;border-radius:16px;}
+  .scard:nth-child(n+4){grid-column:span 3;display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;}
+  .scard:nth-child(n+4) .sv{grid-row:1/3;margin-top:0;font-size:30px;min-width:28px;}
+  .scard:nth-child(n+4) .sl{align-self:end;}
+  .scard:nth-child(n+4) .ss2{align-self:start;margin-top:0;}
+  .sico{top:8px;right:8px;width:24px;height:24px;font-size:12px;}
+  .scard .sl{font-size:10.5px;letter-spacing:.02em;white-space:nowrap;text-transform:none;
+    padding-right:26px;overflow:hidden;text-overflow:ellipsis;}
+  .scard .sv{font-size:30px;margin-top:3px;}
+  .scard .ss2{font-size:10.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  /* แถบเมนูล่าง */
+  .abar{margin-bottom:10px;display:block;}
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:60;display:grid;grid-template-columns:repeat(5,1fr);gap:0;
+    padding:6px max(6px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));
+    border:none;border-top:1px solid var(--ln);border-radius:0;background:rgba(253,249,242,.93);
+    -webkit-backdrop-filter:saturate(1.5) blur(18px);backdrop-filter:saturate(1.5) blur(18px);
+    box-shadow:0 -6px 24px rgba(42,24,16,.07);}
+  .tab{flex-direction:column;gap:1px;padding:4px 2px 2px;font-size:10.5px;border-radius:14px;min-height:50px;
+    justify-content:flex-end;white-space:nowrap;}
+  .tab .ti{font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;height:28px;
+    min-width:52px;border-radius:999px;transition:background .2s;}
+  .tab.active{background:transparent;color:var(--pd);font-weight:700;}
+  .tab.active .ti{background:var(--ps);}
+  .tab-add{display:inline-flex;color:var(--pd);font-weight:600;}
+  .tab-add .ti{width:48px;min-width:48px;height:48px;margin-top:-24px;border-radius:50%;background:var(--pd);color:#fff;
+    font-size:24px;border:3px solid var(--cl);box-shadow:0 6px 16px rgba(196,108,126,.45);}
+  .tbadge{position:absolute;top:0;left:calc(50% + 10px);border:2px solid var(--cl);min-width:20px;height:20px;}
+
+  /* ปุ่มลัด 3 ช่อง (เฉพาะหน้าสถานะห้อง) */
+  .bgroup{display:none;}
+  .abar.t-today .bgroup{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .bgroup .btn{flex-direction:column;gap:2px;padding:9px 4px 8px;border-radius:16px;font-size:12px;line-height:1.3;
+    background:var(--cl);border:1px solid var(--ln);white-space:normal;text-align:center;min-height:58px;justify-content:center;}
+  .bgroup .btn .bi{font-size:19px;line-height:1.1;}
+
+  /* การ์ด */
+  .sec{padding:16px 14px;border-radius:20px;margin-bottom:12px;}
+  .sec.al{padding:12px 14px;}
+  .stitle{margin-bottom:12px;gap:10px;}
+  .stitle h3{font-size:21px;line-height:1.25;}
+  .sec.al .stitle{flex-wrap:nowrap;margin-bottom:10px;}
+  .sec.al .stitle h3{font-size:18px;flex-wrap:nowrap;white-space:nowrap;}
+  .sec.al .stitle .meta{display:none;}        /* ปุ่มมีป้ายชื่อแล้ว — ซ่อนคำอธิบายยาวบนมือถือ */
+  .sacts{flex-wrap:nowrap;flex-shrink:0;}
+  .ico-m{width:38px;height:38px;padding:0;justify-content:center;flex-shrink:0;font-size:15px;}
+  .ico-m .bl{display:none;}
+  .al-add{display:block;}
+  .stitle .meta{font-size:12px;line-height:1.5;margin-top:2px;}
+  .dnav{width:100%;gap:8px;}
+  .dnav .di{flex:1;min-height:42px;text-align:center;border-radius:14px;background:var(--cream);}
+  .nb{width:42px;height:42px;font-size:20px;flex-shrink:0;}
+  .dnav .btn{min-height:42px;}
+  .btn-sm{padding:10px 14px;}
+  .legend{gap:6px 14px;margin-bottom:12px;padding-bottom:10px;font-size:11.5px;}
+  .legend .lhint{display:none;}
+
+  /* ผังกรง: 4 ช่องต่อแถว · Grand Suite 5 ช่อง */
+  .sgrid{grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px;}
+  .rgrid{grid-template-columns:repeat(4,1fr);gap:7px;}
+  .rc{aspect-ratio:auto;min-height:76px;padding:8px 8px 7px;border-radius:14px;min-width:0;}
+  .rc>div{min-width:0;}
+  .rc.suite{height:auto;min-height:76px;padding:8px 6px 7px;}
+  .rnum{font-size:22px;}
+  .rc.suite .rnum{font-size:16px;}
+  .rcrown{top:6px;right:5px;font-size:11px;}
+  .rc .rcr{display:none;}
+  .rc.backup .rcr{display:block;font-size:9px;letter-spacing:.02em;}
+  .rname{font-size:11.5px;line-height:1.3;}
+  .rc.suite .rname{font-size:10.5px;}
+  .rstat{font-size:10.5px !important;line-height:1.3;white-space:nowrap;}
+  .bdivider{margin:16px 0 10px;}
+
+  /* ปฏิทิน: คอลัมน์ชื่อกรงแคบลง ตรึงซ้าย · หัววันที่ตรึงบน */
+  .calwrap{max-height:calc(100dvh - 250px);min-height:320px;margin:0 -4px;}
+  .calgrid{--clw:68px;}
+  .ccorner{padding:8px;}
+  .crl{padding:0 7px;font-size:11.5px;height:40px;}
+  .crl.suite{font-size:12.5px;}
+  .crl .lb-l{display:none;} .crl .lb-s{display:inline;}
+  .cc{height:40px;}
+
+  /* รายการจอง */
+  .frow{gap:8px;margin-bottom:12px;}
+  .sbox{min-width:0;flex-basis:100%;padding:10px 14px;}
+  .pills{width:100%;flex-wrap:nowrap;gap:4px;background:var(--cd);padding:4px;border-radius:999px;border:1px solid var(--ln);}
+  .pill{flex:1;padding:8px 2px;font-size:12px;border-color:transparent;background:transparent;text-align:center;}
+  .blist{gap:8px;}
+  .bc{grid-template-columns:auto 1fr;gap:10px 12px;padding:12px 14px;border-radius:16px;align-items:start;}
+  .badge{width:48px;height:48px;border-radius:12px;}
+  .badge .bn{font-size:19px;}
+  .binfo{min-width:0;}
+  .binfo h4{font-size:16.5px;line-height:1.3;}
+  .bmeta{gap:3px 10px;}
+  .bacts{grid-column:1/-1;justify-content:flex-end;gap:8px;margin-top:-2px;}
+  .bacts .btn{flex:1;justify-content:center;padding:10px 12px;font-size:13px;}
+  .ib{width:40px;height:40px;font-size:15px;}
+  .sq{padding:10px 12px;}
+  .sq-main{min-width:100%;}
+  .sq-acts{width:100%;justify-content:flex-end;gap:8px;}
+  .empty{padding:36px 16px;}
+
+  /* หน้าเมนู */
+  .more{grid-template-columns:1fr;gap:14px;}
+  .booking-link-banner{padding:14px 16px;gap:10px;}
+  .bl-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;}
+  .btn-link{justify-content:center;padding:11px 10px;font-size:13px;}
+  .booking-link-banner .bl-url{max-width:100%;}
+  .line-banner{padding:14px 16px;}
+  .line-banner .lb-actions{width:100%;grid-template-columns:auto 1fr;gap:8px;}
+  .line-banner .btn-line{padding:11px 14px;font-size:13px;}
+
+  /* หน้าต่างย่อย → bottom sheet เลื่อนขึ้นจากขอบล่าง */
+  .overlay{align-items:flex-end;padding:0;}
+  .modal,.co-modal{max-width:none !important;width:100%;max-height:92vh;max-height:92dvh;border-radius:24px 24px 0 0;
+    border-bottom:none;animation:sheet .26s cubic-bezier(.2,.8,.2,1);}
+  .modal{padding:0 16px calc(18px + env(safe-area-inset-bottom));}
+  /* แถบบนของ sheet: ขีดจับ + ปุ่มปิด ตรึงไว้เสมอแม้เลื่อนเนื้อหา */
+  .modal::before{content:'';display:block;position:sticky;top:0;z-index:4;height:22px;margin:0 -16px;
+    background:linear-gradient(var(--ln),var(--ln)) center 9px/40px 4px no-repeat,var(--cl);
+    border-radius:24px 24px 0 0;}
+  .modal h2{font-size:23px;line-height:1.25;}
+  .modal .msub{margin-bottom:16px;}
+  .modal>.mclose{position:sticky;top:6px;float:right;z-index:5;width:36px;height:36px;margin:0 -4px 0 8px;
+    box-shadow:0 0 0 4px var(--cl);}
+  @supports selector(:has(a)){
+    .modal:has(>.mclose)::before{height:50px;}
+    .modal:has(>.mclose)>.mclose{top:8px;margin-top:-44px;}
+  }
+  .modal>.factions:last-child{position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom));z-index:4;background:var(--cl);
+    margin:16px -16px calc(-18px - env(safe-area-inset-bottom));
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -8px 16px -8px rgba(42,24,16,.12);}
+  .dr{padding:10px 0;}
+  .factions{flex-wrap:wrap;}
+  .factions .btn{flex:1;justify-content:center;padding:13px 14px;font-size:14.5px;}
+  .factions .btn-g{flex:0 1 auto;}
+  .frow2{grid-template-columns:1fr;gap:0 10px;}
+  .frow2.keep2{grid-template-columns:1fr 1fr !important;}
+  .fi{padding:12px 13px;min-height:48px;}
+  .rng{grid-template-columns:repeat(6,1fr);gap:6px;}
+  .rnb{font-size:16px;}
+  .rtbtn{padding:12px 6px;font-size:12.5px;line-height:1.35;}
+  .co-modal{max-height:94vh;max-height:94dvh;}
+  .co-header{padding:18px 18px 14px;}
+  .co-body{padding:16px 16px calc(18px + env(safe-area-inset-bottom));}
+  .co-row2{grid-template-columns:1fr;}
+  .co-actions{flex-direction:column;}
+  .co-actions .btn{justify-content:center;padding:13px 14px;}
+  .slip-overlay,.co-receipt-overlay{padding:12px;overflow-y:auto;align-items:flex-start;}
+  .slip-wrap,.co-receipt-wrap{margin:auto;}
+  .slip-actions,.co-receipt-actions{flex-wrap:wrap;}
+  .toast{left:12px;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));text-align:center;border-radius:18px;
+    padding:12px 16px;line-height:1.5;}
+}
+@keyframes sheet{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+@media(max-width:380px){
+  .hname{font-size:19px;}
+  .logo-img{width:50px;}
+  .rnum{font-size:20px;}
+  .tab{font-size:10px;}
+}
+@media(max-width:350px){          /* iPhone SE รุ่นแรก (จอ 320px) */
+  .hname{font-size:17px;}
+  .logo-img{width:44px;}
+  .sico{display:none;}
+  .scard .sl{padding-right:0;}
+  .scard{padding:9px 9px 8px;}
+  .rgrid{gap:5px;} .sgrid{gap:4px;}
+  .rc{padding:7px 6px 6px;}
+}
 </style>
 </head>
 <body>
@@ -2075,10 +2345,9 @@ function updateSyncBadge(){
   const dot=document.getElementById('sdot'), txt=document.getElementById('stxt');
   if(!dot||!txt)return;
   dot.className='dot '+(S.syncSt==='synced'?'synced':S.syncSt==='syncing'?'syncing':S.syncSt==='error'?'error':'');
-  const lbl={syncing:'กำลังซิงก์…',synced:'ซิงก์แล้ว'+(S.lastSync?' · '+rel(S.lastSync):''),
-    error:'ซิงก์ล้มเหลว',idle:'ซิงก์ล่าสุด'+(S.lastSync?' · '+rel(S.lastSync):''),
-    unconfigured:'ยังไม่ได้เชื่อมต่อ'}[S.syncSt]||'';
+  const [lbl,relTxt]=syncParts();
   txt.textContent=lbl;
+  const tm=document.getElementById('stime'); if(tm) tm.textContent=relTxt;
 }
 
 // manualSync — กดเองจากหน้าจอ: ส่งทั้งหมด (full) เสมอ เพื่อรีเซ็ต baseline ให้ตรงกับ Sheet
@@ -2221,8 +2490,8 @@ function rqCard(q){
       </div>
     </div>
     <div class="bacts">
-      <button class="ib confirm" onclick="approveRequest('${q.id}')" title="อนุมัติ — เลือกกรงและลงจองจริง">✓</button>
-      <button class="ib danger" onclick="rejectRequest('${q.id}')" title="ปฏิเสธคำขอ">✕</button>
+      <button class="btn btn-sm btn-no" onclick="rejectRequest('${q.id}')" title="ปฏิเสธคำขอ">✕ ปฏิเสธ</button>
+      <button class="btn btn-sm btn-ok" onclick="approveRequest('${q.id}')" title="อนุมัติ — เลือกกรงและลงจองจริง">✓ อนุมัติ</button>
     </div>
   </div>`;
 }
@@ -2321,8 +2590,8 @@ function spaRqCard(q){
       </div>
     </div>
     <div class="bacts">
-      <button class="ib confirm" onclick="approveSpaRequest('${q.id}')" title="อนุมัติคิวนี้">✓</button>
-      <button class="ib danger" onclick="rejectSpaRequest('${q.id}')" title="ปฏิเสธคำขอ">✕</button>
+      <button class="btn btn-sm btn-no" onclick="rejectSpaRequest('${q.id}')" title="ปฏิเสธคำขอ">✕ ปฏิเสธ</button>
+      <button class="btn btn-sm btn-ok" onclick="approveSpaRequest('${q.id}')" title="อนุมัติคิวนี้">✓ อนุมัติ</button>
     </div>
   </div>`;
 }
@@ -2332,20 +2601,24 @@ function spaApprovedList(){
   if(!S.spaApproved.length) return '';
   const today=todayKey(), tomorrow=addDays(today,1);
   return `<div class="bdivider">📋 คิวสปาที่อนุมัติแล้ว (${S.spaApproved.length})</div>
-    <div style="display:flex;flex-direction:column;gap:8px;">
+    <div class="sqlist">
       ${S.spaApproved.map(q=>{
         const svc=spaSvcOf(q.service);
         const soon=q.date===today?'วันนี้':q.date===tomorrow?'พรุ่งนี้':'';
-        return `<div style="display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:9px 14px;background:${soon?'#fff':'var(--cream)'};border:1px solid ${soon?'var(--pd)':'var(--ln)'};border-radius:12px;font-size:13px;">
-          ${soon?`<span style="background:var(--pd);color:#fff;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:999px;">🔔 ใกล้ถึง · ${soon}</span>`:''}
-          <b>📅 ${thD(q.date,true)} · ${esc(q.time)} น.</b>
-          <span>${svc.icon} ${svc.label}</span>
-          <span>${esc(q.guestName)}${q.gliderName?' · น้อง '+esc(q.gliderName):''} (${q.gliderCount||1} ตัว)</span>
-          ${q.phone?`<span style="color:var(--cm);">📞 ${esc(q.phone)}</span>`:''}
-          <button class="ib" style="margin-left:auto;flex-shrink:0;" onclick="showSpaSlip('${q.id}')" title="ออกใบยืนยันคิว — บันทึกรูปส่งให้ลูกค้า">🧾</button>
-          <button class="ib" style="flex-shrink:0;" onclick="spaCalcForQueue('${q.id}')" title="คิดเงินคิวนี้ — เปิดเครื่องคิดเงินพร้อมข้อมูลคิว">💰</button>
-          <button class="ib confirm" style="flex-shrink:0;" onclick="completeSpaBooking('${q.id}')" title="สปาเสร็จสิ้น — ปิดคิวนี้ออกจากรายการ">✓</button>
-          <button class="ib danger" style="flex-shrink:0;" onclick="cancelSpaBooking('${q.id}')" title="ยกเลิกคิวนี้ — สลอตจะเปิดให้จองใหม่">✕</button>
+        return `<div class="sq${soon?' soon':''}">
+          <div class="sq-main">
+            ${soon?`<span class="sq-soon">🔔 ใกล้ถึง · ${soon}</span>`:''}
+            <b>📅 ${thD(q.date,true)} · ${esc(q.time)} น.</b>
+            <span>${svc.icon} ${svc.label}</span>
+            <span>${esc(q.guestName)}${q.gliderName?' · น้อง '+esc(q.gliderName):''} (${q.gliderCount||1} ตัว)</span>
+            ${q.phone?`<span style="color:var(--cm);">📞 ${esc(q.phone)}</span>`:''}
+          </div>
+          <div class="sq-acts">
+            <button class="ib" onclick="showSpaSlip('${q.id}')" title="ออกใบยืนยันคิว — บันทึกรูปส่งให้ลูกค้า">🧾</button>
+            <button class="ib" onclick="spaCalcForQueue('${q.id}')" title="คิดเงินคิวนี้ — เปิดเครื่องคิดเงินพร้อมข้อมูลคิว">💰</button>
+            <button class="ib confirm" onclick="completeSpaBooking('${q.id}')" title="สปาเสร็จสิ้น — ปิดคิวนี้ออกจากรายการ">✓</button>
+            <button class="ib danger" onclick="cancelSpaBooking('${q.id}')" title="ยกเลิกคิวนี้ — สลอตจะเปิดให้จองใหม่">✕</button>
+          </div>
         </div>`;
       }).join('')}
     </div>`;
@@ -2938,6 +3211,23 @@ function toast(msg,kind='ok'){
 // ============================
 // RENDER
 // ============================
+// สถานะซิงก์: [ข้อความหลัก, เวลาล่าสุด] — แยกกันเพื่อให้มือถือซ่อนส่วนเวลาได้
+function syncParts(){
+  const r=S.lastSync?' · '+rel(S.lastSync):'';
+  return ({syncing:['กำลังซิงก์…',''],synced:['ซิงก์แล้ว',r],error:['ซิงก์ล้มเหลว',''],
+    idle:['ซิงก์ล่าสุด',r],unconfigured:['ยังไม่ได้เชื่อมต่อ','']})[S.syncSt]||['',''];
+}
+
+// การ์ดแจ้งเตือนพับได้ (โน้ต / คำขอจอง / คิวสปา) — จำสถานะพับไว้ในเครื่อง
+const LS_FOLD='ssc_fold1';
+let FOLD={};
+try{FOLD=JSON.parse(localStorage.getItem(LS_FOLD)||'{}')||{};}catch(e){FOLD={};}
+function toggleFold(k){
+  FOLD[k]=!FOLD[k];
+  try{localStorage.setItem(LS_FOLD,JSON.stringify(FOLD));}catch(e){}
+  render();
+}
+
 function render(){
   const app=document.getElementById('app'); if(!app)return;
   const t=todayKey(), total=totalRooms();
@@ -2946,23 +3236,29 @@ function render(){
   const ci=S.bookings.filter(b=>b.checkIn===t).length;
   const co=S.bookings.filter(b=>b.checkOut===t).length;
   const totalGliders=countGlidersOnDate(t);
-  const syncLbl={syncing:'กำลังซิงก์…',synced:'ซิงก์แล้ว'+(S.lastSync?' · '+rel(S.lastSync):''),
-    error:'ซิงก์ล้มเหลว',idle:'ซิงก์ล่าสุด'+(S.lastSync?' · '+rel(S.lastSync):''),
-    unconfigured:'ยังไม่ได้เชื่อมต่อ'}[S.syncSt]||'';
+  const [syncLbl,syncRel]=syncParts();
+  const pend=S.requests.length+S.spaRequests.length;   // งานรออนุมัติ — ขึ้นตัวเลขบนแท็บสถานะห้อง
+  const memoCnt=MEMOS.filter(m=>m.date>=t).length;
+  const tab=(k,ico,lbl,badge)=>`<button class="tab ${S.tab===k?'active':''}" onclick="setTab('${k}')"><span class="ti">${ico}</span><span class="tl">${lbl}</span>${badge?`<span class="tbadge">${badge}</span>`:''}</button>`;
+  app.setAttribute('data-tab',S.tab);
 
   app.innerHTML=`
   <div class="hrow">
-    <div>
+    <div class="hbrand">
       <img class="logo-img" src="assets/logo.webp" width="480" height="469" decoding="async" alt="Sugar Sugar Camp — Sugar glider care"/>
-      <div class="tagline">— ที่พักสำหรับชูการ์ไกลเดอร์ตัวโปรดของคุณ —</div>
+      <div class="htxt">
+        <div class="hname">Sugar Sugar <em>Camp</em></div>
+        <div class="hdate">${TH_D[parseD(t).getDay()]} ${thD(t)}</div>
+        <div class="tagline">— ที่พักสำหรับชูการ์ไกลเดอร์ตัวโปรดของคุณ —</div>
+      </div>
     </div>
     <div class="hright">
-      <div style="display:flex;gap:6px;align-items:center;">
+      <div class="hsync">
         <button class="sbadge" onclick="openSettings()">
           <span class="dot ${S.syncSt==='synced'?'synced':S.syncSt==='syncing'?'syncing':S.syncSt==='error'?'error':''}" id="sdot"></span>
-          ☁ <span id="stxt">${esc(syncLbl)}</span>
+          <span class="hide-m">☁</span> <span id="stxt">${esc(syncLbl)}</span><span id="stime">${esc(syncRel)}</span>
         </button>
-        ${S.syncUrl?`<button class="sbadge" onclick="pullCloud(false)" title="ดึงข้อมูลล่าสุดจาก Google Sheets" style="padding:8px 12px;">⬇</button>`:''}
+        ${S.syncUrl?`<button class="sbadge hide-m" onclick="pullCloud(false)" title="ดึงข้อมูลล่าสุดจาก Google Sheets" aria-label="ดึงข้อมูลล่าสุดจาก Google Sheets">⬇</button>`:''}
       </div>
       <div class="datebox">
         <div class="dl">วันนี้ · Today</div>
@@ -2982,60 +3278,6 @@ function render(){
     <button class="btn btn-o btn-sm" onclick="openSettings()">⚙ ตั้งค่าตอนนี้</button>
   </div>`:''}
 
-  <div class="booking-link-banner">
-    <div class="bl-left">
-      <div class="bl-title">🔗 ลิงก์จองสำหรับลูกค้า</div>
-      <div class="bl-sub">แชร์ให้ลูกค้าตรวจสอบห้องว่างและส่งคำขอจองได้เลย</div>
-      <span class="bl-url" id="booking-url-display">booking.html (เปิดจากโฟลเดอร์เดียวกัน)</span>
-    </div>
-    <div class="bl-actions">
-      <button class="btn-link ghost" onclick="previewBookingPage()">👁 ดูตัวอย่าง</button>
-      <button class="btn-link primary" id="copy-link-btn" onclick="copyBookingLink()">📋 คัดลอกลิงก์</button>
-    </div>
-  </div>
-
-  <div class="booking-link-banner" style="background:linear-gradient(135deg,var(--gs),var(--phs));border-color:rgba(201,162,78,.45);">
-    <div class="bl-left">
-      <div class="bl-title">💅 ลิงก์จองสปาสำหรับลูกค้า</div>
-      <div class="bl-sub">แชร์ให้ลูกค้าจองคิวตัดเล็บ/ทำสปา — เลือกวันและสลอตเวลา (1 ชม./คิว)</div>
-      <span class="bl-url">spa.html (เปิดจากโฟลเดอร์เดียวกัน)</span>
-    </div>
-    <div class="bl-actions">
-      <button class="btn-link ghost" onclick="openSpaSchedule()">⏰ ตั้งเวลารับ</button>
-      <button class="btn-link ghost" onclick="previewSpaPage()">👁 ดูตัวอย่าง</button>
-      <button class="btn-link ghost" onclick="copySpaLink()" id="copy-spa-link-btn">📋 คัดลอกลิงก์</button>
-      <button class="btn-link primary" onclick="openSpaDirectBook()">💅 จองให้ลูกค้า</button>
-    </div>
-  </div>
-
-  ${S.requests.length?`<div class="sec" style="border:1.5px solid var(--gold);background:linear-gradient(135deg,var(--cl) 60%,var(--gs));">
-    <div class="stitle">
-      <div>
-        <h3>⏳ คำขอจองรออนุมัติ <span style="display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 8px;border-radius:999px;background:var(--gold);color:#fff;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;font-style:normal;vertical-align:middle;">${S.requests.length}</span></h3>
-        <div class="meta">ลูกค้าส่งคำขอผ่านลิงก์จอง — กด ✓ เพื่อเลือกกรงและลงจองจริง หรือ ✕ เพื่อปฏิเสธ</div>
-      </div>
-      <button class="btn btn-s btn-sm" onclick="fetchRequests(false)">🔄 รีเฟรช</button>
-    </div>
-    <div class="blist">${S.requests.map(rqCard).join('')}</div>
-  </div>`:''}
-
-  ${(S.spaRequests.length||S.spaApproved.length)?`<div class="sec" style="border:1.5px solid var(--pd);background:linear-gradient(135deg,var(--cl) 60%,var(--ps));">
-    <div class="stitle">
-      <div>
-        <h3>💅 คิวสปารออนุมัติ <span style="display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 8px;border-radius:999px;background:var(--pd);color:#fff;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;font-style:normal;vertical-align:middle;">${S.spaRequests.length}</span></h3>
-        <div class="meta">ลูกค้าจองคิวตัดเล็บ/ทำสปาผ่านลิงก์ — กด ✓ เพื่อยืนยันคิว หรือ ✕ เพื่อปฏิเสธ</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-s btn-sm" onclick="fetchSpaRequests(false)">🔄 รีเฟรช</button>
-        <button class="btn btn-p btn-sm" onclick="openSpaDirectBook()">＋ จองให้ลูกค้า</button>
-      </div>
-    </div>
-    ${S.spaRequests.length?`<div class="blist">${S.spaRequests.map(spaRqCard).join('')}</div>`:''}
-    ${spaApprovedList()}
-  </div>`:''}
-
-  ${memoBanner()}
-
   <div class="stats">
     <div class="scard sc-sage"><div class="sico">🏠</div><div class="sl">กรงว่าง</div><div class="sv">${avail}</div><div class="ss2">จากทั้งหมด ${total} กรง</div></div>
     <div class="scard sc-coral"><div class="sico">🌙</div><div class="sl">กรงที่เข้าพัก</div><div class="sv">${occ}</div><div class="ss2">กรง</div></div>
@@ -3044,63 +3286,160 @@ function render(){
     <div class="scard sc-sage"><div class="sico">👋</div><div class="sl">เช็คเอาท์วันนี้</div><div class="sv">${co}</div><div class="ss2">กรง</div></div>
   </div>
 
-  <div class="abar">
-    <div class="tabs">
-      <button class="tab ${S.tab==='today'?'active':''}" onclick="setTab('today')">🏠 สถานะห้อง</button>
-      <button class="tab ${S.tab==='calendar'?'active':''}" onclick="setTab('calendar')">📅 ปฏิทิน</button>
-      <button class="tab ${S.tab==='bookings'?'active':''}" onclick="setTab('bookings')">📋 รายการจอง</button>
-    </div>
+  <div class="abar t-${S.tab}">
+    <nav class="tabs">
+      ${tab('today','🏠','สถานะห้อง',pend)}
+      ${tab('calendar','📅','ปฏิทิน')}
+      <button class="tab tab-add" onclick="openForm()" aria-label="เพิ่มการจอง"><span class="ti">＋</span><span class="tl">เพิ่มการจอง</span></button>
+      ${tab('bookings','📋','รายการจอง')}
+      ${tab('more','☰','เมนู')}
+    </nav>
     <div class="bgroup">
-      ${S.syncUrl?`<button class="btn btn-s btn-sm" onclick="manualSync()" ${S.syncSt==='syncing'?'disabled':''}>🔄 Sync</button>`:''}
-      <button class="btn btn-s" onclick="openMemos()">📌 โน้ตเตือน${MEMOS.filter(m=>m.date>=todayKey()).length?' ('+MEMOS.filter(m=>m.date>=todayKey()).length+')':''}</button>
-      <button class="btn btn-s" onclick="openFoodSummary()">🍽 สรุปเตรียมอาหาร</button>
-      <button class="btn btn-s" onclick="openSpaCalc()">🛁 คิดเงินสปา</button>
-      <button class="btn btn-p" onclick="openForm()">＋ เพิ่มการจอง</button>
+      ${S.syncUrl?`<button class="btn btn-s btn-sm hide-m" onclick="manualSync()" ${S.syncSt==='syncing'?'disabled':''}>🔄 Sync</button>`:''}
+      <button class="btn btn-s" onclick="openMemos()"><span class="bi">📌</span><span>โน้ตเตือน${memoCnt?' ('+memoCnt+')':''}</span></button>
+      <button class="btn btn-s" onclick="openFoodSummary()"><span class="bi">🍽</span><span>สรุปเตรียมอาหาร</span></button>
+      <button class="btn btn-s" onclick="openSpaCalc()"><span class="bi">🛁</span><span>คิดเงินสปา</span></button>
+      <button class="btn btn-p hide-m" onclick="openForm()">＋ เพิ่มการจอง</button>
     </div>
   </div>
 
-  ${S.tab==='today'?renderToday():''}
+  ${S.tab==='today'?renderAlerts()+renderToday():''}
   ${S.tab==='calendar'?renderCalendar():''}
   ${S.tab==='bookings'?renderBookings():''}
-
-  ${(()=>{
-    const today=todayKey();
-    const tomorrow=addDays(today,1);
-    const ls=buildLocalLineSummary(today);
-    const lsEve=buildLocalLineSummary(tomorrow);
-    return `<div class="line-banner">
-      <div class="lb-left">
-        <div class="lb-title">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.02 2 11c0 2.89 1.4 5.48 3.6 7.23L5 22l3.97-1.99C10.01 20.64 11 21 12 21c5.52 0 10-4.02 10-9S17.52 2 12 2z"/></svg>
-          แจ้งเตือน LINE · 2 รอบต่อวัน
-        </div>
-        <div class="lb-stats" style="margin-top:6px;">
-          <div class="lb-stat" title="วันนี้">🌅 <span style="font-size:10px;opacity:.8;">วันนี้</span></div>
-          <div class="lb-stat">🚪 <span>${ls.ci.length} เข้า</span></div>
-          <div class="lb-stat">👋 <span>${ls.co.length} ออก</span></div>
-          <div class="lb-stat">🐿 <span>${ls.gliders} ตัว</span></div>
-        </div>
-        <div class="lb-stats">
-          <div class="lb-stat" title="พรุ่งนี้">🌆 <span style="font-size:10px;opacity:.8;">พรุ่งนี้</span></div>
-          <div class="lb-stat">🚪 <span>${lsEve.ci.length} เข้า</span></div>
-          <div class="lb-stat">👋 <span>${lsEve.co.length} ออก</span></div>
-        </div>
-      </div>
-      <div class="lb-actions">
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
-          <div style="display:flex;gap:6px;">
-            <button class="btn-line ghost" style="font-size:11.5px;padding:7px 12px;" onclick="showLinePreview('morning')">👁 เช้า</button>
-            <button class="btn-line solid" id="line-send-btn" style="font-size:12px;padding:7px 14px;" onclick="sendLineNow()">🌅 ส่งเช้า 06:00</button>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn-line ghost" style="font-size:11.5px;padding:7px 12px;" onclick="showLinePreview('evening')">👁 เย็น</button>
-            <button class="btn-line solid" id="line-eve-btn" style="font-size:12px;padding:7px 14px;" onclick="sendLineEvening()">🌆 ส่งเย็น 18:00</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  })()}
+  ${S.tab==='more'?renderMore():''}
   `;
+}
+
+// ============================
+// ALERTS — โน้ตวันนี้/พรุ่งนี้ · คำขอจองรออนุมัติ · คิวสปา (แสดงบนหน้าสถานะห้อง)
+// ============================
+function renderAlerts(){
+  const fold=k=>FOLD[k]?' folded':'';
+  return `${memoBanner()}
+
+  ${S.requests.length?`<div class="sec al al-gold${fold('req')}">
+    <div class="stitle">
+      <div class="fold-t" role="button" onclick="toggleFold('req')">
+        <h3>⏳ คำขอจองรออนุมัติ <span class="cnt">${S.requests.length}</span><span class="chev">▾</span></h3>
+        <div class="meta">ลูกค้าส่งคำขอผ่านลิงก์จอง — กด ✓ เพื่อเลือกกรงและลงจองจริง หรือ ✕ เพื่อปฏิเสธ</div>
+      </div>
+      <button class="btn btn-s btn-sm ico-m" onclick="fetchRequests(false)" aria-label="รีเฟรช"><span>🔄</span><span class="bl">รีเฟรช</span></button>
+    </div>
+    <div class="fold-b"><div class="blist">${S.requests.map(rqCard).join('')}</div></div>
+  </div>`:''}
+
+  ${(S.spaRequests.length||S.spaApproved.length)?`<div class="sec al al-pink${fold('spa')}">
+    <div class="stitle">
+      <div class="fold-t" role="button" onclick="toggleFold('spa')">
+        <h3>💅 คิวสปารออนุมัติ <span class="cnt pk">${S.spaRequests.length}</span><span class="chev">▾</span></h3>
+        <div class="meta">ลูกค้าจองคิวตัดเล็บ/ทำสปาผ่านลิงก์ — กด ✓ เพื่อยืนยันคิว หรือ ✕ เพื่อปฏิเสธ</div>
+      </div>
+      <div class="sacts">
+        <button class="btn btn-s btn-sm ico-m" onclick="fetchSpaRequests(false)" aria-label="รีเฟรช"><span>🔄</span><span class="bl">รีเฟรช</span></button>
+        <button class="btn btn-p btn-sm hide-m" onclick="openSpaDirectBook()">＋ จองให้ลูกค้า</button>
+      </div>
+    </div>
+    <div class="fold-b">
+      ${S.spaRequests.length?`<div class="blist">${S.spaRequests.map(spaRqCard).join('')}</div>`:''}
+      ${spaApprovedList()}
+      <button class="al-add" onclick="openSpaDirectBook()">＋ จองให้ลูกค้า</button>
+    </div>
+  </div>`:''}`;
+}
+
+// ============================
+// MORE VIEW — หน้า "เมนู": เครื่องมือ · ลิงก์สำหรับลูกค้า · LINE · ระบบ
+// ============================
+function renderMore(){
+  const today=todayKey(), tomorrow=addDays(today,1);
+  const ls=buildLocalLineSummary(today), lsEve=buildLocalLineSummary(tomorrow);
+  const memoCnt=MEMOS.filter(m=>m.date>=today).length;
+  const [syncLbl,syncRel]=syncParts();
+  const en=window.SSC_LANG==='en';
+  const row=(ico,cls,title,sub,act,extra)=>`<button class="mrow" onclick="${act}" ${extra||''}>
+      <span class="mico ${cls}">${ico}</span>
+      <span class="mtx"><span class="mt">${title}</span>${sub?`<br/><span class="ms">${sub}</span>`:''}</span>
+      <span class="marr">›</span>
+    </button>`;
+  return `<div class="more">
+    <div class="mcol">
+      <div class="mhead">เครื่องมือประจำวัน</div>
+      <div class="mlist">
+        ${row('📌','g','โน้ตเตือนความจำ',memoCnt?'ตั้งไว้ '+memoCnt+' รายการ':'ตั้งโน้ตให้เตือนในสรุป LINE','openMemos()')}
+        ${row('🍽','','สรุปเตรียมอาหาร','นับจำนวนกรงตามจำนวนตัว','openFoodSummary()')}
+        ${row('🛁','p','คิดเงินสปา','ออกใบเสร็จตัดเล็บ / ทำสปา','openSpaCalc()')}
+        ${row('💅','p','จองคิวสปาให้ลูกค้า','ทางร้านลงคิวให้โดยตรง','openSpaDirectBook()')}
+        ${row('⏰','g','ตั้งเวลารับจองสปา','กำหนดวันและช่วงเวลาที่เปิดรับคิว','openSpaSchedule()')}
+        <a class="mrow" href="customer.html">
+          <span class="mico s">👥</span>
+          <span class="mtx"><span class="mt">ระบบข้อมูลลูกค้า</span><br/><span class="ms">ประวัติลูกค้าและน้องชูการ์ฯ</span></span>
+          <span class="marr">›</span>
+        </a>
+      </div>
+
+      <div class="mhead">ระบบ</div>
+      <div class="mlist">
+        ${S.syncUrl?row('🔄','s','Sync ขึ้น Google Sheets',esc(syncLbl+syncRel),'manualSync()',S.syncSt==='syncing'?'disabled':''):''}
+        ${S.syncUrl?row('⬇','s','ดึงข้อมูลล่าสุดจาก Google Sheets','แทนที่ข้อมูลในเครื่องนี้','pullCloud(false)'):''}
+        ${row('⚙','c','การเชื่อมต่อ Google','Apps Script · Sheets · Calendar','openSettings()')}
+        ${window.SSC_I18N?row('🌐','c','Language · ภาษา',en?'English → ไทย':'ไทย → English',"SSC_I18N.setLang('"+(en?'th':'en')+"')"):''}
+      </div>
+    </div>
+
+    <div class="mcol">
+      <div class="mhead">ลิงก์สำหรับลูกค้า</div>
+      <div class="booking-link-banner">
+        <div class="bl-left">
+          <div class="bl-title">🔗 ลิงก์จองสำหรับลูกค้า</div>
+          <div class="bl-sub">แชร์ให้ลูกค้าตรวจสอบห้องว่างและส่งคำขอจองได้เลย</div>
+          <span class="bl-url" id="booking-url-display">booking.html (เปิดจากโฟลเดอร์เดียวกัน)</span>
+        </div>
+        <div class="bl-actions">
+          <button class="btn-link ghost" onclick="previewBookingPage()">👁 ดูตัวอย่าง</button>
+          <button class="btn-link primary" id="copy-link-btn" onclick="copyBookingLink()">📋 คัดลอกลิงก์</button>
+        </div>
+      </div>
+
+      <div class="booking-link-banner" style="background:linear-gradient(135deg,var(--gs),var(--phs));border-color:rgba(201,162,78,.45);">
+        <div class="bl-left">
+          <div class="bl-title">💅 ลิงก์จองสปาสำหรับลูกค้า</div>
+          <div class="bl-sub">แชร์ให้ลูกค้าจองคิวตัดเล็บ/ทำสปา — เลือกวันและสลอตเวลา (1 ชม./คิว)</div>
+          <span class="bl-url">spa.html (เปิดจากโฟลเดอร์เดียวกัน)</span>
+        </div>
+        <div class="bl-actions">
+          <button class="btn-link ghost" onclick="previewSpaPage()">👁 ดูตัวอย่าง</button>
+          <button class="btn-link primary" onclick="copySpaLink()" id="copy-spa-link-btn">📋 คัดลอกลิงก์</button>
+        </div>
+      </div>
+
+      <div class="mhead">LINE</div>
+      <div class="line-banner">
+        <div class="lb-left">
+          <div class="lb-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.02 2 11c0 2.89 1.4 5.48 3.6 7.23L5 22l3.97-1.99C10.01 20.64 11 21 12 21c5.52 0 10-4.02 10-9S17.52 2 12 2z"/></svg>
+            แจ้งเตือน LINE · 2 รอบต่อวัน
+          </div>
+          <div class="lb-stats" style="margin-top:6px;">
+            <div class="lb-stat" title="วันนี้">🌅 <span class="lb-day">วันนี้</span></div>
+            <div class="lb-stat">🚪 <span>${ls.ci.length} เข้า</span></div>
+            <div class="lb-stat">👋 <span>${ls.co.length} ออก</span></div>
+            <div class="lb-stat">🐿 <span>${ls.gliders} ตัว</span></div>
+          </div>
+          <div class="lb-stats">
+            <div class="lb-stat" title="พรุ่งนี้">🌆 <span class="lb-day">พรุ่งนี้</span></div>
+            <div class="lb-stat">🚪 <span>${lsEve.ci.length} เข้า</span></div>
+            <div class="lb-stat">👋 <span>${lsEve.co.length} ออก</span></div>
+          </div>
+        </div>
+        <div class="lb-actions">
+          <button class="btn-line ghost" onclick="showLinePreview('morning')">👁 เช้า</button>
+          <button class="btn-line solid" id="line-send-btn" onclick="sendLineNow()">🌅 ส่งเช้า 06:00</button>
+          <button class="btn-line ghost" onclick="showLinePreview('evening')">👁 เย็น</button>
+          <button class="btn-line solid" id="line-eve-btn" onclick="sendLineEvening()">🌆 ส่งเย็น 18:00</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
 }
 
 // ============================
@@ -3150,9 +3489,9 @@ function renderToday(){
       <div class="li"><span class="ld sage"></span> ห้องว่าง</div>
       <div class="li"><span class="ld coral"></span> มีน้องเข้าพัก</div>
       <div class="li">👑 Grand Suite</div>
-      <div class="li" style="margin-left:auto;font-style:italic;font-size:11.5px;">แตะห้อง · ดูรายละเอียด / จอง</div>
+      <div class="li lhint" style="margin-left:auto;font-style:italic;font-size:11.5px;">แตะห้อง · ดูรายละเอียด / จอง</div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px;">${Array.from({length:GS_CAGES},(_,i)=>roomCell('grand_suite',i+1,true,idx)).join('')}</div>
+    <div class="sgrid">${Array.from({length:GS_CAGES},(_,i)=>roomCell('grand_suite',i+1,true,idx)).join('')}</div>
     <div class="rgrid">${rooms}</div>
     ${backupSec}
     ${backupToggle}
@@ -3258,7 +3597,7 @@ function roomCell(rt,rn,isSuite,idx){
   const cnt=b?(parseInt(b.gliderCount)||1):0;
   const nameDisp=b?(b.gliderName||b.guestName):'';
   const bot=oc?`<div class="rname">${esc(nameDisp)}</div><div class="rstat" style="font-size:10px;opacity:.8;">🐿 ${cnt} ตัว</div>`:`<div class="rstat">ว่าง</div>`;
-  const crown=isSuite?`<span style="position:absolute;top:12px;right:12px;font-size:15px;">👑</span>`:'';
+  const crown=isSuite?`<span class="rcrown">👑</span>`:'';
   return `<button class="${cls}" onclick="roomClick('${rt}',${rn})">${crown}
     <div class="rnum">${num}</div>
     <div><div class="rcr">${lbl}</div>${bot}</div>
@@ -3298,7 +3637,9 @@ function renderCalendar(){
   let body='';
   const idx=roomIndex(S.bookings);
   allRooms.forEach(room=>{
-    body+=`<div class="crl ${room.isSuite?'suite':''}${room.backup?' bk':''}">${room.isSuite?'👑 ':''}${room.label}</div>`;
+    body+=room.isSuite
+      ?`<div class="crl suite">👑 <span class="lb-l">${room.label}</span><span class="lb-s">GS${room.num}</span></div>`
+      :`<div class="crl${room.backup?' bk':''}">${room.label}</div>`;
     // หาผู้เข้าพักของกรงนี้ครบทุกวันครั้งเดียว แล้วใช้ซ้ำสำหรับวันก่อนหน้า/ถัดไป
     const row=dates.map(d=>roomOfIdx(idx,room.type,room.num,d));
     dates.forEach((d,di)=>{
@@ -3308,8 +3649,10 @@ function renderCalendar(){
       const isS=b&&(!prev||prev.id!==b.id), isE=b&&(!next||next.id!==b.id);
       let cls='cc'; if(b){cls+=' bk';if(isS)cls+=' s';if(isE)cls+=' e';} if(d===today)cls+=' tc';
       const tip=b?esc((b.gliderName||b.guestName)+' · 🐿 '+(parseInt(b.gliderCount)||1)+' ตัว · '+thD(b.checkIn,true)+' – '+thD(b.checkOut,true)):'ว่าง';
+      // ป้ายชื่อยาวได้เท่าจำนวนวันที่แถบการจองนี้กินพื้นที่ในช่วงที่แสดง
+      let span=1; if(b&&isS){ while(di+span<dates.length&&row[di+span]&&row[di+span].id===b.id) span++; }
       body+=`<button class="${cls}" onclick="calClick('${room.type}',${room.num},'${d}')" title="${tip}">
-        ${b&&isS?`<span class="cctag">${esc((b.gliderName||b.guestName).slice(0,8))}</span>`:''}
+        ${b&&isS?`<span class="cctag" style="max-width:calc(${span*100}% + ${(span-1)*2}px - 12px);">${esc(b.gliderName||b.guestName)}</span>`:''}
       </button>`;
     });
   });
@@ -3327,7 +3670,7 @@ function renderCalendar(){
       </div>
     </div>
     <div class="calwrap">
-      <div class="calgrid" style="grid-template-columns:130px repeat(${DAYS},minmax(42px,1fr));">
+      <div class="calgrid" style="--days:${DAYS};">
         ${head}${body}
       </div>
     </div>
@@ -3354,7 +3697,13 @@ function bookingCards(){
   if(S.filter!=='all') bs=bs.filter(b=>bSt(b)===S.filter);
   const q=(S.search||'').toLowerCase().trim();
   if(q) bs=bs.filter(b=>(b.guestName||'').toLowerCase().includes(q)||(b.gliderName||'').toLowerCase().includes(q)||(b.phone||'').includes(q));
-  bs.sort((a,b)=>a.checkIn.localeCompare(b.checkIn));
+  // เรียง: เข้าพักอยู่ → กำลังจะมา (ใกล้สุดก่อน) → ผ่านไปแล้ว (ล่าสุดก่อน) — ไม่ต้องเลื่อนผ่านประวัติเก่าทุกครั้ง
+  const stOrd={active:0,upcoming:1,past:2};
+  bs.sort((a,b)=>{
+    const sa=bSt(a), sb=bSt(b);
+    if(sa!==sb) return stOrd[sa]-stOrd[sb];
+    return sa==='past'?b.checkOut.localeCompare(a.checkOut):a.checkIn.localeCompare(b.checkIn);
+  });
   const stLbl={'upcoming':'✦ กำลังจะมา','active':'✦ เข้าพักอยู่','past':'✦ ผ่านไปแล้ว'};
   const cards=bs.length===0?`<div class="empty">
     <div style="font-size:36px;color:var(--gold);">✦</div>
@@ -3422,7 +3771,11 @@ function renderBookings(){
   </div>`;
 }
 
-function setTab(t){ S.tab=t; render(); }
+function setTab(t){
+  const changed=S.tab!==t;
+  S.tab=t; render();
+  if(changed) window.scrollTo(0,0);   // เปลี่ยนหน้า → กลับขึ้นบนสุด (แถบเมนูล่างบนมือถือ)
+}
 
 // ============================
 // MODAL
@@ -3627,7 +3980,7 @@ function drawForm(v,isEdit){
           onclick="switchRT('grand_suite')">👑 Grand Suite</button>
       </div>
     </div>
-    <div class="frow2">
+    <div class="frow2 keep2">
       <div class="fg"><label class="fl">เช็คอิน *</label>
         <input type="date" id="fci" class="fi" value="${ci}" onchange="onDates()"></div>
       <div class="fg"><label class="fl">เช็คเอาท์ *</label>
@@ -3656,7 +4009,8 @@ function drawForm(v,isEdit){
     </div>
   </div>`);
   renderRec();
-  document.getElementById('fg').focus();
+  // โฟกัสช่องชื่อเฉพาะตอนเริ่มจองใหม่ — ตอนแก้ไข/อนุมัติคำขอ ไม่เด้งคีย์บอร์ดมาบังฟอร์มบนมือถือ
+  if(!v.guestName) document.getElementById('fg').focus();
   // แก้ไขการจอง: โชว์ประวัติการจองทั้งหมดของลูกค้าคนนี้อัตโนมัติ
   if(isEdit){
     const ph=(v.phone||'').trim(), nm=(v.guestName||'').trim().toLowerCase();
@@ -4246,15 +4600,18 @@ function memoBanner(){
   const t=todayKey(), tm=addDays(t,1);
   const a=memosOn(t), b=memosOn(tm);
   if(!a.length&&!b.length) return '';
-  const li=(m)=>`<div style="padding:5px 0;border-bottom:1px dashed var(--ln);white-space:pre-wrap;font-size:14px;">• ${esc(m.text)}</div>`;
-  return `<div class="sec" style="border:1.5px solid var(--gold);background:linear-gradient(135deg,var(--cl) 60%,var(--gs));">
+  const li=(m)=>`<div class="memo-li">• ${esc(m.text)}</div>`;
+  return `<div class="sec al al-gold${FOLD.memo?' folded':''}">
     <div class="stitle">
-      <div><h3>📌 โน้ตเตือนความจำ</h3>
+      <div class="fold-t" role="button" onclick="toggleFold('memo')">
+        <h3>📌 โน้ตเตือนความจำ <span class="cnt">${a.length+b.length}</span><span class="chev">▾</span></h3>
         <div class="meta">โน้ตที่ทางร้านตั้งไว้ — ขึ้นในสรุป LINE เช้า/เย็นด้วย</div></div>
-      <button class="btn btn-s btn-sm" onclick="openMemos()">✎ จัดการโน้ต</button>
+      <button class="btn btn-s btn-sm ico-m" onclick="openMemos()" aria-label="จัดการโน้ต"><span>✎</span><span class="bl">จัดการโน้ต</span></button>
     </div>
-    ${a.length?`<div style="font-weight:700;color:var(--pd);margin-top:4px;">วันนี้ · ${thD(t,true)}</div>${a.map(li).join('')}`:''}
-    ${b.length?`<div style="font-weight:700;color:var(--cm);margin-top:10px;">พรุ่งนี้ · ${thD(tm,true)}</div>${b.map(li).join('')}`:''}
+    <div class="fold-b">
+      ${a.length?`<div class="memo-day">วันนี้ · ${thD(t,true)}</div>${a.map(li).join('')}`:''}
+      ${b.length?`<div class="memo-day tm">พรุ่งนี้ · ${thD(tm,true)}</div>${b.map(li).join('')}`:''}
+    </div>
   </div>`;
 }
 function openMemos(){

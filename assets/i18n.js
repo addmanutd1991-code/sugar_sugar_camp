@@ -119,7 +119,9 @@ var EXACT = {
   'เข้าพัก':'Stay', '📅 เข้าพัก':'📅 Stay', '🏠 ห้อง':'🏠 Room',
   '👤 เจ้าของ':'👤 Owner', '👤 ลูกค้า':'👤 Customer', '🐿 น้อง':'🐿 Glider(s)',
   '🐿 จำนวน':'🐿 Count', '📞 โทร':'📞 Phone', '📝 หมายเหตุ':'📝 Notes',
-  'ซึ่ง':'which is ', 'และ':'and', 'ออก':'out', 'เข้า':'in'
+  'ซึ่ง':'which is ', 'และ':'and', 'ออก':'out', 'เข้า':'in',
+  // dashboard v20: แถบเมนูล่าง / หน้าเมนู / ปุ่มอนุมัติ-ปฏิเสธ
+  'เมนู':'Menu', 'ระบบ':'System', '✓ อนุมัติ':'✓ Approve', '✕ ปฏิเสธ':'✕ Decline'
 };
 
 /* ── SUB: แทนที่วลี (ยาว→สั้น) ภายในข้อความผสม ─────────────── */
@@ -687,6 +689,31 @@ add({
   'ทางร้าน':'the shop',
   'ชูการ์':'gliders',
   'ลูกค้า':'customer'
+});
+
+/* ── dashboard v20: หน้าเมนู + การ์ดแจ้งเตือน ── */
+add({
+  'เครื่องมือประจำวัน':'Daily tools',
+  'ลิงก์สำหรับลูกค้า':'Customer links',
+  'โน้ตที่ทางร้านตั้งไว้ — ขึ้นในสรุป LINE เช้า/เย็นด้วย':'Notes set by the shop — also included in the AM/PM LINE summary',
+  'ตั้งโน้ตให้เตือนในสรุป LINE':'Add notes to the LINE summary',
+  'ยังไม่มีโน้ตที่ตั้งไว้':'No notes yet',
+  'โน้ตเตือนความจำ':'Reminder notes',
+  'โน้ตเตือน':'Reminders',
+  'จัดการโน้ต':'Manage notes',
+  'ตั้งไว้':'Active:',
+  'นับจำนวนกรงตามจำนวนตัว':'Cages grouped by glider count',
+  'ออกใบเสร็จตัดเล็บ / ทำสปา':'Receipts for nail trim / spa',
+  'จองคิวสปาให้ลูกค้า':'Book a spa slot for a customer',
+  'ทางร้านลงคิวให้โดยตรง':'Booked directly by the shop',
+  'กำหนดวันและช่วงเวลาที่เปิดรับคิว':'Set the days and hours open for booking',
+  'ประวัติลูกค้าและน้องชูการ์ฯ':'Customer and glider history',
+  'Sync ขึ้น Google Sheets':'Sync to Google Sheets',
+  'แทนที่ข้อมูลในเครื่องนี้':'Replaces the data on this device',
+  'จองให้ลูกค้า':'Book for customer',
+  'ใกล้ถึง':'Soon',
+  'Language · ภาษา':'Language',
+  'วันนี้ ·':'Today ·'
 });
 
 /* ── สร้างรายการ key เรียงยาว→สั้น ─────────────────────────── */
