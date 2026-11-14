@@ -647,6 +647,7 @@ html{-webkit-text-size-adjust:100%;touch-action:manipulation;}
 button,a,summary,label,[role=button]{-webkit-tap-highlight-color:transparent;}
 button{color:inherit;}                 /* iOS: ปุ่มที่ไม่กำหนดสีจะกลายเป็นสีฟ้าของระบบ */
 input[type=date]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;}
+.frow2>*{min-width:0;}                 /* ช่องวันที่ของ iOS กว้างเกินคอลัมน์ได้ — กันดันหน้าล้นแนวนอน */
 .overlay,.slip-overlay,.img-save-overlay,.co-receipt-overlay{-webkit-backdrop-filter:blur(10px);overscroll-behavior:contain;}
 .modal,.co-modal,.co-receipt-wrap{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
 .btn:active,.tab:active,.ib:active,.rc:active,.nb:active,.pill:active,.mrow:active,.btn-link:active,.btn-line:active{transform:scale(.96);}
